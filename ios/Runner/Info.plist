@@ -26,11 +26,17 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>UIApplicationSceneManifest</key>
+
+	<!-- Location Permissions Started -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-<string>SafePulse needs access to your location for SOS services.</string>
-<key>NSLocationAlwaysUsageDescription</key>
-<string>SafePulse needs access to your location for background safety features.</string>
+	<string>SafePulse needs access to your location for SOS services.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>SafePulse needs access to your location for background safety features.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>SafePulse needs access to your location for background safety features.</string>
+	<!-- Location Permissions Ended -->
+
+	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
