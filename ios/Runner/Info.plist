@@ -27,14 +27,21 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
-	<!-- Location Permissions Started -->
+	<!-- Location Permissions -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>SafePulse needs access to your location for SOS services.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>SafePulse needs access to your location for background safety features.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>SafePulse needs access to your location for background safety features.</string>
-	<!-- Location Permissions Ended -->
+
+	<!-- Camera & Photo Library Permissions (Newly Added) -->
+	<key>NSCameraUsageDescription</key>
+	<string>SafePulse needs access to your camera to take a profile picture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SafePulse needs access to your photo library to select a profile picture.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SafePulse needs microphone access for video related features (optional).</string>
 
 	<key>UIApplicationSceneManifest</key>
 	<dict>
