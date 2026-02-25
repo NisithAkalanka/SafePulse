@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';   // මෙය HomeScreen පේජ් එක හඳුනා ගැනීමට
-import 'signup_screen.dart'; // මෙය Signup පේජ් එක හඳුනා ගැනීමට
+import 'signup_screen.dart'; // Signup පේජ් එක හඳුනා ගැනීමට
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,21 +10,22 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // ටෙක්ස්ට් ෆීල්ඩ් වල දත්ත ලබා ගැනීමට Controller භාවිතා කරමු
+  // TextField පාලනය කිරීමට Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Login ක්‍රියාවලිය පටන් ගමු
+  // ලොගින් ක්‍රියාවලිය
   Future<void> _login() async {
     try {
-      // 1. Firebase හරහා යූසර් ලොගින් කිරීම
+      // 1. Firebase ලොගින් කිරීම
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 2. ලොගින් වීම සාර්ථක නම් Snackbar එකක් පෙන්වමු
       if (!mounted) return;
+
+      // 2. ලොගින් වීම සාර්ථක නම් පණිවිඩයක් පෙන්වීම
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Logged In Successfully!"),
@@ -33,15 +33,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
 
-      // 3. දැන් ඔයා ඉල්ලපු කොටස - සාර්ථක වුණාම HomeScreen එකට යමු
-      // pushReplacement පාවිච්චි කරන්නේ යූසර්ට ආයේ ලොගින් පේජ් එකට Back බටන් එකෙන් එන්න බැරි වෙන්නයි
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+      // 3. --- මෙන්න මෙතන තමයි වැදගත්ම වෙනස ---
+      // අලුත් පේජ් එකකට (HomeScreen) 'Push' කරන්නේ නැතිව, දැනට තිබෙන Login පේජ් එක 'Pop' කර (වසා) දමනවා.
+      // එවිට යූසර් ප්‍රොෆයිල් ටැබ් එකෙන් ආවා නම් නැවත එතැනටම සාර්ථකව ඇතුළු වෙනවා.
+      Navigator.pop(context);
       
     } on FirebaseAuthException catch (e) {
-      // වැරදි ඊමේල් හෝ පාස්වර්ඩ් එකක් ගැහුවොත් ඒ Error එක පෙන්වමු
+      // වැරදි ඊමේල්/පාස්වර්ඩ් සඳහා Error එක පෙන්වීම
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -50,7 +48,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } catch (e) {
-      // වෙනත් ඕනෑම Error එකක් ආවොත් (Internet issue etc.)
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
@@ -60,7 +57,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    // ෆයිල් එක වැසෙද්දී Controller මතකය නිදහස් කරමු
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -75,6 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
         centerTitle: true,
         backgroundColor: Colors.redAccent,
         foregroundColor: Colors.white,
+        elevation: 0,
+        // පස්සට යාමේ ඊතලය අවශ්‍ය නිසා මම මෙය default තැබුවා
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -82,21 +80,22 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ඇප් ලෝගෝ එක වෙනුවට ලස්සන අයිකනයක්
+              // ඇප් එකේ Icon එක සහ නම
               const Icon(Icons.security, size: 100, color: Colors.redAccent),
               const SizedBox(height: 10),
               const Text(
                 "SafePulse",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, letterSpacing: 1.2),
               ),
-              const Text("Welcome Back to Safety"),
+              const Text("Welcome back to Guardian SafeMode", style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 40),
               
-              // Email ඇතුළත් කරන TextField එක
+              // Email Field
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(
                   labelText: "Email Address",
+                  hintText: "Enter your registered email",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
@@ -104,37 +103,39 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               
-              // Password ඇතුළත් කරන TextField එක
+              // Password Field
               TextField(
                 controller: _passwordController,
                 decoration: const InputDecoration(
                   labelText: "Password",
+                  hintText: "Enter your password",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
                 obscureText: true,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 30),
               
-              // Login බටන් එක
+              // Login Button
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 55,
                 child: ElevatedButton(
                   onPressed: _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 2,
                   ),
                   child: const Text(
                     "LOGIN",
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
               
-              // Signup එකට යන බටන් එක
+              // Signup Screen එකට යාමට බටන් එක
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -142,9 +143,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     MaterialPageRoute(builder: (context) => const SignupScreen()),
                   );
                 },
-                child: const Text(
-                  "Don't have an account? Sign Up",
-                  style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                child: RichText(
+                  text: const TextSpan(
+                    text: "Don't have an account? ",
+                    style: TextStyle(color: Colors.black54),
+                    children: [
+                      TextSpan(
+                        text: "Sign Up",
+                        style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
