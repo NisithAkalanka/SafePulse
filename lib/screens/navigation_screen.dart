@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';        // SOS පිටුව
-import 'login_screen.dart';       // ලොගින් පිටුව
-import 'guardian_map_screen.dart'; // ඔයා ඉල්ලපු Snapchat style Map එක
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'home_screen.dart';        
+import 'login_screen.dart';       
+import 'guardian_map_screen.dart'; 
+import 'admin_full_dashboard.dart'; // Admin පේජ් එක
 
-// අනෙකුත් සාමාජිකයින්ගේ වැඩ අවසන් වනතුරු පෙන්වන Placeholder පිටු
+// අනෙකුත් සාමාජිකයින්ගේ වැඩ සඳහා Placeholder පිටු
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   const PlaceholderScreen(this.title, {super.key});
@@ -12,13 +14,7 @@ class PlaceholderScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
-      ),
+      appBar: AppBar(title: Text(title), centerTitle: true),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -26,7 +22,7 @@ class PlaceholderScreen extends StatelessWidget {
             const Icon(Icons.engineering_outlined, size: 80, color: Colors.grey),
             const SizedBox(height: 10),
             Text("$title Section", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const Text("Under development for Student Safety System."),
+            const Text("This module is under development."),
           ],
         ),
       ),
@@ -42,35 +38,78 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
+  String _userRole = "student"; 
 
-  // --- නව ටැබ් එකත් සමඟ Screen ලැයිස්තුව (මුළු ටැබ් 5 ක් ඇත) ---
-  final List<Widget> _screens = [
-    const HomeScreen(),            // 0. SOS 
-    const GuardianMapScreen(),     // 1. CIRCLE MAP (Snapchat style Map එක)
-    const PlaceholderScreen("Help Feed"),    // 2. HELP
-    const PlaceholderScreen("Lost & Found"), // 3. LOST
-    const PlaceholderScreen("Marketplace"),  // 4. MARKET
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _checkUserRole(); // පද්ධතිය පටන් ගන්න කොටම Role එක බලමු
+  }
 
-  // ටැබ් එකක් එබූ විට සිදුවන ආරක්ෂණ පරීක්ෂාව (Login Guard)
+  // Firestore එකෙන් User Role (admin/student) ලබා ගැනීම
+  void _checkUserRole() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        var doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          setState(() {
+            _userRole = doc.data()?['role'] ?? "student";
+          });
+        }
+      } catch (e) {
+        debugPrint("Role check failed: $e");
+      }
+    } else {
+      setState(() { _userRole = "student"; });
+    }
+  }
+
+  // --- පේජ් ලිස්ට් එක Role එක අනුව වෙනස් වේ ---
+  List<Widget> _getScreens() {
+    if (_userRole == 'admin') {
+      return [
+        const HomeScreen(),              // 0
+        const AdminFullDashboard(),      // 1. (Admin ට පමනක් පෙනේ)
+        const GuardianMapScreen(),       // 2
+        const PlaceholderScreen("Help"),  // 3
+        const PlaceholderScreen("Lost"),  // 4
+        const PlaceholderScreen("Market"),// 5
+      ];
+    } else {
+      return [
+        const HomeScreen(),               // 0. SOS
+        const GuardianMapScreen(),        // 1. MAP
+        const PlaceholderScreen("Help"),   // 2
+        const PlaceholderScreen("Lost"),   // 3
+        const PlaceholderScreen("Market"), // 4
+      ];
+    }
+  }
+
+  // ටැබ් එක මාරු කිරීමේදී සිදුවන ආරක්ෂණ ලොජික් එක (Navigation Guard)
   void _onItemTapped(int index) async {
-    // SOS ටැබ් එක (0) ඕනෑම කෙනෙකුට පාවිච්චි කළ හැක. 
-    // නමුත් Map එක සහ අනිත් ටැබ් වලට යාමට පෙර ලොගින් පරීක්ෂා කරමු.
-    if (index != 0 && FirebaseAuth.instance.currentUser == null) {
-      // යූසර් ලොග් නොවී "Map" හෝ අන් ටැබ් ඔබන්න හැදුවොත් Login පේජ් එකට යවමු
+    // 0 යනු SOS (Public access - ලොගින් නොවී එබිය හැක)
+    if (index == 0) {
+      setState(() { _selectedIndex = index; });
+      return;
+    }
+
+    // වෙනත් ඕනෑම ටැබ් එකක් එබීමට පෙර ලොගින් පරීක්ෂා කරමු
+    if (FirebaseAuth.instance.currentUser == null) {
+      // 1. කෙලින්ම ලොගින් පේජ් එකට යවමු
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
-
-      // ලොගින් සාර්ථක නම් පමණක් එම පිටුව පෙන්වමු
+      
+      // 2. ලොගින් පේජ් එකේ සිට ආපසු පැමිණි පසු (Success නම්)
       if (FirebaseAuth.instance.currentUser != null) {
-        setState(() {
-          _selectedIndex = index;
-        });
+        _checkUserRole(); // Role එක update කරමු
+        setState(() { _selectedIndex = index; }); // යූසර්ට අවශ්‍ය වූ පේජ් එකටම යවමු
       }
     } else {
-      // දැනටමත් ලොග් වී ඇත්නම් හෝ SOS ටැබ් එක නම් කෙලින්ම යමු
+      // ලොග් වී ඇත්නම් සාමාන්‍ය ලෙස පේජ් එක මාරු කරන්න
       setState(() {
         _selectedIndex = index;
       });
@@ -79,44 +118,50 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var screens = _getScreens();
+
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed, // මෙය Icon 5 ක් ඇති නිසා අත්‍යවශ්‍යයි
+        type: BottomNavigationBarType.fixed, // Icon 5කට වඩා හොඳින් ගැලපේ
         selectedItemColor: Colors.redAccent,
         unselectedItemColor: Colors.grey[600],
         onTap: _onItemTapped, 
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
         unselectedLabelStyle: const TextStyle(fontSize: 10),
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.security_outlined),
             activeIcon: Icon(Icons.security),
             label: "SOS",
           ),
-          // --- නව ටැබ් එක මෙතන තියෙන්නේ ---
-          BottomNavigationBarItem(
+          
+          // --- Admin ලොග් වී ඇත්නම් පමණක් Dashboard බටන් එක දාමු ---
+          if (_userRole == 'admin')
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.analytics_outlined),
+              label: "DASHBOARD",
+            ),
+
+          const BottomNavigationBarItem(
             icon: Icon(Icons.map_outlined),
             activeIcon: Icon(Icons.map_rounded),
             label: "MAP",
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.handshake_outlined),
-            activeIcon: Icon(Icons.handshake),
             label: "HELP",
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search_rounded),
             label: "LOST",
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.store_outlined),
-            activeIcon: Icon(Icons.store),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.storefront_outlined),
             label: "MARKET",
           ),
         ],
