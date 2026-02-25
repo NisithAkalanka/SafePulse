@@ -1,4 +1,4 @@
-import 'dart:convert'; // පින්තූරය Decode කිරීමට මෙය අත්‍යවශ්‍යයි
+import 'dart:convert'; 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,7 +7,8 @@ import 'navigation_screen.dart';
 import 'edit_profile_screen.dart';       
 import 'sos_customization_screen.dart'; 
 import 'security_status_screen.dart';
-import 'medical_profile_screen.dart'; // තිබේ නම් පමණක්
+import 'medical_profile_screen.dart'; 
+import 'admin_dashboard.dart'; // Admin Dashboard එක සඳහා මෙය අනිවාර්යයෙන්ම තිබිය යුතුයි
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,7 +22,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String studentEmail = "Not Logged In";
   String studentName = "SafePulse Member";
   String sliitId = "---";
-  String? _profilePhotoBase64; // පින්තූරය තාවකාලිකව රඳවා ගැනීමට
+  String userRole = "student"; // Default role එක ශිෂ්‍යයෙක් ලෙස තබා ගනිමු
+  String? _profilePhotoBase64; 
 
   @override
   void initState() {
@@ -32,14 +34,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Firestore එකෙන් දත්ත කියවා පින්තූරය ඇතුළු දත්ත පෙන්වමු
+  // Firestore එකෙන් දත්ත සහ User Role එක කියවීම
   Future<void> _loadUserData() async {
     if (user != null) {
       try {
         var ds = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
         if (ds.exists) {
           setState(() {
-            // First Name සහ Last Name තිබේ නම් එය පෙන්වමු
+            // පළමු සහ අවසාන නම තිබේදැයි බලමු
             String fname = ds.data()?['first_name'] ?? "";
             String lname = ds.data()?['last_name'] ?? "";
             studentName = (fname.isEmpty && lname.isEmpty) 
@@ -49,7 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             sliitId = ds.data()?['sliit_id'] ?? "No ID Found";
             studentEmail = ds.data()?['student_email'] ?? user?.email ?? "";
             
-            // Database එකේ ඇති පින්තූර Text එක ගනිමු
+            // --- මෙන්න අලුතින් එක් කළ කොටස: Role එක ලබා ගැනීම ---
+            userRole = ds.data()?['role'] ?? "student"; 
+
             _profilePhotoBase64 = ds.data()?['profile_photo_base64'];
           });
         }
@@ -75,12 +79,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: _loadUserData, // පහළට අැද්දම පේජ් එක update වෙනවා
+        onRefresh: _loadUserData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              // --- HEADER SECTION (IMAGE + NAME + SLIIT ID) ---
+              // --- HEADER SECTION ---
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
@@ -95,7 +99,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     CircleAvatar(
                       radius: 42,
                       backgroundColor: Colors.redAccent,
-                      // මෙන්න පින්තූරය පෙන්වන ලොජික් එක
                       backgroundImage: _profilePhotoBase64 != null 
                           ? MemoryImage(base64Decode(_profilePhotoBase64!))
                           : null,
@@ -108,20 +111,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            studentName,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          Text(studentName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                           Text(studentEmail, style: const TextStyle(color: Colors.grey, fontSize: 13)),
                           const SizedBox(height: 5),
-                          Text(
-                            "ID: $sliitId",
-                            style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600, fontSize: 14),
-                          ),
+                          Text("ID: $sliitId", style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600, fontSize: 14)),
                           const SizedBox(height: 5),
-                          const Text("🛡️ Verified Guardian",
-                              style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                          // User Role Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(5)),
+                            child: Text(userRole.toUpperCase(), style: const TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
                         ],
                       ),
                     )
@@ -153,11 +153,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     _profileMenuItem(Icons.edit_outlined, "Edit Profile Details", "Years, degree, phone & photo", () async {
                       bool? updated = await Navigator.push(context, MaterialPageRoute(builder: (context) => const EditProfileScreen()));
-                      if (updated == true) _loadUserData(); // දත්ත මාරු කළොත් පේජ් එක update කරමු
+                      if (updated == true) _loadUserData();
                     }),
                     _profileMenuItem(Icons.tune, "SOS Customization", "Set vibrations & trigger delay", () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const SOSCustomizationScreen()));
                     }),
+                    
+                    // --- මෙන්න වැදගත්ම කොටස: ADMIN මෙනු එක ---
+                    if (userRole == "admin")
+                      _profileMenuItem(
+                        Icons.admin_panel_settings, 
+                        "Security Admin Dashboard", 
+                        "Manage all university SOS alerts", 
+                        () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
+                        }
+                      ),
+
                     _profileMenuItem(Icons.notifications_none, "App Settings", "Notifications & System preferences", () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
                     }),
@@ -165,7 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const SecurityStatusScreen()));
                     }),
                     _profileMenuItem(Icons.health_and_safety_outlined, "Medical Information", "Blood group & Allergies", () {
-                       Navigator.push(context, MaterialPageRoute(builder: (context) => MedicalProfileScreen()));
+                       Navigator.push(context, MaterialPageRoute(builder: (context) => const MedicalProfileScreen()));
                     }),
                   ],
                 ),
