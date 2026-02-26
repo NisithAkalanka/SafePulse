@@ -83,4 +83,5 @@ class DefaultFirebaseOptions {
     authDomain: 'safepluse-f4e9a.firebaseapp.com',
     storageBucket: 'safepluse-f4e9a.firebasestorage.app',
   );
+
 }
