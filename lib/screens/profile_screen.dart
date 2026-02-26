@@ -26,12 +26,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String userRole = "student"; // Default role එක ශිෂ්‍යයෙක් ලෙස තබා ගනිමු
   String? _profilePhotoBase64;
 
+  double completionPercentage = 0.0;
+  bool isSetupComplete = false;
+
   @override
   void initState() {
     super.initState();
     if (user != null) {
       studentEmail = user?.email ?? "Guest";
       _loadUserData();
+      _calculateCompletion();
     }
   }
 
@@ -59,11 +63,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
             userRole = ds.data()?['role'] ?? "student";
 
             _profilePhotoBase64 = ds.data()?['profile_photo_base64'];
+            _calculateCompletion();
           });
         }
       } catch (e) {
         debugPrint("Error loading profile: $e");
       }
+    }
+  }
+
+  Future<void> _calculateCompletion() async {
+    if (user == null) return;
+
+    var doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .get();
+
+    if (doc.exists) {
+      var data = doc.data()!;
+      int filledFields = 0;
+
+      List<String> requiredFields = [
+        'first_name',
+        'last_name',
+        'sliit_id',
+        'phone',
+        'degree',
+        'join_year',
+        'blood_type',
+        'allergies',
+        'ice_name',
+        'ice_phone',
+      ];
+
+      for (var field in requiredFields) {
+        if (data[field] != null && data[field].toString().trim().isNotEmpty) {
+          filledFields++;
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        completionPercentage = filledFields / 10.0;
+        isSetupComplete = completionPercentage == 1.0;
+      });
     }
   }
 
@@ -149,6 +194,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 children: [
+                  // PROFILE COMPLETION SECTION
+                  if (!isSetupComplete)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: _buildProgressBarUI(),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: _buildCompletionSuccessMsg(),
+                    ),
                   const SizedBox(height: 120),
 
                   // HERO CARD (glass)
@@ -209,31 +265,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               const SizedBox(width: 16),
+
                               Expanded(
+                                // ✅ Required Expanded
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       studentName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 3),
+
                                     Text(
                                       studentEmail,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         color: Colors.white70,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
+
                                     const SizedBox(height: 10),
-                                    Row(
+
+                                    Wrap(
+                                      // 🔥 Row → Wrap (overflow fix)
+                                      spacing: 10,
+                                      runSpacing: 6,
                                       children: [
                                         // ID chip
                                         Container(
@@ -264,8 +330,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        const SizedBox(width: 10),
-                                        // Role chip (same role variable)
+
+                                        // Role chip
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 10,
@@ -412,7 +478,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _profileMenuItem(
                           Icons.verified_user_outlined,
                           "Security Status",
-                          "Security check & Node status",
+                          "Check account verification & node status",
                           () {
                             Navigator.push(
                               context,
@@ -510,6 +576,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 34),
                 ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressBarUI() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Complete Your Safety Profile",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                ),
+              ),
+              Text(
+                "${(completionPercentage * 100).toInt()}%",
+                style: const TextStyle(
+                  color: Colors.yellowAccent,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(
+            value: completionPercentage,
+            minHeight: 8,
+            backgroundColor: Colors.white24,
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.greenAccent),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompletionSuccessMsg() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.greenAccent.withOpacity(0.5)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.verified_user, color: Colors.greenAccent),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "Your Safety Profile is fully connected! ✅",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),

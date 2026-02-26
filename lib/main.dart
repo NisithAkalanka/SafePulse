@@ -1,17 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // මෙතන වැරදි ඉරක් පෙන්වනවා නම් පියවර 2 බලන්න
-import 'screens/navigation_screen.dart'; // Navigation screen එකට යාමට
+import 'firebase_options.dart';
+import 'screens/navigation_screen.dart';
+import 'services/notification_service.dart'; // මෙය අනිවාර්යයෙන්ම තිබිය යුතුය
 
 void main() async {
-  // Flutter binding එක පණගැන්වීම
+  // 1. Flutter Engine එක සජීවීව පණගැන්වීම
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase Initialize කිරීම
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // 2. Firebase සහ Notification සේවා පණගැන්වීම
+  // වැදගත්: මෙම සේවා දෙකම සම්පූර්ණ වන තෙක් ඇප් එක දියත් නොවේ
+  try {
+    // Firebase initialization
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
+    // Notification initialization (යූසර්ට alert එවීමට සූදානම් කිරීම)
+    await NotificationService.initNotification();
+
+    debugPrint("SafePulse: Services Initialized Successfully");
+  } catch (e) {
+    debugPrint("Initialization Error: $e");
+  }
+
+  // 3. දැන් පමණක් ප්‍රධාන ඇප් එක පණගන්වමු
   runApp(const SafePulseApp());
 }
 
@@ -23,11 +36,17 @@ class SafePulseApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SafePulse',
+      // ඇප් එකේ මුළු තේමාවම රතු වර්ණයෙන් හැඩගැස්වීම (Design Guideline අනුව)
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFFF4B4B),
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
+        // සරල අකුරු විලාසයක් භාවිත කිරීම
+        fontFamily: 'Roboto',
       ),
-      // කෙලින්ම මෙනු එක සහිත පේජ් එකට යමු (නොබැඳි යූසර්ට SOS ඇලර්ට් යැවිය හැකි පරිදි)
+      // සෘජුවම අපගේ ප්‍රධාන පාලක පද්ධතියට (DASHBOARD/MAP/SOS) යොමු කරයි
       home: const MainNavigationScreen(),
     );
   }

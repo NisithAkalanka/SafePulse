@@ -40,12 +40,33 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
     ).animate(CurvedAnimation(parent: _walkCtrl, curve: Curves.easeInOut));
   }
 
-  void _startTimer(int minutes) {
+  // ✅ UPDATED: Firestore update + timer start
+  Future<void> _startTimer(int minutes) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    // පද්ධතිය දැනුවත් කරනවා අපි මේ වෙලාවේ "Walk" එකක් පටන් ගත්තා කියලා
+    DateTime expectedTime = DateTime.now().add(Duration(minutes: minutes));
+
+    // User logged in නම් Firestore එකට write කරන්න
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'is_on_safe_walk': true,
+          'expected_arrival': expectedTime, // සජීවී කාලය
+        }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint("Safe Walk Firestore Update Failed: $e");
+      }
+    }
+
+    // පෝන් එකේ ඇතුලේ ටයිමරයත් රන් කරනවා:
     setState(() {
       _secondsRemaining = minutes * 60;
       _isTimerRunning = true;
     });
 
+    // ... ඉතුරු Timer.periodic logic එක දිගටම දුවන්න දෙන්න ...
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining > 0) {
         setState(() {
@@ -240,173 +261,171 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                   if (!_isTimerRunning) _walkingAnimation(),
                   if (!_isTimerRunning) const SizedBox(height: 14),
 
+                  // ✅ FIX: Make this area scrollable to avoid bottom overflow
                   Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 520),
-                        child: _glassCard(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!_isTimerRunning) ...[
-                                const Icon(
-                                  Icons.directions_walk_rounded,
-                                  size: 80,
-                                  color: Colors.blueGrey,
-                                ),
-                                const SizedBox(height: 20),
-                                const Text(
-                                  "Set Your Expected Arrival Time",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: _glassCard(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (!_isTimerRunning) ...[
+                                  const Icon(
+                                    Icons.directions_walk_rounded,
+                                    size: 80,
+                                    color: Colors.blueGrey,
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  "Auto SOS will trigger if you don't check in.",
-                                  style: TextStyle(color: Colors.grey),
-                                  textAlign: TextAlign.center,
-                                ),
-
-                                const SizedBox(height: 40),
-
-                                // Custom Time Picker Button
-                                GestureDetector(
-                                  onTap: _showTimePicker,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 25,
-                                      vertical: 15,
+                                  const SizedBox(height: 20),
+                                  const Text(
+                                    "Set Your Expected Arrival Time",
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      border: Border.all(
-                                        color: Colors.redAccent.withOpacity(
-                                          0.5,
-                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "Auto SOS will trigger if you don't check in.",
+                                    style: TextStyle(color: Colors.grey),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 40),
+
+                                  GestureDetector(
+                                    onTap: _showTimePicker,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 25,
+                                        vertical: 15,
                                       ),
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.timer_outlined,
-                                          color: Colors.redAccent,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          "Selected: $_selectedMinutes Minutes",
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        border: Border.all(
+                                          color: Colors.redAccent.withOpacity(
+                                            0.5,
                                           ),
                                         ),
-                                      ],
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.timer_outlined,
+                                            color: Colors.redAccent,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            "Selected: $_selectedMinutes Minutes",
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
 
-                                const SizedBox(height: 40),
+                                  const SizedBox(height: 40),
 
-                                ElevatedButton(
-                                  onPressed: () =>
-                                      _startTimer(_selectedMinutes),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.redAccent,
-                                    minimumSize: const Size(
-                                      double.infinity,
-                                      55,
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        _startTimer(_selectedMinutes),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.redAccent,
+                                      minimumSize: const Size(
+                                        double.infinity,
+                                        55,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      elevation: 2,
                                     ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  child: const Text(
-                                    "START MONITORING ME",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                    child: const Text(
+                                      "START MONITORING ME",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                ),
 
-                                const SizedBox(height: 20),
+                                  const SizedBox(height: 20),
 
-                                // --- FIXED OVERFLOW SECTION ---
-                                // Row එක වෙනුවට Wrap භාවිතා කර ඇති නිසා දැන් බොත්තම් ඉඩකඩ අනුව සැකසෙයි
-                                Wrap(
-                                  alignment: WrapAlignment.center,
-                                  spacing: 8.0, // බොත්තම් අතර තිරස් පරතරය
-                                  runSpacing:
-                                      8.0, // බොත්තම් අතර සිරස් පරතරය (ඊළඟ පේළියට ගියහොත්)
-                                  children: [
-                                    _quickSelect(1, "1min (Test)"),
-                                    _quickSelect(10, "10min"),
-                                    _quickSelect(30, "30min"),
-                                  ],
-                                ),
-                              ] else ...[
-                                // --- Timer Running UI ---
-                                const Icon(
-                                  Icons.security,
-                                  size: 100,
-                                  color: Colors.red,
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}",
-                                  style: const TextStyle(
-                                    fontSize: 80,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
+                                  Wrap(
+                                    alignment: WrapAlignment.center,
+                                    spacing: 8.0,
+                                    runSpacing: 8.0,
+                                    children: [
+                                      _quickSelect(1, "1min (Test)"),
+                                      _quickSelect(10, "10min"),
+                                      _quickSelect(30, "30min"),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 10),
-                                const Text(
-                                  "SAFETY MONITORING ACTIVE",
-                                  style: TextStyle(
+                                ] else ...[
+                                  const Icon(
+                                    Icons.security,
+                                    size: 100,
                                     color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.2,
                                   ),
-                                ),
-
-                                const SizedBox(height: 60),
-
-                                ElevatedButton(
-                                  onPressed: _stopTimer,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[600],
-                                    minimumSize: const Size(
-                                      double.infinity,
-                                      65,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    "I AM SAFE - CHECK IN ✅",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}",
+                                    style: const TextStyle(
+                                      fontSize: 80,
                                       fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 20),
-                                const Text(
-                                  "Check-in to cancel the automatic SOS alert.",
-                                  style: TextStyle(color: Colors.grey),
-                                ),
+                                  const SizedBox(height: 10),
+                                  const Text(
+                                    "SAFETY MONITORING ACTIVE",
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 60),
+
+                                  ElevatedButton(
+                                    onPressed: _stopTimer,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      minimumSize: const Size(
+                                        double.infinity,
+                                        65,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      "I AM SAFE - CHECK IN ✅",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  const Text(
+                                    "Check-in to cancel the automatic SOS alert.",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         ),
                       ),
@@ -533,7 +552,6 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
         builder: (context, child) {
           return Stack(
             children: [
-              // Track line
               Align(
                 alignment: Alignment.center,
                 child: Container(
@@ -545,8 +563,6 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                   ),
                 ),
               ),
-
-              // Moving walker
               Align(
                 alignment: Alignment.centerLeft,
                 child: Transform.translate(

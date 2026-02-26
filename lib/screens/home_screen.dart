@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:shake/shake.dart'; // ✅ SHAKE import
 
 import 'profile_screen.dart';
 import 'login_screen.dart';
@@ -12,6 +13,8 @@ import 'safety_timer_screen.dart';
 import 'guardian_mode_screen.dart';
 import 'alerts_hub_screen.dart';
 import 'admin_full_dashboard.dart';
+import 'fake_call_screen.dart';
+import '../services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +31,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _locationSyncTimer;
   StreamSubscription<User?>? _authSub;
 
+  // --- SHAKE TRIGGER VARIABLES ---
+  ShakeDetector? _shakeDetector;
+  bool _shakeEnabled = true; // Firestore field: shake_enabled
+
   Map<String, bool> _sosCategories = {
     "🚨 Medical Emergency": true,
     "⚠️ Threat / Hazard": true,
@@ -41,6 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _listenForGlobalAlerts();
     _loadUserStatus();
     _startLiveLocationSync();
+
+    _initShakeDetection(); // ✅ start shake detection
 
     // When user logs in/out, reload role so admin button shows correctly
     _authSub = FirebaseAuth.instance.authStateChanges().listen((u) {
@@ -85,6 +94,106 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // --- 🎯 SHAKE DETECTION LOGIC ---
+  // the detector callback used to be `void Function()`; newer
+  // versions supply a value, so accept an optional parameter and
+  // ignore it.
+  void _onShakeAction([dynamic _]) {
+    if (_shakeEnabled) {
+      _showShakeConfirmationDialog();
+    }
+  }
+
+  // 2. ShakeDetector එක හදන හැටි (මෙතනයි Error එක තිබුණේ)
+  void _initShakeDetection() {
+    _shakeDetector = ShakeDetector.autoStart(
+      // the callback now takes an argument; our handler accepts
+      // an optional one, so we can pass it directly.
+      onPhoneShake: _onShakeAction,
+      shakeThresholdGravity: 2.7,
+    );
+  }
+
+  void _showShakeConfirmationDialog() {
+    if (!mounted) return;
+
+    int countdown = 3;
+    Timer? countdownTimer;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            countdownTimer ??= Timer.periodic(const Duration(seconds: 1), (
+              timer,
+            ) {
+              if (countdown > 1) {
+                setDialogState(() {
+                  countdown--;
+                });
+              } else {
+                timer.cancel();
+                Navigator.pop(context);
+                _sendToFirebase("🆘 SHAKE DETECTED (EMERGENCY)");
+              }
+            });
+
+            return AlertDialog(
+              backgroundColor: Colors.red[900],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                "SHAKE DETECTED!",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "An emergency alert is being dispatched automatically.",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "$countdown",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 50,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    countdownTimer?.cancel();
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    "CANCEL",
+                    style: TextStyle(
+                      color: Colors.yellow,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      countdownTimer?.cancel();
+    });
+  }
+
   Future<void> _loadUserStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -96,6 +205,8 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted) return;
         setState(() {
           _userRole = doc.data()?['role'] ?? "student";
+          _shakeEnabled =
+              doc.data()?['shake_enabled'] ?? true; // ✅ load shake setting
           if (doc.data()?['sos_categories'] != null) {
             _sosCategories = Map<String, bool>.from(
               doc.data()?['sos_categories'],
@@ -158,23 +269,19 @@ class _HomeScreenState extends State<HomeScreen> {
         'time': FieldValue.serverTimestamp(),
         'status': 'New Alert',
       });
+      NotificationService.showSOSNotification(type, _currentAddress);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "🆘 $type Alert Sent!",
+            "🆘 $type Dispatching Help!",
             style: const TextStyle(color: Colors.black),
           ),
           backgroundColor: Colors.white,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
-          ),
-          action: SnackBarAction(
-            label: "OK",
-            textColor: Colors.redAccent,
-            onPressed: () {},
           ),
         ),
       );
@@ -196,46 +303,68 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(35)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 45,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 25),
-            const Text(
-              "Select Emergency Type",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            ...activeTypes
-                .map(
-                  (type) => ListTile(
-                    leading: const Icon(
-                      Icons.flash_on,
-                      color: Colors.redAccent,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.55,
+            minChildSize: 0.35,
+            maxChildSize: 0.9,
+            builder: (context, scrollController) {
+              return Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 45,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    title: Text(
-                      type,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    const SizedBox(height: 14),
+                    const Text(
+                      "Emergency Type",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _sendToFirebase(type);
-                    },
-                  ),
-                )
-                .toList(),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: EdgeInsets.zero,
+                        children: [
+                          ...activeTypes
+                              .map(
+                                (type) => ListTile(
+                                  leading: const Icon(
+                                    Icons.flash_on,
+                                    color: Colors.redAccent,
+                                  ),
+                                  title: Text(type),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _sendToFirebase(type);
+                                  },
+                                ),
+                              )
+                              .toList(),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -344,6 +473,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(
+              Icons.phone_in_talk_rounded,
+              color: Colors.white70,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const FakeCallScreen(callerName: "Home (Mom)"),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(
               Icons.account_circle_rounded,
               color: Colors.white,
               size: 34,
@@ -418,7 +562,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Foreground content (FIXED: scrollable so it won't overflow)
+          // Foreground (scrollable)
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -548,11 +692,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           const SizedBox(height: 26),
 
-                          // Punchy tagline
+                          // Tagline (updated)
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 22),
                             child: Text(
-                              "Hold SOS for instant help — your guardians will be notified.",
+                              "Shake your phone or hold SOS for instant help — your guardians will be notified.",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white70,
@@ -565,7 +709,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           const Spacer(),
 
-                          // SOS BUTTON AREA (same logic, upgraded UI)
+                          // SOS BUTTON
                           Center(
                             child: GestureDetector(
                               onLongPress: _showSOSOptions,
@@ -646,7 +790,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           const Spacer(),
 
-                          // Bottom Glass Panel (keeps the same StreamBuilder + admin logic)
+                          // Bottom Glass Panel
                           Padding(
                             padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
                             child: ClipRRect(
@@ -673,7 +817,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   child: Column(
                                     children: [
-                                      // little handle
                                       Container(
                                         width: 46,
                                         height: 5,
@@ -685,7 +828,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       ),
                                       const SizedBox(height: 12),
-
                                       StreamBuilder<User?>(
                                         stream: FirebaseAuth.instance
                                             .authStateChanges(),
@@ -713,13 +855,137 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       ),
                                                     ),
                                                     GestureDetector(
-                                                      onTap: () => Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (context) =>
-                                                              const GuardianModeScreen(),
-                                                        ),
-                                                      ),
+                                                      onTap: () {
+                                                        TextEditingController
+                                                        pinController =
+                                                            TextEditingController();
+
+                                                        showDialog(
+                                                          context: context,
+                                                          barrierDismissible:
+                                                              false,
+                                                          builder: (dialogContext) => AlertDialog(
+                                                            title: const Text(
+                                                              "Enter App PIN",
+                                                            ),
+                                                            content: TextField(
+                                                              controller:
+                                                                  pinController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              obscureText: true,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              maxLength: 4,
+                                                              decoration:
+                                                                  const InputDecoration(
+                                                                    hintText:
+                                                                        "****",
+                                                                    border:
+                                                                        OutlineInputBorder(),
+                                                                  ),
+                                                            ),
+                                                            actions: [
+                                                              TextButton(
+                                                                onPressed: () =>
+                                                                    Navigator.pop(
+                                                                      dialogContext,
+                                                                    ),
+                                                                child:
+                                                                    const Text(
+                                                                      "CANCEL",
+                                                                    ),
+                                                              ),
+                                                              ElevatedButton(
+                                                                onPressed: () async {
+                                                                  final user =
+                                                                      FirebaseAuth
+                                                                          .instance
+                                                                          .currentUser;
+                                                                  if (user ==
+                                                                      null) {
+                                                                    Navigator.pop(
+                                                                      dialogContext,
+                                                                    );
+                                                                    Navigator.push(
+                                                                      context,
+                                                                      MaterialPageRoute(
+                                                                        builder:
+                                                                            (
+                                                                              context,
+                                                                            ) =>
+                                                                                const LoginScreen(),
+                                                                      ),
+                                                                    );
+                                                                    return;
+                                                                  }
+
+                                                                  final doc = await FirebaseFirestore
+                                                                      .instance
+                                                                      .collection(
+                                                                        'users',
+                                                                      )
+                                                                      .doc(
+                                                                        user.uid,
+                                                                      )
+                                                                      .get();
+
+                                                                  if (pinController
+                                                                          .text ==
+                                                                      doc.data()?['app_pin']) {
+                                                                    // 1) Close dialog fully first
+                                                                    Navigator.pop(
+                                                                      dialogContext,
+                                                                    );
+
+                                                                    // 2) Small delay to avoid navigator/globalkey issues
+                                                                    Future.delayed(
+                                                                      const Duration(
+                                                                        milliseconds:
+                                                                            100,
+                                                                      ),
+                                                                      () {
+                                                                        if (!mounted)
+                                                                          return;
+                                                                        Navigator.push(
+                                                                          context,
+                                                                          MaterialPageRoute(
+                                                                            builder:
+                                                                                (
+                                                                                  context,
+                                                                                ) => const GuardianModeScreen(),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                    );
+                                                                  } else {
+                                                                    if (!mounted)
+                                                                      return;
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      const SnackBar(
+                                                                        content:
+                                                                            Text(
+                                                                              "Wrong PIN!",
+                                                                            ),
+                                                                        backgroundColor:
+                                                                            Colors.red,
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                },
+                                                                child:
+                                                                    const Text(
+                                                                      "UNLOCK",
+                                                                    ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      },
                                                       child: _btmBtn(
                                                         Icons
                                                             .verified_user_rounded,
@@ -728,7 +994,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     ),
                                                   ],
                                                 ),
-
                                                 if (_userRole == 'admin') ...[
                                                   const SizedBox(height: 16),
                                                   GestureDetector(
@@ -804,14 +1069,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                             );
                                           }
 
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(
+                                          return const Padding(
+                                            padding: EdgeInsets.symmetric(
                                               vertical: 10,
                                             ),
                                             child: Row(
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
-                                              children: const [
+                                              children: [
                                                 Icon(
                                                   Icons.lock_outline,
                                                   color: Colors.white70,
@@ -880,9 +1145,115 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _shakeDetector?.stopListening(); // ✅ stop shake
     _globalAlertsSub?.cancel();
     _locationSyncTimer?.cancel();
     _authSub?.cancel();
     super.dispose();
+  }
+}
+
+// ===============================
+// Phase 3: App Security Lock (PIN)
+// NOTE: You can move this block into `lib/services/security_check.dart` later.
+// ===============================
+
+class SecurityCheck {
+  static Future<void> validateAccess(
+    BuildContext context,
+    VoidCallback onSuccess,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    // If user has set an app PIN, force the PIN dialog before allowing access
+    final appPin = doc.data()?['app_pin'];
+    if (doc.exists && appPin != null && appPin.toString().isNotEmpty) {
+      if (!context.mounted) return;
+
+      final bool? isValid = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const SecurityLockDialog(),
+      );
+
+      if (isValid == true) {
+        onSuccess();
+      }
+    } else {
+      // If no PIN set, allow directly
+      onSuccess();
+    }
+  }
+}
+
+class SecurityLockDialog extends StatefulWidget {
+  const SecurityLockDialog({super.key});
+
+  @override
+  State<SecurityLockDialog> createState() => _SecurityLockDialogState();
+}
+
+class _SecurityLockDialogState extends State<SecurityLockDialog> {
+  final TextEditingController _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      title: const Text("Enter App PIN", textAlign: TextAlign.center),
+      content: TextField(
+        controller: _ctrl,
+        keyboardType: TextInputType.number,
+        obscureText: true,
+        textAlign: TextAlign.center,
+        maxLength: 4,
+        decoration: const InputDecoration(
+          hintText: "••••",
+          border: OutlineInputBorder(),
+          counterText: "",
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text("CANCEL"),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null) return;
+
+            final doc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+
+            final savedPin = (doc.data()?['app_pin'] ?? '').toString();
+            if (_ctrl.text == savedPin) {
+              if (!context.mounted) return;
+              Navigator.pop(context, true);
+            } else {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Wrong PIN! Try again.")),
+              );
+            }
+          },
+          child: const Text("UNLOCK"),
+        ),
+      ],
+    );
   }
 }
