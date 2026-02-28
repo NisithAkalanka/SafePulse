@@ -27,21 +27,41 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
-	<!-- Location Permissions -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>SafePulse needs access to your location for SOS services.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>SafePulse needs access to your location for background safety features.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>SafePulse needs access to your location for background safety features.</string>
-
-	<!-- Camera & Photo Library Permissions (Newly Added) -->
+	<!-- 📸 Photo & Camera Permissions -->
 	<key>NSCameraUsageDescription</key>
 	<string>SafePulse needs access to your camera to take a profile picture.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SafePulse needs access to your photo library to select a profile picture.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SafePulse needs microphone access for video related features (optional).</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SafePulse needs access to your photo library to select a profile picture.</string>
+
+	<!-- 📍 Location Permissions -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>SafePulse needs access to your location for background safety features and Safe Walk mode.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>SafePulse needs access to your location for background safety features even when the app is closed.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SafePulse needs access to your location for SOS services.</string>
+
+	<!-- 🚀 URL Launching Schemes (Fixed: Added Maps support) -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>sms</string>
+		<string>http</string>
+		<string>https</string>
+		<string>comgooglemaps</string>
+		<string>googlechromes</string>
+	</array>
+
+	<!-- 💡 Background Modes -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>location</string>
+		<string>processing</string>
+		<string>remote-notification</string>
+	</array>
 
 	<key>UIApplicationSceneManifest</key>
 	<dict>
@@ -64,6 +84,7 @@
 			</array>
 		</dict>
 	</dict>
+
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
