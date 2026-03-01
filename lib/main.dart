@@ -8,15 +8,13 @@ void main() async {
   // 1. Flutter Engine එක සජීවීව පණගැන්වීම
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Firebase සහ Notification සේවා පණගැන්වීම
-  // වැදගත්: මෙම සේවා දෙකම සම්පූර්ණ වන තෙක් ඇප් එක දියත් නොවේ
   try {
     // Firebase initialization
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // Notification initialization (යූසර්ට alert එවීමට සූදානම් කිරීම)
+    // Notification initialization
     await NotificationService.initNotification();
 
     debugPrint("SafePulse: Services Initialized Successfully");
