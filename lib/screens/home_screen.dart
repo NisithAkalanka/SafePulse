@@ -13,6 +13,7 @@ import 'guardian_mode_screen.dart';
 import 'alerts_hub_screen.dart';
 import 'admin_full_dashboard.dart';
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -302,17 +303,38 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      GestureDetector(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SafetyTimerScreen())), child: _btmBtn(Icons.directions_walk_rounded, "Safe Walk")),
-                      GestureDetector(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const GuardianModeScreen())), child: _btmBtn(Icons.verified_user_rounded, "Guardians")),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SafetyTimerScreen(),
+                          ),
+                        ),
+                        child: _btmBtn(Icons.directions_walk_rounded, "Safe Walk"),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GuardianModeScreen(),
+                          ),
+                        ),
+                        child: _btmBtn(Icons.verified_user_rounded, "Guardians"),
+                      ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 25),
 
                   // ADMIN SPECIAL BUTTON (මෙය පෙනෙන්නේ ඇඩ්මින් ලොග් වුණොත් පමණි)
-                  if (_userRole == 'admin') 
+                  if (_userRole == 'admin')
                     GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminFullDashboard())),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminFullDashboard(),
+                        ),
+                      ),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         width: double.infinity,
@@ -321,19 +343,29 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.black.withOpacity(0.8),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: Colors.redAccent, width: 1.5),
-                          boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 10)],
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black45, blurRadius: 10),
+                          ],
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 26),
+                            Icon(Icons.admin_panel_settings_rounded,
+                                color: Colors.white, size: 26),
                             SizedBox(width: 12),
-                            Text("ADMIN COMMAND CENTER", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                            Text(
+                              "ADMIN COMMAND CENTER",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ),
-                  
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -363,6 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
 
   @override
   void dispose() {

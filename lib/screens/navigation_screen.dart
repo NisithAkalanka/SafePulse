@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'home_screen.dart';        // SOS පිටුව
 import 'login_screen.dart';       // ලොගින් පිටුව
 import 'guardian_map_screen.dart'; // ඔයා ඉල්ලපු Snapchat style Map එක
+import 'help_feed_screen.dart';
+import 'help_screen.dart';
 
 // අනෙකුත් සාමාජිකයින්ගේ වැඩ අවසන් වනතුරු පෙන්වන Placeholder පිටු
 class PlaceholderScreen extends StatelessWidget {
@@ -47,7 +49,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),            // 0. SOS 
     const GuardianMapScreen(),     // 1. CIRCLE MAP (Snapchat style Map එක)
-    const PlaceholderScreen("Help Feed"),    // 2. HELP
+    const HelpScreen(),            // 2. HELP (Request help)
     const PlaceholderScreen("Lost & Found"), // 3. LOST
     const PlaceholderScreen("Marketplace"),  // 4. MARKET
   ];
@@ -92,32 +94,52 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onTap: _onItemTapped, 
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
         unselectedLabelStyle: const TextStyle(fontSize: 10),
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.security_outlined),
             activeIcon: Icon(Icons.security),
             label: "SOS",
           ),
           // --- නව ටැබ් එක මෙතන තියෙන්නේ ---
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.map_outlined),
             activeIcon: Icon(Icons.map_rounded),
             label: "MAP",
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.handshake_outlined),
-            activeIcon: Icon(Icons.handshake),
+            activeIcon: Icon(Icons.handshake, color: Colors.redAccent),
             label: "HELP",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search_rounded),
+            icon: const Icon(Icons.search_outlined),
+            activeIcon: Stack(
+              children: [
+                const Icon(Icons.search_rounded),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(1),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 10,
+                      minHeight: 10,
+                    ),
+                    child: const Icon(Icons.close, size: 8, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
             label: "LOST",
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.store_outlined),
-            activeIcon: Icon(Icons.store),
-            label: "MARKET",
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline_rounded),
+            activeIcon: Icon(Icons.person_rounded),
+            label: "Rewards",
           ),
         ],
       ),
