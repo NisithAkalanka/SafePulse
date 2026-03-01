@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // මෙතන වැරදි ඉරක් පෙන්වනවා නම් පියවර 2 බලන්න
-import 'screens/navigation_screen.dart'; // Navigation screen එකට යාමට
+import 'firebase_options.dart'; 
+import 'screens/navigation_screen.dart'; 
+
+// 1. මේ විදිහට ඔයාගේ Marketplace Home එක Import කරගන්න. 
+// පෝල්ඩර් එකේ නම marketplace_system (all simple) ද කියලා චෙක් කරගන්න.
+import 'screens/marketPlace_system/market_home.dart'; 
 
 void main() async {
-  // Flutter binding එක පණගැන්වීම
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase Initialize කිරීම
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const SafePulseApp());
+  // 'const' එක මෙතනින් ඉවත් කරන්න (MarketHome එක const එකක් නෙවෙයි නම්)
+  runApp(SafePulseApp()); 
 }
 
 class SafePulseApp extends StatelessWidget {
@@ -27,8 +30,16 @@ class SafePulseApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
-      // කෙලින්ම මෙනු එක සහිත පේජ් එකට යමු (නොබැඳි යූසර්ට SOS ඇලර්ට් යැවිය හැකි පරිදි)
-      home: const MainNavigationScreen(),
+      
+      // 2. මෙතන 'home' එකට ඔයා හදපු MarketHome() එක දෙන්න.
+      // කෙලින්ම Marketplace එක Load වෙන්නේ මෙතනින්.
+      home: MarketHome(), 
+
+      // 3. Navigation එක පහසු වෙන්න routes මෙතනට දාන්න.
+      routes: {
+        '/navigation': (context) => const MainNavigationScreen(),
+        '/market': (context) => MarketHome(),
+      },
     );
   }
 }

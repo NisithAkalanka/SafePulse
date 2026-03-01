@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';        // SOS පිටුව
-import 'login_screen.dart';       // ලොගින් පිටුව
-import 'guardian_map_screen.dart'; // ඔයා ඉල්ලපු Snapchat style Map එක
+import 'home_screen.dart';        
+import 'login_screen.dart';       
+import 'guardian_map_screen.dart'; 
 
-// අනෙකුත් සාමාජිකයින්ගේ වැඩ අවසන් වනතුරු පෙන්වන Placeholder පිටු
+// --- 1. ඔයාගේ MARKETPLACE එක මෙතනට IMPORT කරන්න ---
+import 'marketPlace_system/market_home.dart'; 
+
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   const PlaceholderScreen(this.title, {super.key});
@@ -43,34 +45,29 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  // --- නව ටැබ් එකත් සමඟ Screen ලැයිස්තුව (මුළු ටැබ් 5 ක් ඇත) ---
+  // --- 2. SCREEN ලැයිස්තුව වෙනස් කළා (MARKETPLACE එක ඇතුළත් කර ඇත) ---
   final List<Widget> _screens = [
     const HomeScreen(),            // 0. SOS 
-    const GuardianMapScreen(),     // 1. CIRCLE MAP (Snapchat style Map එක)
+    const GuardianMapScreen(),     // 1. MAP
     const PlaceholderScreen("Help Feed"),    // 2. HELP
     const PlaceholderScreen("Lost & Found"), // 3. LOST
-    const PlaceholderScreen("Marketplace"),  // 4. MARKET
+    MarketHome(),                  // 4. ඔයා හදපු Marketplace එක දැන් මෙතනට එනවා
   ];
 
-  // ටැබ් එකක් එබූ විට සිදුවන ආරක්ෂණ පරීක්ෂාව (Login Guard)
   void _onItemTapped(int index) async {
-    // SOS ටැබ් එක (0) ඕනෑම කෙනෙකුට පාවිච්චි කළ හැක. 
-    // නමුත් Map එක සහ අනිත් ටැබ් වලට යාමට පෙර ලොගින් පරීක්ෂා කරමු.
+    // SOS ටැබ් එක (0) හැර අනිත් ටැබ් වලට යාමට පෙර Login එක චෙක් කරයි
     if (index != 0 && FirebaseAuth.instance.currentUser == null) {
-      // යූසර් ලොග් නොවී "Map" හෝ අන් ටැබ් ඔබන්න හැදුවොත් Login පේජ් එකට යවමු
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
 
-      // ලොගින් සාර්ථක නම් පමණක් එම පිටුව පෙන්වමු
       if (FirebaseAuth.instance.currentUser != null) {
         setState(() {
           _selectedIndex = index;
         });
       }
     } else {
-      // දැනටමත් ලොග් වී ඇත්නම් හෝ SOS ටැබ් එක නම් කෙලින්ම යමු
       setState(() {
         _selectedIndex = index;
       });
@@ -86,7 +83,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed, // මෙය Icon 5 ක් ඇති නිසා අත්‍යවශ්‍යයි
+        type: BottomNavigationBarType.fixed, 
         selectedItemColor: Colors.redAccent,
         unselectedItemColor: Colors.grey[600],
         onTap: _onItemTapped, 
@@ -98,7 +95,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             activeIcon: Icon(Icons.security),
             label: "SOS",
           ),
-          // --- නව ටැබ් එක මෙතන තියෙන්නේ ---
           BottomNavigationBarItem(
             icon: Icon(Icons.map_outlined),
             activeIcon: Icon(Icons.map_rounded),
@@ -115,7 +111,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             label: "LOST",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.store_outlined),
+            icon: Icon(Icons.store_outlined), // Marketplace සඳහා Icon එක
             activeIcon: Icon(Icons.store),
             label: "MARKET",
           ),
