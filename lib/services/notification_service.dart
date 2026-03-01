@@ -32,7 +32,7 @@ class NotificationService {
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
-        presentSound: true,
+        presentSound: true, // ensure sound plays on iOS
         subtitle: 'SafePulse Security Alert',
       ),
       android: AndroidNotificationDetails(
@@ -41,6 +41,7 @@ class NotificationService {
         channelDescription: 'Notifications for SOS Alerts',
         importance: Importance.max,
         priority: Priority.high,
+        playSound: true, // explicitly enable sound on Android
       ),
     );
 
