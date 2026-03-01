@@ -5,9 +5,16 @@ import 'screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+<<<<<<< Updated upstream
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+=======
+
+  // Firebase Initialize කිරීම
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+>>>>>>> Stashed changes
   runApp(const SafePulseApp());
 }
 
