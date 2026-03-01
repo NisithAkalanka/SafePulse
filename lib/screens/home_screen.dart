@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -712,7 +713,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           // SOS BUTTON
                           Center(
                             child: GestureDetector(
-                              onLongPress: _showSOSOptions,
+                              onLongPressStart: (_) {
+                                // Light haptic when user starts pressing
+                                HapticFeedback.heavyImpact();
+                              },
+                              onLongPress: () {
+                                // Strong vibration when SOS is triggered
+                                HapticFeedback.vibrate();
+                                _showSOSOptions();
+                              },
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
