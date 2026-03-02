@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+
 import 'screens/navigation_screen.dart';
-import 'services/notification_service.dart'; // මෙය අනිවාර්යයෙන්ම තිබිය යුතුය
+import 'services/notification_service.dart';
+
+// Marketplace Screens
+import 'screens/marketPlace_system/market_home.dart';
+import 'screens/marketPlace_system/create_listing.dart';
+import 'screens/marketPlace_system/item_details.dart';
+import 'screens/marketPlace_system/negotiation_chat.dart';
 
 void main() async {
-  // 1. Flutter Engine එක සජීවීව පණගැන්වීම
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // Firebase initialization
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // Notification initialization
     await NotificationService.initNotification();
 
     debugPrint("SafePulse: Services Initialized Successfully");
@@ -22,7 +26,6 @@ void main() async {
     debugPrint("Initialization Error: $e");
   }
 
-  // 3. දැන් පමණක් ප්‍රධාන ඇප් එක පණගන්වමු
   runApp(const SafePulseApp());
 }
 
@@ -34,18 +37,27 @@ class SafePulseApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SafePulse',
-      // ඇප් එකේ මුළු තේමාවම රතු වර්ණයෙන් හැඩගැස්වීම (Design Guideline අනුව)
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFFF4B4B),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        // සරල අකුරු විලාසයක් භාවිත කිරීම
         fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
       ),
-      // සෘජුවම අපගේ ප්‍රධාන පාලක පද්ධතියට (DASHBOARD/MAP/SOS) යොමු කරයි
       home: const MainNavigationScreen(),
+      routes: {
+        '/navigation': (context) => const MainNavigationScreen(),
+        '/market-home': (context) => MarketHome(),
+        '/create-listing': (context) => CreateListing(),
+        '/item-details': (context) => ItemDetails(),
+        '/chat': (context) => NegotiationChat(),
+      },
     );
   }
 }

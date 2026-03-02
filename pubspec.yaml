@@ -48,7 +48,16 @@ flutter:
   uses-material-design: true
 
   # --- මෙන්න මෙතන තමයි සිතියමේ රූපය Register වෙලා තියෙන්නේ ---
+  # To add assets to your application, add an assets section, like this:
   assets:
+    - assets/images/resource_sharing.png
+    - assets/images/study_support.png
+    - assets/images/safety_transport.png
+    - assets/images/tech_support.png
+    - assets/images/canteen_runner.png
+    - assets/images/campus_logistics.png
+    - assets/images/cash_exchange.png
+    - assets/images/other.png
     - assets/images/sliit_map.png
     - assets/sounds/iphone_ringtone.mp3
   # To add assets to your application, add an assets section, like this:
