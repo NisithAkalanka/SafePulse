@@ -140,24 +140,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // Admins: SOS + Dashboard + Map + Help + Lost&Found + Market
     if (_userRole == 'admin') {
       return [
-        const HomeScreen(),
-        const AdminFullDashboard(),
-        const GuardianMapScreen(),
-        const HelpScreen(),
-        const HelpFeedScreen(),
-        const LostFoundFeedScreen(),
-        MarketHome(),
+        const HomeScreen(),          // SOS
+        const AdminFullDashboard(),  // DASHBOARD
+        const GuardianMapScreen(),   // MAP
+        const HelpScreen(),          // HELP
+        const LostFoundFeedScreen(), // LOST
+        MarketHome(),                // MARKET
       ];
     }
 
     // Students: SOS + Map + Help + Lost&Found + Market
     return [
-      const HomeScreen(),
-      const GuardianMapScreen(),
-      const HelpScreen(),
-      const HelpFeedScreen(),
-      const LostFoundFeedScreen(),
-      MarketHome(),
+      const HomeScreen(),          // SOS
+      const GuardianMapScreen(),   // MAP
+      const HelpScreen(),          // HELP
+      const LostFoundFeedScreen(), // LOST
+      MarketHome(),                // MARKET
     ];
   }
 

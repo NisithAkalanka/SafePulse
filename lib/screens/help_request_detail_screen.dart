@@ -118,7 +118,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
             locationText = autoLocation;
             _locationController.text = autoLocation;
           } else {
-            locationText = "${lat!.toStringAsFixed(4)}, ${lng!.toStringAsFixed(4)}";
+            locationText = "${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}";
             _locationController.text = locationText;
           }
         }
