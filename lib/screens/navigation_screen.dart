@@ -8,6 +8,7 @@ import 'guardian_map_screen.dart';
 import 'admin_full_dashboard.dart';
 import 'lost_found_system/lost_found_feed_screen.dart';
 import 'marketPlace_system/market_home.dart';
+import 'help_screen.dart';
 
 // Placeholder (අනිත් අයගේ වැඩ වෙනුවෙන්)
 class PlaceholderScreen extends StatelessWidget {
@@ -106,7 +107,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         const HomeScreen(),
         const AdminFullDashboard(),
         const GuardianMapScreen(),
-        const PlaceholderScreen('Help Feed'),
+        const HelpScreen(),
         const LostFoundFeedScreen(),
         MarketHome(),
       ];
@@ -116,7 +117,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return [
       const HomeScreen(),
       const GuardianMapScreen(),
-      const PlaceholderScreen('Help Feed'),
+      const HelpScreen(),
       const LostFoundFeedScreen(),
       MarketHome(),
     ];

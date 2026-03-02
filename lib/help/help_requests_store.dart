@@ -72,5 +72,10 @@ class HelpRequestsStore {
   void add(HelpRequest request) {
     requests.value = [request, ...requests.value];
   }
+
+  /// Replace list with Firestore data (used by HelpRequestService).
+  void setFromFirestore(List<HelpRequest> list) {
+    requests.value = list;
+  }
 }
 
