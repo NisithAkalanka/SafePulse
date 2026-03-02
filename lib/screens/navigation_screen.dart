@@ -52,6 +52,42 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
+class HelpFeedScreen extends StatelessWidget {
+  const HelpFeedScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Help & Support"), centerTitle: true),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          _helpTile(context, Icons.volunteer_activism, "Request Help"),
+          _helpTile(context, Icons.support_agent, "Offer Help"),
+          _helpTile(context, Icons.info_outline, "Help Guidelines"),
+        ],
+      ),
+    );
+  }
+
+  Widget _helpTile(BuildContext context, IconData icon, String title) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 15),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.redAccent),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("$title page coming soon...")));
+        },
+      ),
+    );
+  }
+}
+
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
   @override
@@ -108,6 +144,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         const AdminFullDashboard(),
         const GuardianMapScreen(),
         const HelpScreen(),
+        const HelpFeedScreen(),
         const LostFoundFeedScreen(),
         MarketHome(),
       ];
@@ -118,6 +155,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const HomeScreen(),
       const GuardianMapScreen(),
       const HelpScreen(),
+      const HelpFeedScreen(),
       const LostFoundFeedScreen(),
       MarketHome(),
     ];
