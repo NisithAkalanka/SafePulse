@@ -22,7 +22,6 @@ class HelpLiveLocationScreen extends StatelessWidget {
       );
       return;
     }
-
     final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
@@ -32,17 +31,10 @@ class HelpLiveLocationScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _call(BuildContext context) async {
-    // Phone number not available in request model right now.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Caller number not available yet.')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.red[50],
+      backgroundColor: Colors.red.shade50,
       appBar: AppBar(
         title: const Text('Track Live Location'),
         backgroundColor: Colors.redAccent,
@@ -51,101 +43,90 @@ class HelpLiveLocationScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: Container(
-              width: double.infinity,
-              color: Colors.blue[50],
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.location_on, color: Colors.red, size: 80),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "MAP VISUALIZATION ACTIVE",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.location_on, color: Colors.red, size: 80),
+                  const SizedBox(height: 16),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
                     ),
-                    const Text(
-                      "Live location sharing enabled",
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 20),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '📍 $locationName',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
+                  if (lat != null && lng != null) ...[
+                    const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        "LAT: ${lat?.toStringAsFixed(5) ?? '-'} \nLNG: ${lng?.toStringAsFixed(5) ?? '-'}",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        'Lat: ${lat!.toStringAsFixed(5)}  Lng: ${lng!.toStringAsFixed(5)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
-                    )
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
           ),
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openMaps(context),
+                    icon: const Icon(Icons.navigation_rounded),
+                    label: const Text('Open in Google Maps'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  "📍 $locationName",
-                  style: const TextStyle(fontSize: 13.5),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _openMaps(context),
-                        icon: const Icon(Icons.navigation_rounded),
-                        label: const Text('Navigate'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 46),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Caller number not available yet.')),
+                      );
+                    },
+                    icon: const Icon(Icons.phone_rounded),
+                    label: const Text('Call'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _call(context),
-                        icon: const Icon(Icons.phone_rounded),
-                        label: const Text('Call'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 46),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -155,4 +136,3 @@ class HelpLiveLocationScreen extends StatelessWidget {
     );
   }
 }
-

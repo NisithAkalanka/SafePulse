@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'help_feed_screen.dart';
 import '../help/help_request.dart';
 import '../help/help_requests_store.dart';
+import '../services/help_request_service.dart';
 
 class HelpRequestDetailScreen extends StatefulWidget {
   final String category;
@@ -116,13 +118,14 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
             locationText = autoLocation;
             _locationController.text = autoLocation;
           } else {
-            locationText = "${lat!.toStringAsFixed(4)}, ${lng!.toStringAsFixed(4)}";
+            locationText = "${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}";
             _locationController.text = locationText;
           }
         }
       } catch (_) {}
     }
 
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     final created = HelpRequest(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       category: widget.category,
@@ -134,15 +137,24 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       isUrgent: _timeSelection == 0,
       isMine: true,
       createdAt: DateTime.now(),
+      creatorUid: uid,
     );
 
-    HelpRequestsStore.instance.add(created);
-
+    final docId = await HelpRequestService.instance.addRequest(created);
     setState(() {
       _isSubmitting = false;
     });
 
     if (!mounted) return;
+
+    if (docId == null) {
+      HelpRequestsStore.instance.add(created);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved locally. Sync when online.')),
+        );
+      }
+    }
 
     showDialog<void>(
       context: context,
@@ -206,288 +218,413 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    const Color redPrimary = Color(0xFFD32F2F);
+    const Color redDark = Color(0xFF8B1A1A);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        foregroundColor: Colors.black,
-        title: const Text(
-          'Describe Help',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x11000000),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF8B1A1A), Color(0xFF6B1515), Color(0xFF671111)],
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
-                      borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          Positioned(
+            top: -80,
+            right: -80,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.04),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 120,
+            left: -60,
+            child: Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.03),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  foregroundColor: Colors.white,
+                  title: const Text(
+                    'Describe Help',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      fontSize: 19,
+                      letterSpacing: -0.3,
                     ),
-                    child: Row(
+                  ),
+                  centerTitle: true,
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.handshake, color: Colors.redAccent.shade200, size: 18),
-                        const SizedBox(width: 6),
-                        Text(
-                          widget.category,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                        _buildCategoryChip(context, redPrimary),
+                        const SizedBox(height: 24),
+                        _buildFormCard(
+                          context,
+                          redPrimary,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel(Icons.title_rounded, 'Short title'),
+                              const SizedBox(height: 8),
+                              _buildTextField(
+                                controller: _titleController,
+                                hint: 'E.g. Need help carrying medical bag',
+                                redPrimary: redPrimary,
+                              ),
+                              const SizedBox(height: 20),
+                              _buildLabel(Icons.edit_note_rounded, 'Describe what you need'),
+                              const SizedBox(height: 8),
+                              _buildTextField(
+                                controller: _descriptionController,
+                                hint: 'Share details like when, where and any special instructions.',
+                                redPrimary: redPrimary,
+                                minLines: 4,
+                                maxLines: 6,
+                              ),
+                              const SizedBox(height: 20),
+                              _buildLabel(Icons.place_rounded, 'Location'),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _locationController,
+                                textInputAction: TextInputAction.next,
+                                decoration: InputDecoration(
+                                  hintText: 'E.g. Main medical block, 2nd floor',
+                                  hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                                  prefixIcon: Icon(Icons.location_on_outlined, size: 22, color: redPrimary.withOpacity(0.8)),
+                                  filled: true,
+                                  fillColor: const Color(0xFFFAFAFA),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.grey.shade200),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: redPrimary, width: 2),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildLabel(Icons.schedule_rounded, 'When do you need it?'),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  _buildTimeChip('Now', 0, redPrimary),
+                                  const SizedBox(width: 12),
+                                  _buildTimeChip('Later today', 1, redPrimary),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              _buildLabel(Icons.card_giftcard_rounded, 'Optional thank‑you / reward'),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _rewardController,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  hintText: 'E.g. 500',
+                                  hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                                  prefixIcon: Padding(
+                                    padding: const EdgeInsets.only(left: 14, right: 8),
+                                    child: Text(
+                                      'Rs',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                        color: redPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                  filled: true,
+                                  fillColor: const Color(0xFFFAFAFA),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.grey.shade200),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: redPrimary, width: 2),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Spacer(),
-                  const Text(
-                    'Help request',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
+                ),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                  decoration: BoxDecoration(
+                    color: redDark.withOpacity(0.98),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, -6),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _isSubmitting ? null : _submitRequest,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: redPrimary.withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: _isSubmitting
+                              ? SizedBox(
+                                  width: 26,
+                                  height: 26,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(redPrimary),
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.check_circle_outline_rounded, size: 22, color: redPrimary),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      'CONFIRM REQUEST',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 16,
+                                        letterSpacing: 0.8,
+                                        color: redPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Short title',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _titleController,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                hintText: 'E.g. Need help carrying medical bag',
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E6)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E6)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.redAccent),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Describe what you need',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _descriptionController,
-              minLines: 4,
-              maxLines: 6,
-              decoration: InputDecoration(
-                hintText: 'Share details like when, where and any special instructions.',
-                filled: true,
-                fillColor: Colors.white,
-                alignLabelWithHint: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E6)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E6)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.redAccent),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Location',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _locationController,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                hintText: 'E.g. Main medical block, 2nd floor',
-                prefixIcon: const Icon(Icons.place_outlined, size: 20),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E6)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E6)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.redAccent),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'When do you need it?',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                ChoiceChip(
-                  label: const Text('Now'),
-                  selected: _timeSelection == 0,
-                  onSelected: (_) {
-                    setState(() {
-                      _timeSelection = 0;
-                    });
-                  },
-                  selectedColor: Colors.redAccent.withOpacity(0.12),
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: _timeSelection == 0 ? Colors.redAccent : Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 0, width: 10),
-                ChoiceChip(
-                  label: const Text('Later today'),
-                  selected: _timeSelection == 1,
-                  onSelected: (_) {
-                    setState(() {
-                      _timeSelection = 1;
-                    });
-                  },
-                  selectedColor: Colors.redAccent.withOpacity(0.12),
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: _timeSelection == 1 ? Colors.redAccent : Colors.black87,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Optional thank‑you / reward',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(BuildContext context, Color redPrimary) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [redPrimary, redPrimary.withOpacity(0.85)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: redPrimary.withOpacity(0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _rewardController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: 'E.g. 500',
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.only(left: 14, right: 4),
-                  child: Text(
-                    'Rs',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.handshake_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  widget.category,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
                   ),
                 ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 0,
-                  minHeight: 0,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E6)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E6)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.redAccent),
-                ),
-              ),
+              ],
             ),
-          ],
+          ),
+          const Spacer(),
+          Text(
+            'Help request',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormCard(BuildContext context, Color redPrimary, {required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildLabel(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.black87),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required Color redPrimary,
+    int minLines = 1,
+    int maxLines = 3,
+  }) {
+    return TextField(
+      controller: controller,
+      textInputAction: TextInputAction.next,
+      minLines: minLines,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+        filled: true,
+        fillColor: const Color(0xFFFAFAFA),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: redPrimary, width: 2),
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 10,
-              offset: Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 48,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
+    );
+  }
+
+  Widget _buildTimeChip(String label, int value, Color redPrimary) {
+    final isSelected = _timeSelection == value;
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => _timeSelection = value),
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: isSelected ? redPrimary : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isSelected ? redPrimary : Colors.grey.shade300,
+                width: isSelected ? 2 : 1,
               ),
-              onPressed: _isSubmitting ? null : _submitRequest,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.4,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: redPrimary.withOpacity(0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                    )
-                  : const Text('CONFIRM REQUEST'),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isSelected)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                  ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: isSelected ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

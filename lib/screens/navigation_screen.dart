@@ -8,6 +8,7 @@ import 'guardian_map_screen.dart';
 import 'admin_full_dashboard.dart';
 import 'lost_found_system/lost_found_feed_screen.dart';
 import 'marketPlace_system/market_home.dart';
+import 'help_screen.dart';
 
 // Placeholder (අනිත් අයගේ වැඩ වෙනුවෙන්)
 class PlaceholderScreen extends StatelessWidget {
@@ -139,22 +140,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // Admins: SOS + Dashboard + Map + Help + Lost&Found + Market
     if (_userRole == 'admin') {
       return [
-        const HomeScreen(),
-        const AdminFullDashboard(),
-        const GuardianMapScreen(),
-        const HelpFeedScreen(),
-        const LostFoundFeedScreen(),
-        MarketHome(),
+        const HomeScreen(),          // SOS
+        const AdminFullDashboard(),  // DASHBOARD
+        const GuardianMapScreen(),   // MAP
+        const HelpScreen(),          // HELP
+        const LostFoundFeedScreen(), // LOST
+        MarketHome(),                // MARKET
       ];
     }
 
     // Students: SOS + Map + Help + Lost&Found + Market
     return [
-      const HomeScreen(),
-      const GuardianMapScreen(),
-      const HelpFeedScreen(),
-      const LostFoundFeedScreen(),
-      MarketHome(),
+      const HomeScreen(),          // SOS
+      const GuardianMapScreen(),   // MAP
+      const HelpScreen(),          // HELP
+      const LostFoundFeedScreen(), // LOST
+      MarketHome(),                // MARKET
     ];
   }
 
@@ -258,4 +259,4 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
     );
   }
-}
+} //original code: 2024-06-01
