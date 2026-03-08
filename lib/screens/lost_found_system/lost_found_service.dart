@@ -1,89 +1,161 @@
-import 'dart:async';
 import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lost_item_model.dart';
 
 class LostFoundService {
-  // --- MEMORY DATABASE ---
-  static final List<LostItem> _memoryDb = [
-    // ITEM 1: Posted by SOMEONE ELSE. (You can claim this)
-    LostItem(
-      id: 'item_1',
-      userId: 'user_other',
-      userName: 'John',
-      type: 'Lost',
-      title: 'Black Umbrella',
-      category: 'Others',
-      description: 'Left it near the main gate when raining.',
-      location: 'Main Gate',
-      imageUrl: '', // Empty string = Use default icon (No Red Line)
-      status: 'Active',
-      timestamp: DateTime.now().subtract(const Duration(hours: 5)),
-    ),
-
-    // ITEM 2: Posted by YOU. (Someone claimed this - Test Verification)
-    LostItem(
-      id: 'item_2',
-      userId: 'my_id',
-      userName: 'Me',
-      type: 'Found',
-      title: 'Silver Watch',
-      category: 'Electronics',
-      description: 'Found this watch on a bench.',
-      location: 'Garden Area',
-      imageUrl: '',
-      status: 'Claim Pending', // This lets you test the "Owner View"
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      claimerId: 'user_claimant',
-    ),
-  ];
-
-  // Storage for "Verification Answers" (Simulating the database)
-  static final Map<String, String> _verificationAnswers = {
-    'item_2': 'The strap has a small tear.', // This is the "answer" for Item 2
-  };
-
-  static final StreamController<List<LostItem>> _controller =
-      StreamController<List<LostItem>>.broadcast();
-
-  // --- FUNCTIONS ---
+  static const String _col = 'lost_found_posts';
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   Stream<List<LostItem>> getItemsStream(String type) {
-    Future(() => _controller.add(_memoryDb));
-    return _controller.stream.map(
-      (list) => list.where((i) => i.type == type).toList(),
-    );
+    _cleanupReturnedItems();
+    return _db.collection(_col).where('type', isEqualTo: type).snapshots().map((
+      snap,
+    ) {
+      final items = snap.docs
+          .map((d) => LostItem.fromMap(d.data(), d.id))
+          .where((item) {
+            if (item.status != 'Returned') return true;
+            if (item.returnedAt == null) return true;
+            return DateTime.now().difference(item.returnedAt!).inMinutes < 60;
+          })
+          .toList();
+
+      items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return items;
+    });
+  }
+
+  Future<void> _cleanupReturnedItems() async {
+    final snap = await _db
+        .collection(_col)
+        .where('status', isEqualTo: 'Returned')
+        .get();
+
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final rt = data['returnedAt'];
+      DateTime? returnedAt;
+      if (rt is Timestamp) returnedAt = rt.toDate();
+
+      if (returnedAt != null &&
+          DateTime.now().difference(returnedAt).inMinutes >= 60) {
+        await doc.reference.delete();
+      }
+    }
   }
 
   Future<void> createPost(LostItem item, File? imageFile) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    item.id = DateTime.now().millisecondsSinceEpoch.toString();
-    // Use local placeholder if valid URL isn't possible
-    item.imageUrl = '';
-    _memoryDb.insert(0, item);
-    _controller.add(_memoryDb);
+    final data = item.toMap();
+    data['timestamp'] = FieldValue.serverTimestamp();
+    await _db.collection(_col).add(data);
   }
 
-  // LOGIC: Claimer sends "Proof" (Process Map Step 2)
-  Future<void> submitClaimRequest(String itemId, String proofAnswer) async {
-    final index = _memoryDb.indexWhere((i) => i.id == itemId);
-    if (index != -1) {
-      _memoryDb[index].status = 'Claim Pending';
-      _verificationAnswers[itemId] = proofAnswer; // Save the answer
-      _controller.add(_memoryDb);
-    }
+  Future<void> submitFoundReport({
+    required String itemId,
+    required String requesterId,
+    required String requesterName,
+    required String question,
+  }) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Verification Pending',
+      'requestType': 'found',
+      'requesterId': requesterId,
+      'requesterName': requesterName,
+      'verificationQuestion': question,
+      'verificationAnswer': null,
+      'chatEnabled': false,
+    });
   }
 
-  // LOGIC: Owner retrieves the "Proof" to check it
-  String getVerificationAnswer(String itemId) {
-    return _verificationAnswers[itemId] ?? "No details provided.";
+  Future<void> submitOwnerAnswer({
+    required String itemId,
+    required String answer,
+  }) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Answer Submitted',
+      'verificationAnswer': answer,
+    });
   }
 
-  // LOGIC: Mark as Returned (Process Map Step Final)
+  Future<void> submitClaimRequest({
+    required String itemId,
+    required String requesterId,
+    required String requesterName,
+    required String proofAnswer,
+  }) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Claim Pending',
+      'requestType': 'claim',
+      'requesterId': requesterId,
+      'requesterName': requesterName,
+      'verificationQuestion': 'Describe any special marks or unique details.',
+      'verificationAnswer': proofAnswer,
+      'chatEnabled': false,
+    });
+  }
+
+  Future<String> getVerificationAnswer(String itemId) async {
+    final ds = await _db.collection(_col).doc(itemId).get();
+    if (!ds.exists) return "No details provided.";
+    final data = ds.data();
+    return (data?['verificationAnswer'] as String?) ?? "No details provided.";
+  }
+
+  Future<String> getVerificationQuestion(String itemId) async {
+    final ds = await _db.collection(_col).doc(itemId).get();
+    if (!ds.exists) return "No question provided.";
+    final data = ds.data();
+    return (data?['verificationQuestion'] as String?) ??
+        "No question provided.";
+  }
+
+  Future<void> enablePrivateChat(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Chat Enabled',
+      'chatEnabled': true,
+    });
+  }
+
+  Future<void> rejectRequest(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Active',
+      'requestType': null,
+      'requesterId': null,
+      'requesterName': null,
+      'verificationQuestion': null,
+      'verificationAnswer': null,
+      'chatEnabled': false,
+    });
+  }
+
   Future<void> markAsReturned(String itemId) async {
-    final index = _memoryDb.indexWhere((i) => i.id == itemId);
-    if (index != -1) {
-      _memoryDb[index].status = 'Returned';
-      _controller.add(_memoryDb);
-    }
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Returned',
+      'returnedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getMessagesStream(String itemId) {
+    return _db
+        .collection(_col)
+        .doc(itemId)
+        .collection('messages')
+        .orderBy('timestamp')
+        .snapshots();
+  }
+
+  Future<void> sendMessage({
+    required String itemId,
+    required String senderId,
+    required String senderName,
+    required String text,
+  }) async {
+    await _db.collection(_col).doc(itemId).collection('messages').add({
+      'senderId': senderId,
+      'senderName': senderName,
+      'text': text,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   }
 }
