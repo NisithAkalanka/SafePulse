@@ -10,6 +10,7 @@ class HelpRequestsStore {
     HelpRequest(
       id: 'seed-1',
       category: 'Study Support',
+      requesterName: 'Alex P.',
       title: 'Need help preparing for exam',
       description: 'Need help preparing for exam',
       locationName: 'Main Library',
@@ -18,10 +19,12 @@ class HelpRequestsStore {
       isUrgent: true,
       isMine: false,
       createdAt: DateTime.now().subtract(const Duration(minutes: 2)),
+      neededAt: DateTime.now().add(const Duration(hours: 2)),
     ),
     HelpRequest(
       id: 'seed-2',
       category: 'Study Support',
+      requesterName: 'Sam K.',
       title: 'Preparation for exam',
       description: 'Preparation for exam',
       locationName: 'Engineering Block',
@@ -30,10 +33,12 @@ class HelpRequestsStore {
       isUrgent: false,
       isMine: false,
       createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
+      neededAt: DateTime.now().add(const Duration(hours: 5)),
     ),
     HelpRequest(
       id: 'seed-3',
       category: 'Safety Transport',
+      requesterName: 'Jordan M.',
       title: 'Safe ride to dormitory',
       description: 'Need a safe ride to dormitory',
       locationName: 'North Gate',
@@ -42,10 +47,12 @@ class HelpRequestsStore {
       isUrgent: true,
       isMine: false,
       createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
+      neededAt: DateTime.now().add(const Duration(minutes: 30)),
     ),
     HelpRequest(
       id: 'seed-4',
       category: 'Tech Support',
+      requesterName: 'Riley T.',
       title: 'Fix laptop',
       description: 'Laptop issue, need help',
       locationName: 'Lab 3, Tech Center',
@@ -54,10 +61,12 @@ class HelpRequestsStore {
       isUrgent: false,
       isMine: false,
       createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
+      neededAt: DateTime.now().add(const Duration(days: 1, hours: 3)),
     ),
     HelpRequest(
       id: 'seed-5',
       category: 'Cash Exchange',
+      requesterName: 'You',
       title: 'Need to exchange 10\$ to coins',
       description: 'Need to exchange 10\$ to coins',
       locationName: 'Cafeteria',
@@ -66,6 +75,7 @@ class HelpRequestsStore {
       isUrgent: false,
       isMine: true,
       createdAt: DateTime.now().subtract(const Duration(minutes: 20)),
+      neededAt: DateTime.now().add(const Duration(hours: 1)),
     ),
   ]);
 
