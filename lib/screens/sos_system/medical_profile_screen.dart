@@ -39,7 +39,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
   }
 
   // කලින් දත්ත තියේනම් ලෝඩ් කරමු
-  _loadMedicalData() async {
+  Future<void> _loadMedicalData() async {
     setState(() => _isLoading = true);
     var doc = await FirebaseFirestore.instance
         .collection('users')
@@ -298,10 +298,12 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                                           Icons.warning_amber,
                                           validator: (value) {
                                             final v = (value ?? '').trim();
-                                            if (v.isEmpty)
+                                            if (v.isEmpty) {
                                               return 'Allergies field is required';
-                                            if (v.length > 30)
+                                            }
+                                            if (v.length > 30) {
                                               return 'Max 30 characters allowed';
+                                            }
                                             if (!RegExp(
                                               r'^[A-Za-z ,]+$',
                                             ).hasMatch(v)) {
@@ -360,8 +362,9 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                                           Icons.person_add_alt_1,
                                           validator: (value) {
                                             final v = (value ?? '').trim();
-                                            if (v.isEmpty)
+                                            if (v.isEmpty) {
                                               return 'Guardian name is required';
+                                            }
                                             if (!RegExp(
                                               r'^[A-Za-z ]{1,10}$',
                                             ).hasMatch(v)) {
@@ -377,8 +380,9 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                                           type: TextInputType.phone,
                                           validator: (value) {
                                             final v = (value ?? '').trim();
-                                            if (v.isEmpty)
+                                            if (v.isEmpty) {
                                               return 'Guardian phone is required';
+                                            }
                                             if (!RegExp(
                                               r'^0\d{9}$',
                                             ).hasMatch(v)) {
@@ -453,7 +457,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: DropdownButtonFormField<String>(
-        value: _bloodGroups.contains(_bloodTypeCtrl.text)
+        initialValue: _bloodGroups.contains(_bloodTypeCtrl.text)
             ? _bloodTypeCtrl.text
             : null,
         items: _bloodGroups

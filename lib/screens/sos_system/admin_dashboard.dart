@@ -63,18 +63,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
           .orderBy('time', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError)
+        if (snapshot.hasError) {
           return Center(child: Text("Error: ${snapshot.error}"));
-        if (!snapshot.hasData)
+        }
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
+        }
 
         var alerts = snapshot.data!.docs;
-        if (alerts.isEmpty)
+        if (alerts.isEmpty) {
           return Center(
             child: Text(
               activeOnly ? "No Active Alerts Found" : "No Past Records",
             ),
           );
+        }
 
         return ListView.builder(
           itemCount: alerts.length,

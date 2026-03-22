@@ -40,7 +40,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   // 1. කලින් සේව් කර ඇති දත්ත Firestore එකෙන් ලෝඩ් කරමු
-  _loadExistingData() async {
+  Future<void> _loadExistingData() async {
     setState(() => _isLoading = true);
     try {
       var doc = await FirebaseFirestore.instance
@@ -315,8 +315,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     Icons.person_outline,
                                     validator: (value) {
                                       final v = (value ?? '').trim();
-                                      if (v.isEmpty)
+                                      if (v.isEmpty) {
                                         return 'First name is required';
+                                      }
                                       if (!RegExp(
                                         r'^[A-Za-z]{1,10}$',
                                       ).hasMatch(v)) {
@@ -331,8 +332,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     Icons.person_outline,
                                     validator: (value) {
                                       final v = (value ?? '').trim();
-                                      if (v.isEmpty)
+                                      if (v.isEmpty) {
                                         return 'Last name is required';
+                                      }
                                       if (!RegExp(
                                         r'^[A-Za-z]{1,10}$',
                                       ).hasMatch(v)) {
@@ -355,8 +357,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     keyboard: TextInputType.phone,
                                     validator: (value) {
                                       final v = (value ?? '').trim();
-                                      if (v.isEmpty)
+                                      if (v.isEmpty) {
                                         return 'Contact number is required';
+                                      }
                                       if (!RegExp(r'^0\d{9}$').hasMatch(v)) {
                                         return 'Must be 10 digits, start with 0';
                                       }

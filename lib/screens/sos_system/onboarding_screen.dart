@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 // නිවැරදි පෑත් එක: පෝල්ඩරයෙන් එකක් පස්සට (..) ගොස් සෙවිය යුතුය
 import '../navigation_screen.dart';
 

@@ -399,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   },
                                 ),
                               )
-                              .toList(),
+                              ,
                           const SizedBox(height: 10),
                         ],
                       ),
@@ -1029,8 +1029,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                                           100,
                                                                     ),
                                                                     () {
-                                                                      if (!mounted)
+                                                                      if (!mounted) {
                                                                         return;
+                                                                      }
                                                                       Navigator.push(
                                                                         context,
                                                                         MaterialPageRoute(
@@ -1043,8 +1044,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                                     },
                                                                   );
                                                                 } else {
-                                                                  if (!mounted)
+                                                                  if (!mounted) {
                                                                     return;
+                                                                  }
                                                                   ScaffoldMessenger.of(
                                                                     context,
                                                                   ).showSnackBar(

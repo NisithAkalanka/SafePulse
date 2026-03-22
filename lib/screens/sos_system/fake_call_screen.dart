@@ -28,10 +28,11 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
   void _initiateCountdown() {
     _startTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timerValue > 0) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _timerValue--;
           });
+        }
       } else {
         if (mounted) {
           setState(() {

@@ -273,7 +273,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                 top: y,
                                 child: _buildFloatingAvatar(data),
                               );
-                            }).toList(),
+                            }),
                           ],
                         ),
                       );
@@ -886,7 +886,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                   16,
                                   8,
                                 ),
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const SizedBox(height: 10),
                                 itemBuilder: (context, i) {
                                   final m = filtered[i];

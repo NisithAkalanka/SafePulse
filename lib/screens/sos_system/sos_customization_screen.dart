@@ -314,7 +314,7 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                     ),
                                   ),
                                   value: vibrateOnTrigger,
-                                  activeColor: const Color(0xFFB31217),
+                                  activeThumbColor: const Color(0xFFB31217),
                                   onChanged: (val) =>
                                       setState(() => vibrateOnTrigger = val),
                                 ),

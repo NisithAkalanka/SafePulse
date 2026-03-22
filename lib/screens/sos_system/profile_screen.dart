@@ -1,13 +1,8 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'settings_screen.dart';
 import 'edit_profile_screen.dart';
-import 'sos_customization_screen.dart';
-import 'security_status_screen.dart';
-import 'medical_profile_screen.dart';
 import '../../main.dart';
 import 'admin_dashboard.dart'; // Admin Dashboard එක සඳහා මෙය අනිවාර්යයෙන්ම තිබිය යුතුයි
 
