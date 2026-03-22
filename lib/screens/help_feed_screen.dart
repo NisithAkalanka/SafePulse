@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'help_screen.dart';
 import '../help/help_request.dart';
 import '../help/help_requests_store.dart';
@@ -161,6 +162,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                             locationName: request.locationName,
                             lat: request.lat,
                             lng: request.lng,
+                            creatorUid: request.creatorUid,
                           ),
                         ),
                       );
@@ -202,6 +204,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
 
     return _HelpRequest(
       category: r.category,
+      requesterName: r.requesterName.isNotEmpty ? r.requesterName : 'Requester',
       title: r.title,
       locationName: r.locationName,
       lat: r.lat ?? 0,
@@ -209,6 +212,8 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
       isUrgent: r.isUrgent,
       isMine: r.isMine,
       postedAt: r.createdAt,
+      neededAt: r.neededAt,
+      creatorUid: r.creatorUid,
       markerColor: markerColor,
       tagColor: tagColor,
       statusLabel: statusLabel,
@@ -276,14 +281,45 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Help Nearby',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 20,
-                              color: Colors.white,
-                              letterSpacing: -0.3,
-                            ),
+                          Row(
+                            children: [
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                onPressed: () {
+                                  // If this page was opened via navigation stack, go back.
+                                  // Otherwise, fallback to Help screen.
+                                  final didPop = Navigator.of(context).canPop();
+                                  if (didPop) {
+                                    Navigator.of(context).pop();
+                                  } else {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (_) => const HelpScreen(),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Help Nearby',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
                           ),
                           if (_loadingLocation)
                             const SizedBox(
@@ -473,6 +509,15 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           color: Color(0xFF374151),
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        request.requesterName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         request.title,
@@ -516,16 +561,38 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                       Row(
                         children: [
                           Icon(
-                            Icons.access_time_rounded,
+                            Icons.send_rounded,
                             size: 14,
                             color: Colors.grey.shade500,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _timeAgoLabel(request.postedAt),
+                            'Posted ${_timeAgoLabel(request.postedAt)}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.event_available_rounded,
+                            size: 14,
+                            color: redPrimary.withOpacity(0.75),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Needed ${DateFormat.yMMMd().add_jm().format(request.neededAt)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade800,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -641,6 +708,16 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
+                  request.requesterName,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
                   request.title,
                   style: const TextStyle(
                     fontSize: 13.5,
@@ -699,11 +776,14 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                       color: Colors.grey.shade500,
                     ),
                     const SizedBox(width: 3),
-                    Text(
-                      _timeAgoLabel(request.postedAt),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
+                    Expanded(
+                      child: Text(
+                        '${_timeAgoLabel(request.postedAt)} · Need ${DateFormat.MMMd().add_jm().format(request.neededAt)}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -719,6 +799,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
 
 class _HelpRequest {
   final String category;
+  final String requesterName;
   final String title;
   final String locationName;
   final double lat;
@@ -726,12 +807,15 @@ class _HelpRequest {
   final bool isUrgent;
   final bool isMine;
   final DateTime postedAt;
+  final DateTime neededAt;
+  final String? creatorUid;
   final Color? markerColor;
   final Color? tagColor;
   final String? statusLabel;
 
   const _HelpRequest({
     required this.category,
+    required this.requesterName,
     required this.title,
     required this.locationName,
     required this.lat,
@@ -739,6 +823,8 @@ class _HelpRequest {
     required this.isUrgent,
     required this.isMine,
     required this.postedAt,
+    required this.neededAt,
+    this.creatorUid,
     this.markerColor,
     this.tagColor,
     this.statusLabel,

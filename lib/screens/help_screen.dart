@@ -13,9 +13,7 @@ class HelpScreen extends StatefulWidget {
 
 class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
   late TabController _tabController;
-  final TextEditingController _helpController = TextEditingController();
   int _selectedCategoryIndex = 0;
-  bool _showDescribeSection = false;
 
   static const List<_HelpCategory> _categories = [
     _HelpCategory(
@@ -64,7 +62,17 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
       );
       if (idx != -1) {
         _selectedCategoryIndex = idx;
-        _showDescribeSection = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => HelpRequestDetailScreen(
+                category: _categories[idx].title,
+                initialNote: '',
+              ),
+            ),
+          );
+        });
       }
     }
   }
@@ -72,19 +80,16 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _tabController.dispose();
-    _helpController.dispose();
     super.dispose();
   }
 
-  void _onPostRequest() {
-    final category = _categories[_selectedCategoryIndex].title;
-    final description = _helpController.text.trim();
-
+  void _openRequestDetail(int index) {
+    setState(() => _selectedCategoryIndex = index);
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => HelpRequestDetailScreen(
-          category: category,
-          initialNote: description,
+      MaterialPageRoute<void>(
+        builder: (_) => HelpRequestDetailScreen(
+          category: _categories[index].title,
+          initialNote: '',
         ),
       ),
     );
@@ -134,13 +139,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
           _RequestTabContent(
             categories: _categories,
             selectedIndex: _selectedCategoryIndex,
-            showDescribeSection: _showDescribeSection,
-            onCategorySelected: (i) => setState(() {
-              _selectedCategoryIndex = i;
-              _showDescribeSection = true;
-            }),
-            helpController: _helpController,
-            onPostRequest: _onPostRequest,
+            onCategorySelected: _openRequestDetail,
           ),
           const HelpFeedScreen(),
         ],
@@ -153,18 +152,12 @@ class _RequestTabContent extends StatelessWidget {
   const _RequestTabContent({
     required this.categories,
     required this.selectedIndex,
-    required this.showDescribeSection,
     required this.onCategorySelected,
-    required this.helpController,
-    required this.onPostRequest,
   });
 
   final List<_HelpCategory> categories;
   final int selectedIndex;
-  final bool showDescribeSection;
   final ValueChanged<int> onCategorySelected;
-  final TextEditingController helpController;
-  final VoidCallback onPostRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +191,7 @@ class _RequestTabContent extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Pick a category below or describe your own request.',
+                    'Pick a category below to open the request form.',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -330,6 +323,26 @@ return null;,
             ),
           ]
           },
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final category = categories[index];
+                  final isSelected = index == selectedIndex;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _CategoryCard(
+                      asset: category.asset,
+                      title: category.title,
+                      subtitle: category.subtitle,
+                      isSelected: isSelected,
+                      onTap: () => onCategorySelected(index),
+                    ),
+                  );
+                },
+                childCount: categories.length,
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + 24)),
         ],
       ),
     )
