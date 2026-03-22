@@ -63,11 +63,33 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
     }
   }
 
-  // 3. ලිස්ට් එකෙන් සම්පූර්ණයෙන්ම ඉවත් කිරීම
-  void _removeType(String key) {
-    setState(() {
-      sosTypes.remove(key);
-    });
+  // 3. ලිස්ට් එකෙන් සම්පූර්ණයෙන්ම ඉවත් කිරීම (Firestore sync + confirmation)
+  Future<void> _deleteCategory(String key) async {
+    if (user == null) return;
+
+    try {
+      final updated = Map<String, bool>.from(sosTypes);
+      updated.remove(key);
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .update({'sos_categories': updated});
+      await _loadUserSettings();
+      if (!mounted) return;
+      setState(() {
+        sosTypes = updated;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category deleted successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+    }
   }
 
   // 4. සියලුම දත්ත එකවර Firestore වල සේව් කිරීම
@@ -76,10 +98,17 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
       await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
         'trigger_time': triggerTime,
         'vibrate_enabled': vibrateOnTrigger,
-        'sos_categories': sosTypes,
       }, SetOptions(merge: true));
 
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .update({'sos_categories': Map<String, bool>.from(sosTypes)});
+      await _loadUserSettings();
       if (!mounted) return;
+      setState(() {
+        sosTypes = Map<String, bool>.from(sosTypes);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("✅ SOS Preferences Synced with Server"),
@@ -424,7 +453,42 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                           color: Color(0xFF747A86),
                                           size: 20,
                                         ),
-                                        onPressed: () => _removeType(key),
+                                        onPressed: () async {
+                                          final bool?
+                                          confirm = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text(
+                                                'Delete Category',
+                                              ),
+                                              content: Text(
+                                                'Are you sure you want to delete "$key"?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(
+                                                        context,
+                                                        false,
+                                                      ),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(
+                                                        context,
+                                                        true,
+                                                      ),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+
+                                          if (confirm == true) {
+                                            await _deleteCategory(key);
+                                          }
+                                        },
                                       ),
                                     );
                                   }).toList(),
