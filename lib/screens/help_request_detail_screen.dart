@@ -7,7 +7,7 @@ import 'help_feed_screen.dart';
 import '../help/help_request.dart';
 import '../help/help_requests_store.dart';
 import '../services/help_request_service.dart';
-import 'profile_screen.dart';
+import 'sos_system/main_menu_screen.dart';
 
 class HelpRequestDetailScreen extends StatefulWidget {
   final String category;
@@ -20,8 +20,8 @@ class HelpRequestDetailScreen extends StatefulWidget {
   });
 
   @override
-  @override
-  State<HelpRequestDetailScreen> createState() => _HelpRequestDetailScreenState();
+  State<HelpRequestDetailScreen> createState() =>
+      _HelpRequestDetailScreenState();
 }
 
 class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
@@ -54,23 +54,36 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
 
   // Building/location categories shown in the form.
   // Coordinates are approximate inside the SLIIT Malabe campus so Google Maps can open correctly.
-  static const Map<String, _SlitLocation> _slitBuildings = <String, _SlitLocation>{
-    'main_gate': _SlitLocation('Main Gate', 6.9149, 79.9736),
-    'library': _SlitLocation('Library', 6.9154, 79.9731),
-    'auditorium': _SlitLocation('Auditorium', 6.9142, 79.9742),
-    'canteen': _SlitLocation('Canteen', 6.9144, 79.9729),
-    'car_park': _SlitLocation('Car Park', 6.9152, 79.9730),
-    'main_building': _SlitLocation('Main Building', 6.9147, 79.9733),
-    'new_building_block': _SlitLocation('New Building/Block', 6.9150, 79.9729),
-    'new_building_g_block': _SlitLocation('New Building/G Block', 6.9151, 79.9727),
-    'engineering_building': _SlitLocation('Engineering Building', 6.9153, 79.9734),
-    'business_school': _SlitLocation('Business School', 6.9150, 79.9732),
-    'juice_bar': _SlitLocation('Juice Bar', 6.9149, 79.9731),
-    'playground': _SlitLocation('Playground', 6.9147, 79.9730),
-    'birdnest': _SlitLocation('Bird Nest', 6.9148, 79.9732),
-    'william_angliss': _SlitLocation('William Angliss', 6.9151, 79.9735),
-    'other': _SlitLocation('Other', 6.9148, 79.9733),
-  };
+  static const Map<String, _SlitLocation> _slitBuildings =
+      <String, _SlitLocation>{
+        'main_gate': _SlitLocation('Main Gate', 6.9149, 79.9736),
+        'library': _SlitLocation('Library', 6.9154, 79.9731),
+        'auditorium': _SlitLocation('Auditorium', 6.9142, 79.9742),
+        'canteen': _SlitLocation('Canteen', 6.9144, 79.9729),
+        'car_park': _SlitLocation('Car Park', 6.9152, 79.9730),
+        'main_building': _SlitLocation('Main Building', 6.9147, 79.9733),
+        'new_building_block': _SlitLocation(
+          'New Building/Block',
+          6.9150,
+          79.9729,
+        ),
+        'new_building_g_block': _SlitLocation(
+          'New Building/G Block',
+          6.9151,
+          79.9727,
+        ),
+        'engineering_building': _SlitLocation(
+          'Engineering Building',
+          6.9153,
+          79.9734,
+        ),
+        'business_school': _SlitLocation('Business School', 6.9150, 79.9732),
+        'juice_bar': _SlitLocation('Juice Bar', 6.9149, 79.9731),
+        'playground': _SlitLocation('Playground', 6.9147, 79.9730),
+        'birdnest': _SlitLocation('Bird Nest', 6.9148, 79.9732),
+        'william_angliss': _SlitLocation('William Angliss', 6.9151, 79.9735),
+        'other': _SlitLocation('Other', 6.9148, 79.9733),
+      };
 
   @override
   void initState() {
@@ -103,12 +116,12 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
   }
 
   DateTime get _combinedNeededAt => DateTime(
-        _neededDate.year,
-        _neededDate.month,
-        _neededDate.day,
-        _neededTime.hour,
-        _neededTime.minute,
-      );
+    _neededDate.year,
+    _neededDate.month,
+    _neededDate.day,
+    _neededTime.hour,
+    _neededTime.minute,
+  );
 
   Future<void> _pickNeededDate(Color redPrimary) async {
     final today = DateTime.now();
@@ -121,7 +134,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       builder: (ctx, child) {
         return Theme(
           data: Theme.of(ctx).copyWith(
-            colorScheme: ColorScheme.light(primary: redPrimary, onPrimary: Colors.white),
+            colorScheme: ColorScheme.light(
+              primary: redPrimary,
+              onPrimary: Colors.white,
+            ),
           ),
           child: child!,
         );
@@ -137,7 +153,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       builder: (ctx, child) {
         return Theme(
           data: Theme.of(ctx).copyWith(
-            colorScheme: ColorScheme.light(primary: redPrimary, onPrimary: Colors.white),
+            colorScheme: ColorScheme.light(
+              primary: redPrimary,
+              onPrimary: Colors.white,
+            ),
           ),
           child: child!,
         );
@@ -233,11 +252,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       setState(() => _isSubmitting = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please select a SLIIT location.',
-          ),
-        ),
+        const SnackBar(content: Text('Please select a SLIIT location.')),
       );
       return;
     }
@@ -249,17 +264,25 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     final neededAt = _combinedNeededAt;
 
     // Prevent accidentally posting a request for the past.
-    if (neededAt.isBefore(DateTime.now().subtract(const Duration(minutes: 1)))) {
+    if (neededAt.isBefore(
+      DateTime.now().subtract(const Duration(minutes: 1)),
+    )) {
       setState(() => _isSubmitting = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a future date and time for your request.')),
+        const SnackBar(
+          content: Text(
+            'Please select a future date and time for your request.',
+          ),
+        ),
       );
       return;
     }
 
     // If the needed time is soon, mark it as urgent. (No extra "Now/Later" fields needed.)
-    final isUrgent = neededAt.isBefore(DateTime.now().add(const Duration(hours: 2)));
+    final isUrgent = neededAt.isBefore(
+      DateTime.now().add(const Duration(hours: 2)),
+    );
 
     final created = HelpRequest(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -306,7 +329,9 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text(
             'Help request posted!',
             style: TextStyle(fontWeight: FontWeight.w700),
@@ -315,15 +340,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Your request under "${widget.category}" has been shared.',
-              ),
+              Text('Your request under "${widget.category}" has been shared.'),
               if (locationText.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(
-                  '📍 $locationText',
-                  style: const TextStyle(fontSize: 13),
-                ),
+                Text('📍 $locationText', style: const TextStyle(fontSize: 13)),
               ],
             ],
           ),
@@ -335,7 +355,9 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFD32F2F),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
                 onPressed: () {
@@ -344,7 +366,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                     MaterialPageRoute(builder: (_) => const HelpFeedScreen()),
                   );
                 },
-                child: const Text('OFFER HELP TO OTHERS', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'OFFER HELP TO OTHERS',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -354,7 +379,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 // Allow the user to correct fields on the same form.
                 setState(() => _isEditing = true);
               },
-              child: const Text('Edit request', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Edit request',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
           ],
         );
@@ -375,7 +403,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF8B1A1A), Color(0xFF6B1515), Color(0xFF671111)],
+                colors: [
+                  Color(0xFF8B1A1A),
+                  Color(0xFF6B1515),
+                  Color(0xFF671111),
+                ],
               ),
             ),
           ),
@@ -424,12 +456,12 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                   centerTitle: true,
                   actions: [
                     IconButton(
-                      tooltip: 'Profile',
-                      icon: const Icon(Icons.person_rounded),
+                      tooltip: 'More',
+                      icon: const Icon(Icons.more_vert_rounded),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const ProfileScreen(),
+                            builder: (_) => const MainMenuScreen(),
                           ),
                         );
                       },
@@ -451,11 +483,15 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                           redPrimary,
                           child: Form(
                             key: _formKey,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel(Icons.badge_outlined, 'Requester name'),
+                                _buildLabel(
+                                  Icons.badge_outlined,
+                                  'Requester name',
+                                ),
                                 const SizedBox(height: 8),
                                 TextFormField(
                                   controller: _requesterNameController,
@@ -463,7 +499,8 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   textInputAction: TextInputAction.next,
                                   readOnly: !_isEditing,
                                   decoration: _inputDecoration(
-                                    hint: 'Your name as it should appear to helpers',
+                                    hint:
+                                        'Your name as it should appear to helpers',
                                     redPrimary: redPrimary,
                                     prefixIcon: Icon(
                                       Icons.person_outline_rounded,
@@ -473,11 +510,17 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   ),
                                   validator: (v) {
                                     final t = v?.trim() ?? '';
-                                    if (t.isEmpty) return 'Please enter your name';
-                                    if (t.length < 2) return 'Name must be at least 2 characters';
-                                    if (t.length > 80) return 'Name is too long';
+                                    if (t.isEmpty)
+                                      return 'Please enter your name';
+                                    if (t.length < 2)
+                                      return 'Name must be at least 2 characters';
+                                    if (t.length > 80)
+                                      return 'Name is too long';
                                     // Letters + spaces only (supports Sinhala/Tamil/etc via Unicode categories).
-                                    final onlyLettersAndSpaces = RegExp(r'^[\p{L} ]+$', unicode: true);
+                                    final onlyLettersAndSpaces = RegExp(
+                                      r'^[\p{L} ]+$',
+                                      unicode: true,
+                                    );
                                     if (!onlyLettersAndSpaces.hasMatch(t)) {
                                       return 'Name should contain letters only';
                                     }
@@ -485,9 +528,16 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   },
                                 ),
                                 const SizedBox(height: 20),
-                                _buildLabel(Icons.event_rounded, 'Date you need help'),
+                                _buildLabel(
+                                  Icons.event_rounded,
+                                  'Date you need help',
+                                ),
                                 const SizedBox(height: 8),
-                                _buildDateTimePickers(context, redPrimary, _isEditing),
+                                _buildDateTimePickers(
+                                  context,
+                                  redPrimary,
+                                  _isEditing,
+                                ),
                                 const SizedBox(height: 20),
                                 _buildLabel(Icons.title_rounded, 'Short title'),
                                 const SizedBox(height: 8),
@@ -501,14 +551,20 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   ),
                                   validator: (v) {
                                     final t = v?.trim() ?? '';
-                                    if (t.isEmpty) return 'Please enter a short title';
-                                    if (t.length < 2) return 'Title must be at least 2 characters';
-                                    if (t.length > 80) return 'Title is too long';
+                                    if (t.isEmpty)
+                                      return 'Please enter a short title';
+                                    if (t.length < 2)
+                                      return 'Title must be at least 2 characters';
+                                    if (t.length > 80)
+                                      return 'Title is too long';
                                     return null;
                                   },
                                 ),
                                 const SizedBox(height: 20),
-                                _buildLabel(Icons.edit_note_rounded, 'Describe what you need'),
+                                _buildLabel(
+                                  Icons.edit_note_rounded,
+                                  'Describe what you need',
+                                ),
                                 const SizedBox(height: 8),
                                 TextFormField(
                                   controller: _descriptionController,
@@ -516,14 +572,18 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   maxLines: 4,
                                   readOnly: !_isEditing,
                                   decoration: _inputDecoration(
-                                    hint: 'Share details like when, where and any special instructions.',
+                                    hint:
+                                        'Share details like when, where and any special instructions.',
                                     redPrimary: redPrimary,
                                   ),
                                   validator: (v) {
                                     final t = v?.trim() ?? '';
-                                    if (t.isEmpty) return 'Please describe what you need';
-                                    if (t.length < 5) return 'Please add a bit more detail (at least 5 characters)';
-                                    if (t.length > 400) return 'Description is too long (max 400 characters)';
+                                    if (t.isEmpty)
+                                      return 'Please describe what you need';
+                                    if (t.length < 5)
+                                      return 'Please add a bit more detail (at least 5 characters)';
+                                    if (t.length > 400)
+                                      return 'Description is too long (max 400 characters)';
                                     return null;
                                   },
                                 ),
@@ -536,30 +596,42 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                     Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
-                                      children: _slitBuildings.entries.map((entry) {
+                                      children: _slitBuildings.entries.map((
+                                        entry,
+                                      ) {
                                         final key = entry.key;
                                         final loc = entry.value;
-                                        final isSel = _selectedSlitLocationKey == key;
+                                        final isSel =
+                                            _selectedSlitLocationKey == key;
                                         return Material(
                                           color: Colors.transparent,
                                           child: InkWell(
                                             onTap: _isEditing
                                                 ? () {
                                                     setState(() {
-                                                      _selectedSlitLocationKey = key;
+                                                      _selectedSlitLocationKey =
+                                                          key;
                                                     });
                                                   }
                                                 : null,
-                                            borderRadius: BorderRadius.circular(24),
+                                            borderRadius: BorderRadius.circular(
+                                              24,
+                                            ),
                                             child: AnimatedContainer(
-                                              duration: const Duration(milliseconds: 180),
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 14,
-                                                vertical: 10,
+                                              duration: const Duration(
+                                                milliseconds: 180,
                                               ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 10,
+                                                  ),
                                               decoration: BoxDecoration(
-                                                color: isSel ? redPrimary : Colors.white,
-                                                borderRadius: BorderRadius.circular(24),
+                                                color: isSel
+                                                    ? redPrimary
+                                                    : Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(24),
                                                 border: Border.all(
                                                   color: isSel
                                                       ? redPrimary
@@ -571,13 +643,18 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   if (isSel)
-                                                    const Icon(Icons.check_rounded,
-                                                        size: 18, color: Colors.white),
-                                                  if (isSel) const SizedBox(width: 6),
+                                                    const Icon(
+                                                      Icons.check_rounded,
+                                                      size: 18,
+                                                      color: Colors.white,
+                                                    ),
+                                                  if (isSel)
+                                                    const SizedBox(width: 6),
                                                   Text(
                                                     loc.label,
                                                     style: TextStyle(
-                                                      fontWeight: FontWeight.w700,
+                                                      fontWeight:
+                                                          FontWeight.w700,
                                                       fontSize: 12,
                                                       color: isSel
                                                           ? Colors.white
@@ -611,11 +688,16 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                       letterSpacing: -0.2,
                                     ),
                                   ),
-                                  trailing: const Icon(Icons.expand_more_rounded),
+                                  trailing: const Icon(
+                                    Icons.expand_more_rounded,
+                                  ),
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.only(top: 12),
-                                      child: _buildHelperPreferencesSection(context, redPrimary),
+                                      child: _buildHelperPreferencesSection(
+                                        context,
+                                        redPrimary,
+                                      ),
                                     ),
                                     const SizedBox(height: 10),
                                   ],
@@ -667,13 +749,19 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   height: 26,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(redPrimary),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      redPrimary,
+                                    ),
                                   ),
                                 )
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.check_circle_outline_rounded, size: 22, color: redPrimary),
+                                    Icon(
+                                      Icons.check_circle_outline_rounded,
+                                      size: 22,
+                                      color: redPrimary,
+                                    ),
                                     const SizedBox(width: 10),
                                     Text(
                                       'CONFIRM REQUEST',
@@ -699,7 +787,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  Widget _buildDateTimePickers(BuildContext context, Color redPrimary, bool enabled) {
+  Widget _buildDateTimePickers(
+    BuildContext context,
+    Color redPrimary,
+    bool enabled,
+  ) {
     final dateStr = DateFormat.yMMMEd().format(_neededDate);
     final timeStr = _neededTime.format(context);
     return Row(
@@ -712,7 +804,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               onTap: enabled ? () => _pickNeededDate(redPrimary) : null,
               borderRadius: BorderRadius.circular(14),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFAFAFA),
                   borderRadius: BorderRadius.circular(14),
@@ -720,7 +815,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.calendar_today_rounded, size: 20, color: redPrimary.withOpacity(0.85)),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 20,
+                      color: redPrimary.withOpacity(0.85),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
@@ -748,7 +847,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                         ],
                       ),
                     ),
-                    Icon(Icons.expand_more_rounded, color: Colors.grey.shade500, size: 22),
+                    Icon(
+                      Icons.expand_more_rounded,
+                      color: Colors.grey.shade500,
+                      size: 22,
+                    ),
                   ],
                 ),
               ),
@@ -763,7 +866,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               onTap: enabled ? () => _pickNeededTime(redPrimary) : null,
               borderRadius: BorderRadius.circular(14),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFAFAFA),
                   borderRadius: BorderRadius.circular(14),
@@ -771,7 +877,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.schedule_rounded, size: 20, color: redPrimary.withOpacity(0.85)),
+                    Icon(
+                      Icons.schedule_rounded,
+                      size: 20,
+                      color: redPrimary.withOpacity(0.85),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
@@ -797,7 +907,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                         ],
                       ),
                     ),
-                    Icon(Icons.expand_more_rounded, color: Colors.grey.shade500, size: 22),
+                    Icon(
+                      Icons.expand_more_rounded,
+                      color: Colors.grey.shade500,
+                      size: 22,
+                    ),
                   ],
                 ),
               ),
@@ -809,7 +923,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
   }
 
   /// Optional helper-matching preferences — chips, toggles, dropdown, with validations on tip & physical notes.
-  Widget _buildHelperPreferencesSection(BuildContext context, Color redPrimary) {
+  Widget _buildHelperPreferencesSection(
+    BuildContext context,
+    Color redPrimary,
+  ) {
     const cream = Color(0xFFFFF8F8);
     return Container(
       width: double.infinity,
@@ -859,7 +976,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.tune_rounded, color: Colors.white, size: 22),
+                  child: const Icon(
+                    Icons.tune_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -888,7 +1009,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -907,7 +1031,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               ],
             ),
             const SizedBox(height: 22),
-            _buildPrefSubheading(Icons.wc_rounded, 'Helper gender preference', redPrimary),
+            _buildPrefSubheading(
+              Icons.wc_rounded,
+              'Helper gender preference',
+              redPrimary,
+            ),
             const SizedBox(height: 10),
             _buildOptionChips(
               options: const ['Male', 'Female', 'Any'],
@@ -917,7 +1045,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               enabled: _isEditing,
             ),
             const SizedBox(height: 20),
-            _buildPrefSubheading(Icons.language_rounded, 'Language preference', redPrimary),
+            _buildPrefSubheading(
+              Icons.language_rounded,
+              'Language preference',
+              redPrimary,
+            ),
             const SizedBox(height: 10),
             _buildOptionChips(
               options: const ['English', 'Sinhala', 'Tamil', 'Any'],
@@ -936,7 +1068,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               enabled: _isEditing,
             ),
             const SizedBox(height: 12),
-            _buildPrefSubheading(Icons.pedal_bike_rounded, 'Vehicle requirement', redPrimary),
+            _buildPrefSubheading(
+              Icons.pedal_bike_rounded,
+              'Vehicle requirement',
+              redPrimary,
+            ),
             const SizedBox(height: 10),
             _buildOptionChips(
               options: const ['Not required', 'Bike', 'Car'],
@@ -955,7 +1091,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               enabled: _isEditing,
             ),
             const SizedBox(height: 20),
-            _buildPrefSubheading(Icons.forum_rounded, 'Preferred communication', redPrimary),
+            _buildPrefSubheading(
+              Icons.forum_rounded,
+              'Preferred communication',
+              redPrimary,
+            ),
             const SizedBox(height: 10),
             _buildOptionChips(
               options: const ['Phone Call', 'In-app Chat', 'SMS'],
@@ -978,7 +1118,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               validator: _validateTip,
             ),
             const SizedBox(height: 18),
-            _buildLabel(Icons.accessible_forward_rounded, 'Physical / special requirements'),
+            _buildLabel(
+              Icons.accessible_forward_rounded,
+              'Physical / special requirements',
+            ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _physicalController,
@@ -986,7 +1129,8 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               maxLines: 3,
               readOnly: !_isEditing,
               decoration: _inputDecoration(
-                hint: 'E.g. Must lift heavy items, comfortable with wheelchair…',
+                hint:
+                    'E.g. Must lift heavy items, comfortable with wheelchair…',
                 redPrimary: redPrimary,
               ),
               validator: _validatePhysical,
@@ -1066,7 +1210,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isSel) ...[
-                    const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                    const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
                   ],
                   Text(
@@ -1184,7 +1332,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.handshake_rounded, color: Colors.white, size: 18),
+                const Icon(
+                  Icons.handshake_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   widget.category,
@@ -1211,7 +1363,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  Widget void _buildFormCard(BuildContext context, Color redPrimary, {required Widget child}) {
+  Widget _buildFormCard(
+    BuildContext context,
+    Color redPrimary, {
+    required Widget child,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1274,11 +1430,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       fillColor: const Color(0xFFFAFAFA),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       // Make validation text visible and consistent with the red theme.
-      errorStyle: TextStyle(
-        color: redPrimary,
-        fontSize: 12,
-        height: 1.2,
-      ),
+      errorStyle: TextStyle(color: redPrimary, fontSize: 12, height: 1.2),
       errorMaxLines: 2,
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -1299,57 +1451,6 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  Widget buildTimeChip(String label, int value, Color redPrimary) {
-    final isSelected = _timeSelection == value;
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => setState(() => _timeSelection = value),
-          borderRadius: BorderRadius.circular(14),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: isSelected ? redPrimary : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isSelected ? redPrimary : Colors.grey.shade300,
-                width: isSelected ? 2 : 1,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: redPrimary.withOpacity(0.35),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isSelected)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                  ),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    color: isSelected ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
   // Note: Earlier versions had Now/Later chips; the current UI uses Date+Time pickers instead.
 }
 

@@ -5,7 +5,7 @@ import 'create_item_screen.dart';
 import 'lost_item_model.dart';
 import 'lost_found_service.dart';
 import 'mock_chat_screen.dart';
-import '../profile_screen.dart';
+import '../sos_system/main_menu_screen.dart';
 
 class LostFoundFeedScreen extends StatefulWidget {
   const LostFoundFeedScreen({super.key});
@@ -92,10 +92,10 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
     );
   }
 
-  void _openProfile() {
+  void _openMainMenu() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+      MaterialPageRoute(builder: (_) => const MainMenuScreen()),
     );
   }
 
@@ -134,13 +134,13 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             IconButton(
-              tooltip: "Profile",
+              tooltip: "More",
               icon: const Icon(
-                Icons.account_circle,
+                Icons.more_vert_rounded,
                 color: Colors.white,
                 size: 28,
               ),
-              onPressed: _openProfile,
+              onPressed: _openMainMenu,
             ),
           ],
           bottom: TabBar(

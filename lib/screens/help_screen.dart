@@ -46,10 +46,7 @@ class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
       title: 'Cash Exchange',
       subtitle: '👥 Rs 4,500',
     ),
-    _HelpCategory(
-      asset: 'assets/images/other.png',
-      title: 'Other',
-    ),
+    _HelpCategory(asset: 'assets/images/other.png', title: 'Other'),
   ];
 
   @override
@@ -166,10 +163,7 @@ class _RequestTabContent extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF8B1A1A),
-            Color(0xFF671111),
-          ],
+          colors: [Color(0xFF8B1A1A), Color(0xFF671111)],
         ),
       ),
       child: CustomScrollView(
@@ -205,8 +199,7 @@ class _RequestTabContent extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
+              delegate: SliverChildBuilderDelegate((context, index) {
                 final category = categories[index];
                 final isSelected = index == selectedIndex;
                 return Padding(
@@ -219,133 +212,15 @@ class _RequestTabContent extends StatelessWidget {
                     onTap: () => onCategorySelected(index),
                   ),
                 );
-              },
-              childCount: categories.length,
-            )
-return null;,
-          ),
-          ),
-          if (showDescribeSection) {
-            [
-            SliverToBoxAdapter(child: const SizedBox(height: 12)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                        child: Text(
-                          'Describe your request',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: TextField(
-                          controller: helpController,
-                          minLines: 2,
-                          maxLines: 3,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.black87),
-                          decoration: InputDecoration(
-                            hintText: 'e.g. Need help carrying medical bag',
-                            hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                            filled: true,
-                            fillColor: const Color(0xFFF5F6F9),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: onPostRequest,
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              height: 54,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFD32F2F), Color(0xFFE53935)],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFE53935).withOpacity(0.4),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'POST REQUEST',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ]
-          },
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final category = categories[index];
-                  final isSelected = index == selectedIndex;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _CategoryCard(
-                      asset: category.asset,
-                      title: category.title,
-                      subtitle: category.subtitle,
-                      isSelected: isSelected,
-                      onTap: () => onCategorySelected(index),
-                    ),
-                  );
-                },
-                childCount: categories.length,
-              ),
+              }, childCount: categories.length),
             ),
           ),
-          SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + 24)),
+          SliverToBoxAdapter(
+            child: SizedBox(height: MediaQuery.of(context).padding.bottom + 24),
+          ),
         ],
       ),
-    )
+    );
   }
 }
 
@@ -376,7 +251,9 @@ class _CategoryCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFFD32F2F) : const Color(0xFFEEF0F3),
+            color: isSelected
+                ? const Color(0xFFD32F2F)
+                : const Color(0xFFEEF0F3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
@@ -396,14 +273,18 @@ class _CategoryCard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
+                errorBuilder: (_, __, ___) => Container(
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5F5F5),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.handshake_rounded, color: Color(0xFF424242), size: 26),
+                  child: const Icon(
+                    Icons.handshake_rounded,
+                    color: Color(0xFF424242),
+                    size: 26,
+                  ),
                 ),
               ),
             ),
@@ -417,7 +298,9 @@ class _CategoryCard extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight: isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
                       color: Colors.black,
                     ),
                   ),
