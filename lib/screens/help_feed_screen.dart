@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'help_screen.dart';
 import '../help/help_request.dart';
 import '../help/help_requests_store.dart';
@@ -60,10 +61,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
         return requests.where((r) => r.isUrgent).toList();
       case 2:
         return [...requests]..sort(
-            (a, b) => a.distanceMeters(_currentPosition).compareTo(
-              b.distanceMeters(_currentPosition),
-            ),
-          );
+          (a, b) => a
+              .distanceMeters(_currentPosition)
+              .compareTo(b.distanceMeters(_currentPosition)),
+        );
       case 3:
         return requests.where((r) => r.isMine).toList();
       default:
@@ -90,9 +91,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
   }
 
   void _openCreateHelp() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const HelpScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
   }
 
   void _showRequestAccepted(_HelpRequest request) {
@@ -100,7 +101,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
       context: context,
       builder: (dialogContext) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
             child: Column(
@@ -159,6 +162,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                             locationName: request.locationName,
                             lat: request.lat,
                             lng: request.lng,
+                            creatorUid: request.creatorUid,
                           ),
                         ),
                       );
@@ -200,6 +204,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
 
     return _HelpRequest(
       category: r.category,
+      requesterName: r.requesterName.isNotEmpty ? r.requesterName : 'Requester',
       title: r.title,
       locationName: r.locationName,
       lat: r.lat ?? 0,
@@ -207,6 +212,8 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
       isUrgent: r.isUrgent,
       isMine: r.isMine,
       postedAt: r.createdAt,
+      neededAt: r.neededAt,
+      creatorUid: r.creatorUid,
       markerColor: markerColor,
       tagColor: tagColor,
       statusLabel: statusLabel,
@@ -223,86 +230,198 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
         final uiAll = all.map(_toUiRequest).toList();
         final requests = _filteredRequests(uiAll);
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF5F5F7),
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Help Nearby',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (_loadingLocation)
-                        const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else
-                        IconButton(
-                          icon: const Icon(Icons.my_location_rounded, size: 20),
-                          onPressed: _loadLocation,
-                          tooltip: 'Refresh location',
-                        ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _filterChip('All', 0),
-                      _filterChip('Urgent', 1),
-                      _filterChip('Nearby', 2),
-                      _filterChip('My Requests', 3),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                    itemCount: requests.length,
-                    itemBuilder: (context, index) {
-                      final request = requests[index];
-                      final isFeatured = index == 0 && _selectedFilter != 3;
+        const Color redPrimary = Color(0xFFD32F2F);
 
-                      if (isFeatured) {
-                        return _featuredCard(request);
-                      }
-                      return _compactCard(request);
-                    },
+        return Scaffold(
+          body: Stack(
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF8B1A1A),
+                      Color(0xFF6B1515),
+                      Color(0xFF671111),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-          floatingActionButton: FloatingActionButton(
-            onPressed: _openCreateHelp,
-            backgroundColor: const Color(0xFFFFD54F),
-            elevation: 4,
-            child: const Icon(Icons.add_rounded, color: Colors.black87),
+              ),
+              Positioned(
+                top: -100,
+                right: -80,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 200,
+                left: -80,
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.03),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 14, 8, 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                onPressed: () {
+                                  // If this page was opened via navigation stack, go back.
+                                  // Otherwise, fallback to Help screen.
+                                  final didPop = Navigator.of(context).canPop();
+                                  if (didPop) {
+                                    Navigator.of(context).pop();
+                                  } else {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (_) => const HelpScreen(),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Help Nearby',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_loadingLocation)
+                            const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                          else
+                            IconButton(
+                              icon: const Icon(
+                                Icons.my_location_rounded,
+                                size: 24,
+                                color: Colors.white,
+                              ),
+                              onPressed: _loadLocation,
+                              tooltip: 'Refresh location',
+                            ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        children: [
+                          _filterChip('All', 0, redPrimary),
+                          _filterChip('Urgent', 1, redPrimary),
+                          _filterChip('Nearby', 2, redPrimary),
+                          _filterChip('My Requests', 3, redPrimary),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                        itemCount: requests.length,
+                        itemBuilder: (context, index) {
+                          final request = requests[index];
+                          final isFeatured = index == 0 && _selectedFilter != 3;
+                          if (isFeatured) {
+                            return _featuredCard(request, redPrimary);
+                          }
+                          return _compactCard(request, redPrimary);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 16,
+                bottom: 24,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _openCreateHelp,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: redPrimary.withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.add_rounded,
+                        color: redPrimary,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _filterChip(String label, int index) {
+  Widget _filterChip(String label, int index, Color redPrimary) {
     final bool isSelected = _selectedFilter == index;
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         child: GestureDetector(
           onTap: () {
             setState(() {
@@ -310,23 +429,34 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
             });
           },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            duration: const Duration(milliseconds: 220),
+            padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.white : Colors.transparent,
-              borderRadius: BorderRadius.circular(18),
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isSelected ? Colors.redAccent : const Color(0xFFE0E0E6),
-                width: 1,
+                color: isSelected
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.4),
+                width: isSelected ? 2 : 1,
               ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
             alignment: Alignment.center,
             child: Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.redAccent : Colors.black87,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? redPrimary : Colors.white,
               ),
             ),
           ),
@@ -335,35 +465,38 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     );
   }
 
-  Widget _featuredCard(_HelpRequest request) {
+  Widget _featuredCard(_HelpRequest request, Color redPrimary) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x11000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
-        border: Border.all(color: const Color(0xFFE0E0E6)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Color(0xFFE3F2FD),
-                  child: Icon(Icons.person, color: Colors.blueGrey, size: 18),
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: redPrimary.withOpacity(0.12),
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: redPrimary,
+                    size: 20,
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,26 +505,44 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                         request.category,
                         style: const TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF374151),
                         ),
                       ),
                       const SizedBox(height: 2),
+                      Text(
+                        request.requesterName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
                       Text(
                         request.title,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1D2E),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.place, size: 16, color: Colors.redAccent),
+                          Icon(
+                            Icons.place_rounded,
+                            size: 16,
+                            color: redPrimary,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               request.locationName,
-                              style: const TextStyle(fontSize: 13),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6B7280),
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -401,6 +552,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -408,11 +560,40 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                          Icon(
+                            Icons.send_rounded,
+                            size: 14,
+                            color: Colors.grey.shade500,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            _timeAgoLabel(request.postedAt),
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            'Posted ${_timeAgoLabel(request.postedAt)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.event_available_rounded,
+                            size: 14,
+                            color: redPrimary.withOpacity(0.75),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Needed ${DateFormat.yMMMd().add_jm().format(request.neededAt)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade800,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -421,35 +602,40 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                 ),
                 if (request.isUrgent)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
                     ),
-                    child: const Text(
+                    decoration: BoxDecoration(
+                      color: redPrimary.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: redPrimary.withOpacity(0.4)),
+                    ),
+                    child: Text(
                       'Urgent',
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w700,
+                        color: redPrimary,
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
-              height: 40,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.redAccent),
+              height: 44,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: redPrimary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   textStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                 ),
@@ -463,26 +649,35 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     );
   }
 
-  Widget _compactCard(_HelpRequest request) {
+  Widget _compactCard(_HelpRequest request, Color redPrimary) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: request.tagColor ?? const Color(0xFFF5F5F7),
-              borderRadius: BorderRadius.circular(8),
+              color: (request.tagColor ?? const Color(0xFFF5F5F7)).withOpacity(
+                0.8,
+              ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.handshake_rounded, size: 18, color: Colors.redAccent),
+            child: Icon(Icons.handshake_rounded, size: 20, color: redPrimary),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,7 +689,8 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                         request.category,
                         style: const TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF374151),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -502,14 +698,31 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     const SizedBox(width: 6),
                     Text(
                       _distanceLabel(request),
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
+                  request.requesterName,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
                   request.title,
-                  style: const TextStyle(fontSize: 13.5),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: Color(0xFF1A1D2E),
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
@@ -518,20 +731,26 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     Icon(
                       Icons.location_on_rounded,
                       size: 14,
-                      color: request.markerColor ?? Colors.redAccent,
+                      color: request.markerColor ?? redPrimary,
                     ),
                     const SizedBox(width: 3),
                     Expanded(
                       child: Text(
                         request.locationName,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (request.statusLabel != null) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(10),
@@ -551,11 +770,21 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    const Icon(Icons.schedule, size: 13, color: Colors.grey),
+                    Icon(
+                      Icons.schedule_rounded,
+                      size: 13,
+                      color: Colors.grey.shade500,
+                    ),
                     const SizedBox(width: 3),
-                    Text(
-                      _timeAgoLabel(request.postedAt),
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    Expanded(
+                      child: Text(
+                        '${_timeAgoLabel(request.postedAt)} · Need ${DateFormat.MMMd().add_jm().format(request.neededAt)}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -570,6 +799,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
 
 class _HelpRequest {
   final String category;
+  final String requesterName;
   final String title;
   final String locationName;
   final double lat;
@@ -577,12 +807,15 @@ class _HelpRequest {
   final bool isUrgent;
   final bool isMine;
   final DateTime postedAt;
+  final DateTime neededAt;
+  final String? creatorUid;
   final Color? markerColor;
   final Color? tagColor;
   final String? statusLabel;
 
   const _HelpRequest({
     required this.category,
+    required this.requesterName,
     required this.title,
     required this.locationName,
     required this.lat,
@@ -590,6 +823,8 @@ class _HelpRequest {
     required this.isUrgent,
     required this.isMine,
     required this.postedAt,
+    required this.neededAt,
+    this.creatorUid,
     this.markerColor,
     this.tagColor,
     this.statusLabel,
@@ -605,4 +840,3 @@ class _HelpRequest {
     );
   }
 }
-

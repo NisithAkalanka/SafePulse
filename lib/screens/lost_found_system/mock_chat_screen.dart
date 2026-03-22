@@ -9,11 +9,11 @@ class MockChatScreen extends StatefulWidget {
   final String itemName;
 
   const MockChatScreen({
-    Key? key,
+    super.key,
     required this.itemId,
     required this.otherUserName,
     required this.itemName,
-  }) : super(key: key);
+  });
 
   @override
   State<MockChatScreen> createState() => _MockChatScreenState();

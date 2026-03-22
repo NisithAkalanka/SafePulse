@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 
 import 'screens/navigation_screen.dart';
+import 'screens/sos_system/onboarding_screen.dart';
+import 'screens/sos_system/login_screen.dart';
 import 'services/notification_service.dart';
+import 'services/help_request_service.dart';
 
 // Marketplace Screens
 import 'screens/marketPlace_system/market_home.dart';
@@ -20,10 +24,11 @@ void main() async {
     );
 
     await NotificationService.initNotification();
+    HelpRequestService.instance.startListening();
 
-    debugPrint("SafePulse: Services Initialized Successfully");
+    debugPrint("SafePulse: All Core Services Online.");
   } catch (e) {
-    debugPrint("Initialization Error: $e");
+    debugPrint("SafePulse Error During Start: $e");
   }
 
   runApp(const SafePulseApp());
@@ -39,7 +44,7 @@ class SafePulseApp extends StatelessWidget {
       title: 'SafePulse',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF4B4B),
+          seedColor: const Color(0xFFFF4B4B), // SafePulse Red
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -50,8 +55,26 @@ class SafePulseApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const MainNavigationScreen(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(color: Color(0xFFFF4B4B)),
+              ),
+            );
+          }
+
+          if (snapshot.hasData && snapshot.data != null) {
+            return const MainNavigationScreen();
+          }
+
+          return const OnboardingScreen();
+        },
+      ),
       routes: {
+        '/login': (context) => const LoginScreen(),
         '/navigation': (context) => const MainNavigationScreen(),
         '/market-home': (context) => MarketHome(),
         '/create-listing': (context) => CreateListing(),

@@ -7,7 +7,7 @@ import 'lost_found_service.dart';
 
 class CreateItemScreen extends StatefulWidget {
   final String postType; // 'Lost' or 'Found'
-  const CreateItemScreen({Key? key, required this.postType}) : super(key: key);
+  const CreateItemScreen({super.key, required this.postType});
 
   @override
   State<CreateItemScreen> createState() => _CreateItemScreenState();
@@ -253,7 +253,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
 
                       // Category dropdown with icons
                       DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        initialValue: _selectedCategory,
                         dropdownColor: const Color(0xFF7A0F0F),
                         style: const TextStyle(color: Colors.white),
                         decoration: _fieldDeco(

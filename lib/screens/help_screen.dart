@@ -11,75 +11,82 @@ class HelpScreen extends StatefulWidget {
   State<HelpScreen> createState() => _HelpScreenState();
 }
 
-class _HelpScreenState extends State<HelpScreen> {
-  final TextEditingController _helpController = TextEditingController();
-  int _selectedIndex = 0;
+class _HelpScreenState extends State<HelpScreen> with TickerProviderStateMixin {
+  late TabController _tabController;
+  int _selectedCategoryIndex = 0;
 
-  final List<_HelpCategory> _categories = const [
+  static const List<_HelpCategory> _categories = [
     _HelpCategory(
-      icon: Icons.menu_book_rounded,
+      asset: 'assets/images/resource_sharing.png',
       title: 'Resource Sharing',
     ),
     _HelpCategory(
-      icon: Icons.school_rounded,
+      asset: 'assets/images/study_support.png',
       title: 'Study Support',
     ),
     _HelpCategory(
-      icon: Icons.directions_car_rounded,
+      asset: 'assets/images/safety_transport.png',
       title: 'Safety Transport',
     ),
     _HelpCategory(
-      icon: Icons.settings_input_component_rounded,
+      asset: 'assets/images/tech_support.png',
       title: 'Tech Support',
     ),
     _HelpCategory(
-      icon: Icons.restaurant_rounded,
+      asset: 'assets/images/canteen_runner.png',
       title: 'Canteen Runner',
     ),
     _HelpCategory(
-      icon: Icons.local_shipping_rounded,
+      asset: 'assets/images/campus_logistics.png',
       title: 'Campus Logistics & Moving',
-      subtitle: 'Rs 4,500',
+      subtitle: '👥 Rs 4,500',
     ),
     _HelpCategory(
-      icon: Icons.currency_exchange_rounded,
+      asset: 'assets/images/cash_exchange.png',
       title: 'Cash Exchange',
-      subtitle: 'Rs 4,500',
+      subtitle: '👥 Rs 4,500',
     ),
-    _HelpCategory(
-      icon: Icons.more_horiz_rounded,
-      title: 'Other',
-    ),
+    _HelpCategory(asset: 'assets/images/other.png', title: 'Other'),
   ];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     if (widget.initialCategory != null) {
       final idx = _categories.indexWhere(
         (c) => c.title.toLowerCase() == widget.initialCategory!.toLowerCase(),
       );
       if (idx != -1) {
-        _selectedIndex = idx;
+        _selectedCategoryIndex = idx;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => HelpRequestDetailScreen(
+                category: _categories[idx].title,
+                initialNote: '',
+              ),
+            ),
+          );
+        });
       }
     }
   }
 
   @override
   void dispose() {
-    _helpController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  void _onPostRequest() {
-    final selectedCategory = _categories[_selectedIndex].title;
-    final description = _helpController.text.trim();
-
+  void _openRequestDetail(int index) {
+    setState(() => _selectedCategoryIndex = index);
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => HelpRequestDetailScreen(
-          category: selectedCategory,
-          initialNote: description,
+      MaterialPageRoute<void>(
+        builder: (_) => HelpRequestDetailScreen(
+          category: _categories[index].title,
+          initialNote: '',
         ),
       ),
     );
@@ -87,182 +94,129 @@ class _HelpScreenState extends State<HelpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9FB),
+      backgroundColor: const Color(0xFFF8F9FC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          'Post Help Request',
+          'Help',
           style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
+            color: Color(0xFF1A1D2E),
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.forum_outlined, color: Colors.black87),
-            tooltip: 'View Help Feed',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const HelpFeedScreen()),
-              );
-            },
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: const Color(0xFFE53935),
+          unselectedLabelColor: const Color(0xFF6B7280),
+          indicatorColor: const Color(0xFFE53935),
+          indicatorWeight: 3,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            letterSpacing: 0.3,
           ),
-          const SizedBox(width: 8),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+          tabs: const [
+            Tab(text: 'REQUEST'),
+            Tab(text: 'FEED'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _RequestTabContent(
+            categories: _categories,
+            selectedIndex: _selectedCategoryIndex,
+            onCategorySelected: _openRequestDetail,
+          ),
+          const HelpFeedScreen(),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                final bool isSelected = index == _selectedIndex;
+    );
+  }
+}
 
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedIndex = index;
-                    });
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isSelected 
-                              ? Colors.red.withOpacity(0.15) 
-                              : Colors.black.withOpacity(0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: isSelected ? Colors.redAccent : const Color(0xFFF0F0F0),
-                        width: isSelected ? 1.5 : 1,
-                      ),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      leading: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          category.icon,
-                          color: const Color(0xFFEF5350),
-                          size: 24,
-                        ),
-                      ),
-                      title: Text(
-                        category.title,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                          color: isSelected ? Colors.redAccent : const Color(0xFF333333),
-                        ),
-                      ),
-                      subtitle: category.subtitle != null
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.payments_outlined, size: 14, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    category.subtitle!,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : null,
-                      trailing: Icon(
-                        Icons.chevron_right_rounded,
-                        color: isSelected ? Colors.redAccent : const Color(0xFFCCCCCC),
-                      ),
+class _RequestTabContent extends StatelessWidget {
+  const _RequestTabContent({
+    required this.categories,
+    required this.selectedIndex,
+    required this.onCategorySelected,
+  });
+
+  final List<_HelpCategory> categories;
+  final int selectedIndex;
+  final ValueChanged<int> onCategorySelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF8B1A1A), Color(0xFF671111)],
+        ),
+      ),
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Select your help type',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                );
-              },
+                  const SizedBox(height: 6),
+                  Text(
+                    'Pick a category below to open the request form.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final category = categories[index];
+                final isSelected = index == selectedIndex;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _CategoryCard(
+                    asset: category.asset,
+                    title: category.title,
+                    subtitle: category.subtitle,
+                    isSelected: isSelected,
+                    onTap: () => onCategorySelected(index),
+                  ),
+                );
+              }, childCount: categories.length),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextField(
-                    controller: _helpController,
-                    minLines: 1,
-                    maxLines: 2,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
-                      hintText: 'Need help carrying medical bag.',
-                      hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFD32F2F),
-                      foregroundColor: Colors.white,
-                      elevation: 4,
-                      shadowColor: Colors.redAccent.withOpacity(0.4),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: _onPostRequest,
-                    child: const Text(
-                      'POST REQUEST',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(height: MediaQuery.of(context).padding.bottom + 24),
           ),
         ],
       ),
@@ -270,15 +224,115 @@ class _HelpScreenState extends State<HelpScreen> {
   }
 }
 
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({
+    required this.asset,
+    required this.title,
+    this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String asset;
+  final String title;
+  final String? subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFD32F2F)
+                : const Color(0xFFEEF0F3),
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                asset,
+                width: 52,
+                height: 52,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.handshake_rounded,
+                    color: Color(0xFF424242),
+                    size: 26,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF424242),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _HelpCategory {
-  final IconData icon;
+  final String asset;
   final String title;
   final String? subtitle;
 
   const _HelpCategory({
-    required this.icon,
+    required this.asset,
     required this.title,
     this.subtitle,
   });
 }
-

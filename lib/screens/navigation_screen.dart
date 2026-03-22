@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'home_screen.dart';
-import 'login_screen.dart';
-import 'guardian_map_screen.dart';
-import 'admin_full_dashboard.dart';
+import 'sos_system/home_screen.dart';
+import 'sos_system/login_screen.dart';
+import 'sos_system/guardian_map_screen.dart';
+import 'sos_system/admin_full_dashboard.dart';
 import 'lost_found_system/lost_found_feed_screen.dart';
 import 'marketPlace_system/market_home.dart';
+import 'help_screen.dart';
 
-// Placeholder (අනිත් අයගේ වැඩ වෙනුවෙන්)
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   const PlaceholderScreen(this.title, {super.key});
@@ -102,10 +102,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     super.initState();
     _checkUserRole();
 
-    // Login/logout වෙද්දී role refresh වෙනවා
-    FirebaseAuth.instance.authStateChanges().listen((_) {
+    FirebaseAuth.instance.authStateChanges().listen((user) {
       if (!mounted) return;
-      _checkUserRole();
+      if (user == null) {
+        setState(() {
+          _userRole = 'student';
+          _selectedIndex = 0;
+        });
+      } else {
+        _checkUserRole();
+      }
     });
   }
 
@@ -136,23 +142,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   List<Widget> _getScreens() {
-    // Admins: SOS + Dashboard + Map + Help + Lost&Found + Market
     if (_userRole == 'admin') {
       return [
         const HomeScreen(),
         const AdminFullDashboard(),
         const GuardianMapScreen(),
-        const HelpFeedScreen(),
+        const HelpScreen(),
         const LostFoundFeedScreen(),
         MarketHome(),
       ];
     }
 
-    // Students: SOS + Map + Help + Lost&Found + Market
     return [
       const HomeScreen(),
       const GuardianMapScreen(),
-      const HelpFeedScreen(),
+      const HelpScreen(),
       const LostFoundFeedScreen(),
       MarketHome(),
     ];
@@ -204,27 +208,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<void> _onItemTapped(int index) async {
-    // SOS tab always available
     if (index == 0) {
       setState(() => _selectedIndex = index);
       return;
     }
 
-    // Everything else requires login
     if (FirebaseAuth.instance.currentUser == null) {
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
 
-      // If user logged in after returning
       if (FirebaseAuth.instance.currentUser != null) {
         await _checkUserRole();
-
         if (!mounted) return;
         setState(() => _selectedIndex = index);
       }
-
       return;
     }
 
@@ -236,25 +235,61 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final screens = _getScreens();
     final navItems = _getNavItems();
 
-    // Safety guard: if role changed and index is out of range, reset
     if (_selectedIndex >= screens.length) {
       _selectedIndex = 0;
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
       body: IndexedStack(index: _selectedIndex, children: screens),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.redAccent,
-        unselectedItemColor: Colors.grey,
-        onTap: (i) => _onItemTapped(i),
-        selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 11,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.96),
+            borderRadius: BorderRadius.circular(34),
+            border: Border.all(color: const Color(0xFFFFD9DD), width: 1.2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x22000000),
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(34),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+              ),
+              child: BottomNavigationBar(
+                currentIndex: _selectedIndex,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                type: BottomNavigationBarType.fixed,
+                selectedItemColor: const Color(0xFFFF5A63),
+                unselectedItemColor: const Color(0xFF90A0AC),
+                onTap: _onItemTapped,
+                selectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                  letterSpacing: 0.3,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+                iconSize: 27,
+                items: navItems,
+              ),
+            ),
+          ),
         ),
-        unselectedLabelStyle: const TextStyle(fontSize: 10),
-        items: navItems,
       ),
     );
   }
