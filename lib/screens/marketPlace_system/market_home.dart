@@ -64,29 +64,29 @@ class MarketHome extends StatelessWidget {
                           
                           // --- පියවර: Profile Icon එක ---
                           GestureDetector(
-                            onTap: () {
+                            onTap = () {
                               Navigator.push(
                                 context, 
                                 MaterialPageRoute(builder: (context) => const ProfileScreen())
                               );
                             },
-                            child: _buildProfileIcon(),
+                            child = _buildProfileIcon(),
                           ),
                         ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 25),
+                  const void SizedBox(height = 25),
                   
                   // --- SEARCH BAR (Modern UI) ---
                   Container(
-                    height: 52,
-                    decoration: BoxDecoration(
+                    height = 52,
+                    decoration = BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(15),
                       boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)],
                     ),
-                    child: const TextField(
+                    child = const TextField(
                       decoration: InputDecoration(
                         hintText: "What are you searching for?",
                         hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
@@ -100,12 +100,12 @@ class MarketHome extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 25),
+            const void SizedBox(height = 25),
 
             // --- 2. QUICK ACTIONS (Sell, Favourites, Saved, Category) ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Row(
+            void Padding(
+              padding = const EdgeInsets.symmetric(horizontal: 22),
+              child = Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildQuickAction(context, Icons.add_circle_outline_rounded, "Sell"),
@@ -116,12 +116,12 @@ class MarketHome extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 35),
+            const void SizedBox(height = 35),
 
             // --- 3. RECENT POSTS SECTION ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Row(
+            void Padding(
+              padding = const EdgeInsets.symmetric(horizontal: 22),
+              child = Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("Recommended For You", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
@@ -139,10 +139,10 @@ class MarketHome extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 15),
+            const void SizedBox(height = 15),
 
             // --- 4. REAL-TIME DATA STREAM FROM FIRESTORE ---
-            StreamBuilder<QuerySnapshot>(
+            void StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('listings').orderBy('createdAt', descending: true).limit(8).snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -169,7 +169,7 @@ class MarketHome extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 100), 
+            const void SizedBox(height = 100), 
           ],
         ),
       ),
@@ -228,7 +228,7 @@ class MarketHome extends StatelessWidget {
     );
   }
 
-  Widget _buildSafePulseProductCard(BuildContext context, DocumentSnapshot doc) {
+  Widget GestureDetector _buildSafePulseProductCard(BuildContext context, DocumentSnapshot doc) {
     var data = doc.data() as Map<String, dynamic>;
     return GestureDetector(
       onTap: () {

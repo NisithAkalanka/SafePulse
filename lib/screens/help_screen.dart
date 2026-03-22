@@ -228,10 +228,12 @@ class _RequestTabContent extends StatelessWidget {
                 );
               },
               childCount: categories.length,
-            ),
+            )
+return null;,
           ),
           ),
-          if (showDescribeSection) ...[
+          if (showDescribeSection) {
+            [
             SliverToBoxAdapter(child: const SizedBox(height: 12)),
             SliverToBoxAdapter(
               child: Padding(
@@ -326,10 +328,11 @@ class _RequestTabContent extends StatelessWidget {
                 ),
               ),
             ),
-          ],
+          ]
+          },
         ],
       ),
-    );
+    )
   }
 }
 
@@ -380,7 +383,7 @@ class _CategoryCard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(

@@ -18,6 +18,7 @@ class HelpRequestDetailScreen extends StatefulWidget {
   });
 
   @override
+  @override
   State<HelpRequestDetailScreen> createState() => _HelpRequestDetailScreenState();
 }
 
@@ -514,7 +515,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  Widget _buildFormCard(BuildContext context, Color redPrimary, {required Widget child}) {
+  Widget void _buildFormCard(BuildContext context, Color redPrimary, {required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -533,7 +534,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  Widget _buildLabel(IconData icon, String text) {
+  Widget buildLabel(IconData icon, String text) {
     return Row(
       children: [
         Icon(icon, size: 18, color: Colors.black87),
@@ -550,7 +551,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  Widget _buildTextField({
+  Widget buildTextField({
     required TextEditingController controller,
     required String hint,
     required Color redPrimary,
@@ -580,7 +581,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  Widget _buildTimeChip(String label, int value, Color redPrimary) {
+  Widget buildTimeChip(String label, int value, Color redPrimary) {
     final isSelected = _timeSelection == value;
     return Expanded(
       child: Material(
@@ -632,4 +633,3 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 }
-

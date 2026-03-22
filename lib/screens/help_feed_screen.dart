@@ -60,10 +60,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
         return requests.where((r) => r.isUrgent).toList();
       case 2:
         return [...requests]..sort(
-            (a, b) => a.distanceMeters(_currentPosition).compareTo(
-              b.distanceMeters(_currentPosition),
-            ),
-          );
+          (a, b) => a
+              .distanceMeters(_currentPosition)
+              .compareTo(b.distanceMeters(_currentPosition)),
+        );
       case 3:
         return requests.where((r) => r.isMine).toList();
       default:
@@ -90,9 +90,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
   }
 
   void _openCreateHelp() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const HelpScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
   }
 
   void _showRequestAccepted(_HelpRequest request) {
@@ -100,7 +100,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
       context: context,
       builder: (dialogContext) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
             child: Column(
@@ -233,7 +235,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF8B1A1A), Color(0xFF6B1515), Color(0xFF671111)],
+                    colors: [
+                      Color(0xFF8B1A1A),
+                      Color(0xFF6B1515),
+                      Color(0xFF671111),
+                    ],
                   ),
                 ),
               ),
@@ -285,12 +291,18 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                               height: 22,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           else
                             IconButton(
-                              icon: const Icon(Icons.my_location_rounded, size: 24, color: Colors.white),
+                              icon: const Icon(
+                                Icons.my_location_rounded,
+                                size: 24,
+                                color: Colors.white,
+                              ),
                               onPressed: _loadLocation,
                               tooltip: 'Refresh location',
                             ),
@@ -353,7 +365,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           ),
                         ],
                       ),
-                      child: Icon(Icons.add_rounded, color: redPrimary, size: 28),
+                      child: Icon(
+                        Icons.add_rounded,
+                        color: redPrimary,
+                        size: 28,
+                      ),
                     ),
                   ),
                 ),
@@ -383,7 +399,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
               color: isSelected ? Colors.white : Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isSelected ? Colors.white : Colors.white.withOpacity(0.4),
+                color: isSelected
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.4),
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: isSelected
@@ -436,7 +454,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                 CircleAvatar(
                   radius: 18,
                   backgroundColor: redPrimary.withOpacity(0.12),
-                  child: Icon(Icons.person_rounded, color: redPrimary, size: 20),
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: redPrimary,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -463,30 +485,48 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.place_rounded, size: 16, color: redPrimary),
+                          Icon(
+                            Icons.place_rounded,
+                            size: 16,
+                            color: redPrimary,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               request.locationName,
-                              style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6B7280),
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             _distanceLabel(request),
-                            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.access_time_rounded, size: 14, color: Colors.grey.shade500),
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 14,
+                            color: Colors.grey.shade500,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             _timeAgoLabel(request.postedAt),
-                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
@@ -495,7 +535,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                 ),
                 if (request.isUrgent)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: redPrimary.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
@@ -503,7 +546,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     ),
                     child: Text(
                       'Urgent',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: redPrimary),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: redPrimary,
+                      ),
                     ),
                   ),
               ],
@@ -520,7 +567,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
                 onPressed: () => _showRequestAccepted(request),
                 child: const Text('OFFER HELP'),
@@ -553,7 +603,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: (request.tagColor ?? const Color(0xFFF5F5F7)).withOpacity(0.8),
+              color: (request.tagColor ?? const Color(0xFFF5F5F7)).withOpacity(
+                0.8,
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(Icons.handshake_rounded, size: 20, color: redPrimary),
@@ -579,39 +631,60 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     const SizedBox(width: 6),
                     Text(
                       _distanceLabel(request),
-                      style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
                   request.title,
-                  style: const TextStyle(fontSize: 13.5, color: Color(0xFF1A1D2E)),
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: Color(0xFF1A1D2E),
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.location_on_rounded, size: 14, color: request.markerColor ?? redPrimary),
+                    Icon(
+                      Icons.location_on_rounded,
+                      size: 14,
+                      color: request.markerColor ?? redPrimary,
+                    ),
                     const SizedBox(width: 3),
                     Expanded(
                       child: Text(
                         request.locationName,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (request.statusLabel != null) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           request.statusLabel!,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green,
+                          ),
                         ),
                       ),
                     ],
@@ -620,11 +693,18 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(Icons.schedule_rounded, size: 13, color: Colors.grey.shade500),
+                    Icon(
+                      Icons.schedule_rounded,
+                      size: 13,
+                      color: Colors.grey.shade500,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       _timeAgoLabel(request.postedAt),
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -674,4 +754,3 @@ class _HelpRequest {
     );
   }
 }
-

@@ -8,7 +8,7 @@ import 'mock_chat_screen.dart';
 import '../profile_screen.dart';
 
 class LostFoundFeedScreen extends StatefulWidget {
-  const LostFoundFeedScreen({Key? key}) : super(key: key);
+  const LostFoundFeedScreen({super.key});
 
   @override
   State<LostFoundFeedScreen> createState() => _LostFoundFeedScreenState();
@@ -878,6 +878,7 @@ class _DetailScreenState extends State<_DetailScreen> {
                       ),
                       elevation: 0,
                     ),
+                    onPressed: _showFoundQuestionDialog,
                     child: const Text(
                       "I FOUND THIS",
                       style: TextStyle(
@@ -886,7 +887,6 @@ class _DetailScreenState extends State<_DetailScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    onPressed: _showFoundQuestionDialog,
                   ),
                 ),
               ] else if (item.type == 'Lost' &&
@@ -911,6 +911,7 @@ class _DetailScreenState extends State<_DetailScreen> {
                       ),
                       elevation: 0,
                     ),
+                    onPressed: _showClaimDialog,
                     child: const Text(
                       "THIS IS MINE",
                       style: TextStyle(
@@ -919,7 +920,6 @@ class _DetailScreenState extends State<_DetailScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    onPressed: _showClaimDialog,
                   ),
                 ),
               ] else if (item.type == 'Found' &&

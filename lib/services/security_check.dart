@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../screens/security_pin_screen.dart'; // මෙය කලින් හැදූ ෆයිල් එක
+import '../screens/sos_system/security_pin_screen.dart'; // මෙය කලින් හැදූ ෆයිල් එක
 
 class SecurityCheck {
   static Future<void> validateAccess(
