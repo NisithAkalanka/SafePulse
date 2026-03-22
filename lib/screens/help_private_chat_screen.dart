@@ -327,53 +327,6 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     );
   }
 
-  Future<void> _toggleRecording() async {
-    if (_isResolved) return;
-
-    if (_isRecording) {
-      _recordTimer?.cancel();
-      setState(() {
-        _isRecording = false;
-      });
-
-      final audioPath = await _recorder.stop();
-      final duration = _recordedDuration;
-      _recordedDuration = Duration.zero;
-
-      if (audioPath == null || audioPath.isEmpty) return;
-      await _sendAudioMessage(audioPath, duration);
-      return;
-    }
-
-    final hasPermission = await _recorder.hasPermission();
-    if (!hasPermission) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microphone permission is required for voice messages.')),
-      );
-      return;
-    }
-
-    final tempDir = Directory.systemTemp;
-    final audioPath =
-        '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-    await _recorder.start(const RecordConfig(), path: audioPath);
-
-    _recordTimer?.cancel();
-    setState(() {
-      _isRecording = true;
-      _recordedDuration = Duration.zero;
-    });
-
-    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _recordedDuration += const Duration(seconds: 1);
-      });
-    });
-  }
-
   Future<void> _sendAudioMessage(String audioPath, Duration duration) async {
     if (!mounted) return;
 
@@ -418,6 +371,53 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
         );
       });
       _scrollToBottom();
+    });
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_isResolved) return;
+
+    if (_isRecording) {
+      _recordTimer?.cancel();
+      setState(() {
+        _isRecording = false;
+      });
+
+      final audioPath = await _recorder.stop();
+      final duration = _recordedDuration;
+      _recordedDuration = Duration.zero;
+
+      if (audioPath == null || audioPath.isEmpty) return;
+      await _sendAudioMessage(audioPath, duration);
+      return;
+    }
+
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission is required for voice messages.')),
+      );
+      return;
+    }
+
+    final tempDir = Directory.systemTemp;
+    final audioPath =
+        '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _recorder.start(const RecordConfig(), path: audioPath);
+
+    _recordTimer?.cancel();
+    setState(() {
+      _isRecording = true;
+      _recordedDuration = Duration.zero;
+    });
+
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        _recordedDuration += const Duration(seconds: 1);
+      });
     });
   }
 

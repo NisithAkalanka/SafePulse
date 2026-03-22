@@ -33,7 +33,6 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
 
     try {
       // 2. SOS Node Connectivity (ඇත්තටම Firestore වැඩද බලමු)
-      final pingStart = DateTime.now();
       await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
       _isNodeActive = true;
 

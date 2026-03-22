@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

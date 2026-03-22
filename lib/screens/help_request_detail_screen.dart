@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';
 import 'help_feed_screen.dart';
 import '../help/help_request.dart';
@@ -177,37 +175,6 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       if (tip.isNotEmpty) 'tipNote': tip,
       if (phys.isNotEmpty) 'physicalRequirements': phys,
     };
-  }
-
-  Future<String?> _getCurrentAddress() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return null;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-
-      if (placemarks.isNotEmpty) {
-        final place = placemarks.first;
-        return "${place.name}, ${place.locality}";
-      }
-
-      return "${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}";
-    } catch (_) {
-      return null;
-    }
   }
 
   Future<void> _submitRequest() async {
@@ -472,9 +439,15 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   ),
                                   validator: (v) {
                                     final t = v?.trim() ?? '';
-                                    if (t.isEmpty) return 'Please enter your name';
-                                    if (t.length < 2) return 'Name must be at least 2 characters';
-                                    if (t.length > 80) return 'Name is too long';
+                                    if (t.isEmpty) {
+                                      return 'Please enter your name';
+                                    }
+                                    if (t.length < 2) {
+                                      return 'Name must be at least 2 characters';
+                                    }
+                                    if (t.length > 80) {
+                                      return 'Name is too long';
+                                    }
                                     // Letters + spaces only (supports Sinhala/Tamil/etc via Unicode categories).
                                     final onlyLettersAndSpaces = RegExp(r'^[\p{L} ]+$', unicode: true);
                                     if (!onlyLettersAndSpaces.hasMatch(t)) {
@@ -500,9 +473,15 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   ),
                                   validator: (v) {
                                     final t = v?.trim() ?? '';
-                                    if (t.isEmpty) return 'Please enter a short title';
-                                    if (t.length < 2) return 'Title must be at least 2 characters';
-                                    if (t.length > 80) return 'Title is too long';
+                                    if (t.isEmpty) {
+                                      return 'Please enter a short title';
+                                    }
+                                    if (t.length < 2) {
+                                      return 'Title must be at least 2 characters';
+                                    }
+                                    if (t.length > 80) {
+                                      return 'Title is too long';
+                                    }
                                     return null;
                                   },
                                 ),
@@ -520,9 +499,15 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                   ),
                                   validator: (v) {
                                     final t = v?.trim() ?? '';
-                                    if (t.isEmpty) return 'Please describe what you need';
-                                    if (t.length < 5) return 'Please add a bit more detail (at least 5 characters)';
-                                    if (t.length > 400) return 'Description is too long (max 400 characters)';
+                                    if (t.isEmpty) {
+                                      return 'Please describe what you need';
+                                    }
+                                    if (t.length < 5) {
+                                      return 'Please add a bit more detail (at least 5 characters)';
+                                    }
+                                    if (t.length > 400) {
+                                      return 'Description is too long (max 400 characters)';
+                                    }
                                     return null;
                                   },
                                 ),
