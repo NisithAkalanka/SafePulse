@@ -31,6 +31,7 @@ class _CreateListingState extends State<CreateListing> {
   // SafePulse Branding - Intense Red
   static const Color primaryRed = Color(0xFFD32F2F);
   static const Color darkBlack = Color(0xFF1A0101);
+  static const Color darkBg = Color(0xFF0F0F13);
 
   Future<void> _pickImage() async {
     final XFile? pickedFile = await _picker.pickImage(
