@@ -75,7 +75,11 @@ class SafePulseApp extends StatelessWidget {
       ),
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/navigation': (context) => const MainNavigationScreen(),
+        '/navigation': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          final tab = args is int ? args : null;
+          return MainNavigationScreen(initialTabIndex: tab);
+        },
         '/market-home': (context) => MarketHome(),
         '/create-listing': (context) => CreateListing(),
         '/item-details': (context) => ItemDetails(),

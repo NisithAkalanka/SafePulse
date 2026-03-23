@@ -481,9 +481,6 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  Widget _glassCard({required Widget child}) {
-    return child;
-  }
 
   Widget _inputField(
     TextEditingController c,

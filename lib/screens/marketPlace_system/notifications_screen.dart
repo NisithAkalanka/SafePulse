@@ -10,7 +10,6 @@ class MarketNotificationsScreen extends StatefulWidget {
 class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
   // SafePulse Brand Colors
   static const Color primaryRed = Color(0xFFD32F2F);
-  static const Color accentRed = Color(0xFFFF5252);
   static const Color darkBg = Color(0xFF121212);
 
   // නිදර්ශන Notifications කිහිපයක් (Mock Data)

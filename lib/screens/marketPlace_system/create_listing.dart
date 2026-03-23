@@ -1,35 +1,34 @@
-import 'dart:io'; // මෙක අනිවාර්යයෙන්ම ඕනේ
-import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart'; // package එක import කළා
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CreateListing extends StatefulWidget {
   const CreateListing({super.key});
+
   @override
-  _CreateListingState createState() => _CreateListingState();
+  State<CreateListing> createState() => CreateListingState();
 }
 
-class _CreateListingState extends State<CreateListing> {
+class CreateListingState extends State<CreateListing> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  
+
   String? _selectedCategory;
-  String? _selectedCondition;
   bool _isLoading = false;
 
-  // පින්තූරය තබා ගන්නා variable එක
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
-  static const Color primaryRed = Color(0xFFD32F2F); 
-  static const Color intenseRed = Color(0xFFFF1744); 
+  static const Color primaryRed = Color(0xFFD32F2F);
+  static const Color intenseRed = Color(0xFFFF1744);
   static const Color darkBg = Color(0xFF121212);
 
-  // --- ගැලරියෙන් පින්තූරයක් තෝරා ගැනීමේ function එක ---
   Future<void> _pickImage() async {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    
+
     if (pickedFile != null) {
       setState(() {
         _selectedImage = File(pickedFile.path);
@@ -38,137 +37,174 @@ class _CreateListingState extends State<CreateListing> {
   }
 
   Future<void> _publishListing() async {
-    if (_titleController.text.isEmpty || _priceController.text.isEmpty || _selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Missing information!")));
+    if (_titleController.text.isEmpty ||
+        _priceController.text.isEmpty ||
+        _selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Missing information!')),
+      );
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // මෙහිදී image එක Firebase Storage එකට upload කළ යුතුයි, දැනට අපි කලින් වගේ dummy URL එකක් යමු
       await FirebaseFirestore.instance.collection('listings').add({
         'name': _titleController.text,
-        'price': "Rs ${_priceController.text}",
+        'price': 'Rs ${_priceController.text}',
         'description': _descriptionController.text,
         'category': _selectedCategory,
-        'condition': _selectedCondition ?? "Good",
-        'image': "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=400", 
+        'condition': 'Good',
+        'image':
+            'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=400',
         'createdAt': Timestamp.now(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Listing Published!")));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Listing Published!')),
+      );
       Navigator.pop(context);
     } catch (e) {
-      debugPrint("Error: $e");
+      debugPrint('Error: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: darkBg,
       appBar: AppBar(
-        title: const Text("New Listing", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text('Add New Item'),
         centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: _publishListing,
-            child: const Text("Publish", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-          )
-        ],
+        backgroundColor: primaryRed,
+        foregroundColor: Colors.white,
       ),
-      body: Container(
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(colors: [intenseRed, darkBg], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-        ),
-        child: _isLoading 
-          ? const Center(child: CircularProgressIndicator(color: Colors.white))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 110, 20, 30),
-              child: Column(
-                children: [
-                  // --- Photo Picker Area ---
-                  GestureDetector(
-                    onTap: _pickImage, // මෙතැනදී ගැලරිය විවෘත වෙනවා
-                    child: _buildPhotoPickerUI(),
-                  ),
-                  const SizedBox(height: 25),
-
-                  _buildTextInput("Listing Title", _titleController, Icons.edit_note_rounded),
-                  const SizedBox(height: 15),
-                  _buildTextInput("Price", _priceController, Icons.sell_rounded, keyboardType: TextInputType.number),
-                  const SizedBox(height: 15),
-                  _buildDropdownField("Select Category", Icons.grid_view_rounded, ["Books", "Tech", "Dorm Items", "Clothing"]),
-                  const SizedBox(height: 15),
-                  _buildTextInput("Description", _descriptionController, Icons.description_rounded, maxLines: 4),
-                  const SizedBox(height: 35),
-                ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            GestureDetector(
+              onTap: _isLoading ? null : _pickImage,
+              child: Container(
+                height: 180,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(15),
+                  image: _selectedImage != null
+                      ? DecorationImage(
+                          image: FileImage(_selectedImage!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: _selectedImage == null
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.camera_alt, size: 40, color: Colors.grey),
+                          Text('Tap to add photo', style: TextStyle(color: Colors.grey)),
+                        ],
+                      )
+                    : null,
               ),
             ),
-      ),
-    );
-  }
-
-  // --- Photo Picker එකේ UI එක (පින්තූරය තේරුවාම එය පෙන්වනවා) ---
-  Widget _buildPhotoPickerUI() {
-    return Container(
-      width: double.infinity,
-      height: 200, // ටිකක් උස කළා පින්තූරය පේන්න
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15), 
-        borderRadius: BorderRadius.circular(20), 
-        border: Border.all(color: Colors.white30, width: 2)
-      ),
-      child: _selectedImage != null
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Image.file(_selectedImage!, fit: BoxFit.cover), // තෝරාගත් පින්තූරය මෙහි පෙන්වයි
-            )
-          : const Column(
-              mainAxisAlignment: MainAxisAlignment.center, 
-              children: [
-                Icon(Icons.camera_enhance_rounded, color: Colors.white, size: 45),
-                SizedBox(height: 10),
-                Text("Tap to add product photo", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ],
+            const SizedBox(height: 20),
+            TextField(
+              controller: _titleController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'What are you selling?',
+                labelStyle: const TextStyle(color: Colors.white70),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
-    );
-  }
-
-  // --- Reusable Input field Helpers ---
-  Widget _buildTextInput(String hint, TextEditingController ctrl, IconData icon, {int maxLines = 1, TextInputType keyboardType = TextInputType.text}) {
-    return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-      child: TextField(
-        controller: ctrl,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          hintText: hint,
-          prefixIcon: Icon(icon, color: primaryRed),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(18),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _priceController,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Price (Rs)',
+                labelStyle: const TextStyle(color: Colors.white70),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 4,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Description',
+                labelStyle: const TextStyle(color: Colors.white70),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCategory,
+              dropdownColor: darkBg,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                labelStyle: TextStyle(color: Colors.white70),
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'Electronics', child: Text('Electronics')),
+                DropdownMenuItem(value: 'Books', child: Text('Books')),
+                DropdownMenuItem(value: 'Other', child: Text('Other')),
+              ],
+              onChanged: _isLoading
+                  ? null
+                  : (v) => setState(() => _selectedCategory = v),
+            ),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _publishListing,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: intenseRed,
+                  foregroundColor: Colors.white,
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text(
+                        'Post Listing',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDropdownField(String hint, IconData icon, List<String> items) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-      child: DropdownButtonFormField<String>(
-        hint: Text(hint),
-        decoration: InputDecoration(icon: Icon(icon, color: primaryRed), border: InputBorder.none),
-        items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-        onChanged: (val) => setState(() => _selectedCategory = val),
-      ),
-    );
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _priceController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }

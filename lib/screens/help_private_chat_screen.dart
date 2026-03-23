@@ -4,6 +4,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
+
+import '../theme/guardian_ui.dart';
+
+/// Outgoing bubble — coral red (matches Help chat reference UI).
+const Color _kOutgoingBubble = Color(0xFFFF5252);
+const Color _kChatScreenBg = Color(0xFFEEEEF2);
 
 class HelpPrivateChatScreen extends StatefulWidget {
   final String title;
@@ -29,6 +36,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
   Timer? _typingTimer;
 
   final AudioPlayer _audioPlayer = AudioPlayer();
+  late final AudioRecorder _recorder = AudioRecorder();
 
   bool _isRecording = false;
   Duration _recordedDuration = Duration.zero;
@@ -56,7 +64,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     ),
     _ChatMessage(
       fromMe: true,
-      text: 'Yes, I accepted. I’m on my way.',
+      text: "Yes, I accepted. I'm on my way.",
       time: DateTime.now().subtract(const Duration(minutes: 2)),
     ),
   ];
@@ -102,6 +110,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     _typingTimer?.cancel();
     _recordTimer?.cancel();
     _playerCompleteSub?.cancel();
+    _recorder.dispose();
     _audioPlayer.dispose();
     _elapsedTimer?.cancel();
     super.dispose();
@@ -295,7 +304,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                 ListTile(
                   leading: const Icon(
                     Icons.photo_camera_rounded,
-                    color: Colors.redAccent,
+                    color: _kOutgoingBubble,
                   ),
                   title: const Text('Camera'),
                   onTap: () {
@@ -306,7 +315,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                 ListTile(
                   leading: const Icon(
                     Icons.photo_library_rounded,
-                    color: Colors.redAccent,
+                    color: _kOutgoingBubble,
                   ),
                   title: const Text('Gallery'),
                   onTap: () {
@@ -331,16 +340,6 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     );
   }
 
-  Future<void> _toggleRecording() async {
-    if (_isResolved) return;
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Voice recording is not enabled in this build yet.'),
-      ),
-    );
-  }
 
   Future<void> _sendAudioMessage(String audioPath, Duration duration) async {
     if (!mounted) return;
@@ -389,88 +388,178 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     });
   }
 
+  Future<void> _toggleRecording() async {
+    if (_isResolved) return;
+
+    if (_isRecording) {
+      _recordTimer?.cancel();
+      setState(() {
+        _isRecording = false;
+      });
+
+      final audioPath = await _recorder.stop();
+      final duration = _recordedDuration;
+      _recordedDuration = Duration.zero;
+
+      if (audioPath == null || audioPath.isEmpty) return;
+      await _sendAudioMessage(audioPath, duration);
+      return;
+    }
+
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission is required for voice messages.')),
+      );
+      return;
+    }
+
+    final tempDir = Directory.systemTemp;
+    final audioPath =
+        '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _recorder.start(const RecordConfig(), path: audioPath);
+
+    _recordTimer?.cancel();
+    setState(() {
+      _isRecording = true;
+      _recordedDuration = Duration.zero;
+    });
+
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        _recordedDuration += const Duration(seconds: 1);
+      });
+    });
+  }
+
+  /// Incoming: sharper bottom-left. Outgoing: sharper bottom-right (reference UI).
+  BorderRadius _bubbleRadius(bool fromMe) {
+    const r = 18.0;
+    const tail = 5.0;
+    if (fromMe) {
+      return const BorderRadius.only(
+        topLeft: Radius.circular(r),
+        topRight: Radius.circular(r),
+        bottomLeft: Radius.circular(r),
+        bottomRight: Radius.circular(tail),
+      );
+    }
+    return const BorderRadius.only(
+      topLeft: Radius.circular(r),
+      topRight: Radius.circular(r),
+      bottomRight: Radius.circular(r),
+      bottomLeft: Radius.circular(tail),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: _kChatScreenBg,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0.5,
-        foregroundColor: Colors.black,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.black12,
+        foregroundColor: GuardianUi.textPrimary,
         titleSpacing: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFE8E8EC)),
+        ),
         title: Row(
           children: [
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: Color(0xFFFFEAEA),
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: GuardianUi.redTint,
               child: Icon(
                 Icons.person_rounded,
-                color: Colors.redAccent,
-                size: 18,
+                color: GuardianUi.redPrimary,
+                size: 20,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     widget.title,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: GuardianUi.textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     widget.subtitle,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF9E9E9E),
+                      fontWeight: FontWeight.w500,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (_showStudyTools) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          size: 13,
+                          color: Color(0xFF9E9E9E),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatElapsed(_elapsed),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF9E9E9E),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Row(
+            const SizedBox(width: 6),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _helperTyping ? 'Typing…' : 'Online',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (_showStudyTools) ...[
-                  const SizedBox(width: 10),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.timer_outlined,
-                        size: 14,
-                        color: Colors.grey,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF1E9E5A),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatElapsed(_elapsed),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      _helperTyping ? 'Typing…' : 'Online',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF757575),
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ],
             ),
           ],
@@ -486,10 +575,13 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                 );
               },
             ),
-          IconButton(
-            tooltip: 'Mark resolved & rate helper',
-            icon: const Icon(Icons.check_circle_rounded),
-            onPressed: () async {
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Center(
+              child: Tooltip(
+                message: 'Mark resolved & rate helper',
+                child: InkWell(
+                  onTap: () async {
               if (_isResolved) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Session already resolved.')),
@@ -550,7 +642,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                           ),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent,
+                              backgroundColor: _kOutgoingBubble,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -579,11 +671,29 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                   content: Text('Thanks! Session resolved. Rating: $rating/5'),
                 ),
               );
-            },
+                  },
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFF1B1B22),
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
           IconButton(
-            tooltip: 'Report / Block (placeholder)',
-            icon: const Icon(Icons.report_gmailerrorred_rounded),
+            tooltip: 'Report / Info',
+            icon: const Icon(Icons.error_outline_rounded),
+            color: GuardianUi.textPrimary,
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -600,33 +710,33 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
             child: ListView.builder(
               controller: _scrollController,
               reverse: true,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final m = _messages[_messages.length - 1 - index];
                 final alignment = m.fromMe
                     ? Alignment.centerRight
                     : Alignment.centerLeft;
-                final color = m.fromMe ? Colors.redAccent : Colors.white;
-                final textColor = m.fromMe ? Colors.white : Colors.black87;
+                final color = m.fromMe ? _kOutgoingBubble : Colors.white;
+                final textColor =
+                    m.fromMe ? Colors.white : GuardianUi.textPrimary;
 
                 return Align(
                   alignment: alignment,
                   child: Container(
-                    constraints: const BoxConstraints(maxWidth: 280),
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.sizeOf(context).width * 0.78,
                     ),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
                     decoration: BoxDecoration(
                       color: color,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: const [
+                      borderRadius: _bubbleRadius(m.fromMe),
+                      boxShadow: [
                         BoxShadow(
-                          color: Color(0x11000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
@@ -699,7 +809,12 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                         if (m.text != null && m.text!.isNotEmpty)
                           Text(
                             m.text!,
-                            style: TextStyle(color: textColor, height: 1.25),
+                            style: TextStyle(
+                              color: textColor,
+                              height: 1.3,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         const SizedBox(height: 6),
                         Row(
@@ -713,21 +828,19 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 color: m.fromMe
-                                    ? Colors.white70
-                                    : Colors.grey.shade600,
-                                fontWeight: FontWeight.w700,
+                                    ? Colors.white.withOpacity(0.92)
+                                    : const Color(0xFF757575),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             if (m.fromMe) ...[
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Icon(
                                 m.status == MessageStatus.read
                                     ? Icons.done_all_rounded
                                     : Icons.check_rounded,
-                                size: 16,
-                                color: m.status == MessageStatus.read
-                                    ? Colors.white
-                                    : Colors.white70,
+                                size: 15,
+                                color: Colors.white.withOpacity(0.95),
                               ),
                             ],
                           ],
@@ -772,14 +885,14 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
               ),
             ),
           Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
             decoration: const BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 10,
-                  offset: Offset(0, -4),
+                  color: Color(0x12000000),
+                  blurRadius: 12,
+                  offset: Offset(0, -3),
                 ),
               ],
             ),
@@ -810,7 +923,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                         onPressed: _showAttachmentSheet,
                         icon: const Icon(
                           Icons.attach_file_rounded,
-                          color: Colors.redAccent,
+                          color: _kOutgoingBubble,
                         ),
                       ),
                       IconButton(
@@ -820,7 +933,9 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                           _isRecording
                               ? Icons.stop_rounded
                               : Icons.mic_none_rounded,
-                          color: _isRecording ? Colors.redAccent : Colors.grey,
+                          color: _isRecording
+                              ? _kOutgoingBubble
+                              : const Color(0xFF9E9E9E),
                         ),
                       ),
                       if (_isRecording)
@@ -831,7 +946,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: Colors.redAccent,
+                              color: _kOutgoingBubble,
                             ),
                           ),
                         ),
@@ -846,33 +961,45 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                             if (!_isRecording) _send();
                           },
                           decoration: InputDecoration(
-                            hintText: 'Type a message…',
+                            hintText: 'Type a message...',
+                            hintStyle: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 15,
+                            ),
                             filled: true,
-                            fillColor: const Color(0xFFF5F5F7),
+                            fillColor: const Color(0xFFEFEFEF),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
+                              horizontal: 18,
+                              vertical: 12,
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(26),
                               borderSide: BorderSide.none,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            foregroundColor: Colors.white,
-                            shape: const CircleBorder(),
-                            padding: EdgeInsets.zero,
+                      const SizedBox(width: 8),
+                      Material(
+                        color: (_canSend && !_isRecording)
+                            ? const Color(0xFF9E9E9E)
+                            : const Color(0xFFE0E0E0),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: (_canSend && !_isRecording) ? _send : null,
+                          child: SizedBox(
+                            width: 46,
+                            height: 46,
+                            child: Icon(
+                              Icons.send_rounded,
+                              size: 20,
+                              color: (_canSend && !_isRecording)
+                                  ? Colors.white
+                                  : const Color(0xFFBDBDBD),
+                            ),
                           ),
-                          onPressed: (_canSend && !_isRecording) ? _send : null,
-                          child: const Icon(Icons.send_rounded, size: 18),
                         ),
                       ),
                     ],
@@ -903,10 +1030,12 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.redAccent.withOpacity(0.25)),
+          border: Border.all(
+            color: _kOutgoingBubble.withOpacity(0.28),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.redAccent.withOpacity(0.08),
+              color: _kOutgoingBubble.withOpacity(0.08),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -914,10 +1043,10 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
         ),
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: Colors.redAccent,
+            color: _kOutgoingBubble,
           ),
           textAlign: TextAlign.center,
         ),

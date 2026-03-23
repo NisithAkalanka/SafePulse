@@ -3,12 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'sos_system/home_screen.dart';
-import 'sos_system/login_screen.dart';
 import 'sos_system/guardian_map_screen.dart';
 import 'sos_system/admin_full_dashboard.dart';
 import 'lost_found_system/lost_found_feed_screen.dart';
 import 'marketPlace_system/market_home.dart';
 import 'help_screen.dart';
+import '../widgets/main_bottom_navigation_bar.dart';
 
 class PlaceholderScreen extends StatelessWidget {
   final String title;
@@ -51,8 +51,9 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-class HelpFeedScreen extends StatelessWidget {
-  const HelpFeedScreen({super.key});
+/// Unused legacy menu (Help tab uses [HelpScreen] from `help_screen.dart`).
+class LegacyHelpHubMenuScreen extends StatelessWidget {
+  const LegacyHelpHubMenuScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +89,10 @@ class HelpFeedScreen extends StatelessWidget {
 }
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  /// Optional tab to select after role is loaded (e.g. from embedded nav).
+  final int? initialTabIndex;
+
+  const MainNavigationScreen({super.key, this.initialTabIndex});
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
@@ -96,6 +100,7 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   String _userRole = 'student';
+  bool _initialTabApplied = false;
 
   @override
   void initState() {
@@ -121,6 +126,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     if (user == null) {
       if (!mounted) return;
       setState(() => _userRole = 'student');
+      _applyInitialTabIfNeeded();
       return;
     }
 
@@ -134,11 +140,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       setState(() {
         _userRole = (doc.data()?['role'] ?? 'student').toString();
       });
+      _applyInitialTabIfNeeded();
     } catch (e) {
       debugPrint('Role check failed: $e');
       if (!mounted) return;
       setState(() => _userRole = 'student');
+      _applyInitialTabIfNeeded();
     }
+  }
+
+  void _applyInitialTabIfNeeded() {
+    if (_initialTabApplied ||
+        widget.initialTabIndex == null ||
+        !mounted) {
+      return;
+    }
+    final screens = _getScreens();
+    if (screens.isEmpty) return;
+    setState(() {
+      _selectedIndex =
+          widget.initialTabIndex!.clamp(0, screens.length - 1);
+      _initialTabApplied = true;
+    });
   }
 
   List<Widget> _getScreens() {
@@ -162,78 +185,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ];
   }
 
-  List<BottomNavigationBarItem> _getNavItems() {
-    final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.security_outlined),
-        activeIcon: Icon(Icons.security),
-        label: 'SOS',
-      ),
-    ];
-
-    if (_userRole == 'admin') {
-      items.add(
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.analytics_outlined),
-          activeIcon: Icon(Icons.analytics),
-          label: 'DASHBOARD',
-        ),
-      );
-    }
-
-    items.addAll(const [
-      BottomNavigationBarItem(
-        icon: Icon(Icons.map_outlined),
-        activeIcon: Icon(Icons.map_rounded),
-        label: 'MAP',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.handshake_outlined),
-        activeIcon: Icon(Icons.handshake),
-        label: 'HELP',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.search_outlined),
-        activeIcon: Icon(Icons.search_rounded),
-        label: 'LOST',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.store_outlined),
-        activeIcon: Icon(Icons.store),
-        label: 'MARKET',
-      ),
-    ]);
-
-    return items;
-  }
-
   Future<void> _onItemTapped(int index) async {
-    if (index == 0) {
-      setState(() => _selectedIndex = index);
-      return;
-    }
-
-    if (FirebaseAuth.instance.currentUser == null) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-
-      if (FirebaseAuth.instance.currentUser != null) {
+    await handleMainNavBarTap(context, index, (resolved) async {
+      if (!mounted) return;
+      if (resolved != 0) {
         await _checkUserRole();
-        if (!mounted) return;
-        setState(() => _selectedIndex = index);
       }
-      return;
-    }
-
-    setState(() => _selectedIndex = index);
+      if (!mounted) return;
+      setState(() => _selectedIndex = resolved);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final screens = _getScreens();
-    final navItems = _getNavItems();
+    final navItems = buildMainNavBarItems(_userRole);
 
     if (_selectedIndex >= screens.length) {
       _selectedIndex = 0;
@@ -243,53 +209,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       backgroundColor: Colors.transparent,
       extendBody: true,
       body: IndexedStack(index: _selectedIndex, children: screens),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.96),
-            borderRadius: BorderRadius.circular(34),
-            border: Border.all(color: const Color(0xFFFFD9DD), width: 1.2),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x22000000),
-                blurRadius: 24,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(34),
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-              ),
-              child: BottomNavigationBar(
-                currentIndex: _selectedIndex,
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                type: BottomNavigationBarType.fixed,
-                selectedItemColor: const Color(0xFFFF5A63),
-                unselectedItemColor: const Color(0xFF90A0AC),
-                onTap: _onItemTapped,
-                selectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11,
-                  letterSpacing: 0.3,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
-                iconSize: 27,
-                items: navItems,
-              ),
-            ),
-          ),
-        ),
+      bottomNavigationBar: MainBottomNavigationBarView(
+        currentIndex: _selectedIndex,
+        items: navItems,
+        onTap: _onItemTapped,
       ),
     );
   }

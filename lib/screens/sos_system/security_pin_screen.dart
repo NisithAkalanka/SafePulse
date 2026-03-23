@@ -11,7 +11,6 @@ class SecurityPinScreen extends StatefulWidget {
 class _SecurityPinScreenState extends State<SecurityPinScreen> {
   final _pinController = TextEditingController();
   final user = FirebaseAuth.instance.currentUser;
-  bool _isLoading = false;
   bool _hasExistingPin = false; // දැනට පින් එකක් තිබේද?
 
   @override
@@ -41,7 +40,6 @@ class _SecurityPinScreenState extends State<SecurityPinScreen> {
       ).showSnackBar(const SnackBar(content: Text("Enter 4 digits!")));
       return;
     }
-    setState(() => _isLoading = true);
     await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
       'app_pin': _pinController.text,
       'security_lock_enabled': true,

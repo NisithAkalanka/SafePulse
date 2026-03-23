@@ -420,7 +420,7 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
                               });
                             },
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   ),

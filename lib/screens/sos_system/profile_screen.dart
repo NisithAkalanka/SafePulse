@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'edit_profile_screen.dart';
+import 'sos_hits_ratings_screen.dart';
 import '../../main.dart';
+import '../../services/help_role_mode_service.dart';
 import 'admin_dashboard.dart'; // Admin Dashboard එක සඳහා මෙය අනිවාර්යයෙන්ම තිබිය යුතුයි
 
 class ProfileScreen extends StatefulWidget {
@@ -29,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    HelpRoleModeService.instance.load();
     if (user != null) {
       studentEmail = user?.email ?? "Guest";
       _loadUserData();
@@ -339,9 +342,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Expanded(
                                 child: _statItem(
-                                  "05",
-                                  "SOS Hits",
+                                  "",
+                                  "Request help reviews",
                                   const Color(0xFFFF5A5F),
+                                  onTap: () {
+                                    Navigator.of(context).push<void>(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            const SosHitsRatingsScreen(),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -455,6 +466,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 6),
+                          _buildHelpRoleModeCard(),
+                          const SizedBox(height: 14),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(18),
                             child: Container(
@@ -528,6 +541,123 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Helper vs Requester mode — saved app-wide (see [HelpRoleModeService]).
+  Widget _buildHelpRoleModeCard() {
+    const red = Color(0xFFB31217);
+    return ValueListenableBuilder<bool>(
+      valueListenable: HelpRoleModeService.instance.isHelperMode,
+      builder: (context, isHelper, _) {
+        final title = isHelper ? 'Helper mode' : 'Requester mode';
+        final body = isHelper
+            ? 'You’re browsing as a helper. Offer help on the Help feed.'
+            : 'You’re browsing as a requester. Post help requests when you need support.';
+        final switchLabel = isHelper
+            ? 'Switch to Requester mode'
+            : 'Switch to Helper mode';
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFFFE0E0)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x10000000),
+                blurRadius: 14,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFE8E8),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      isHelper ? Icons.volunteer_activism : Icons.person_pin,
+                      color: red,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF1B1B22),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          body,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFF747A86),
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await HelpRoleModeService.instance.toggle();
+                    if (!context.mounted) return;
+                    final nowHelper = HelpRoleModeService.instance.isHelperMode.value;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          nowHelper
+                              ? 'Switched to Helper mode'
+                              : 'Switched to Requester mode',
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: red,
+                    side: const BorderSide(color: Color(0xFFE8B4B4)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.swap_horiz_rounded, size: 22),
+                  label: Text(
+                    switchLabel,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -611,8 +741,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _statItem(String value, String label, Color color) {
-    return Container(
+  Widget _statItem(
+    String value,
+    String label,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    final inner = Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -627,15 +762,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: color,
+          if (value.trim().isNotEmpty)
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: color,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
+          if (value.trim().isNotEmpty) const SizedBox(height: 4),
           Text(
             label,
             style: const TextStyle(
@@ -645,6 +781,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) {
+      return inner;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: inner,
       ),
     );
   }
