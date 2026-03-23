@@ -47,6 +47,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     if (FirebaseAuth.instance.currentUser == null) {
       return const LoginScreen();
     }
@@ -70,7 +71,9 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                 height: double.infinity,
                 margin: const EdgeInsets.fromLTRB(0, 10, 10, 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.92),
+                  color: isDark
+                      ? const Color(0xFF121217).withOpacity(0.96)
+                      : Colors.white.withOpacity(0.92),
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: const [
                     BoxShadow(
@@ -168,6 +171,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                                       ),
                                     );
                                   },
+                                  isDark: isDark,
                                 ),
                                 _menuTile(
                                   Icons.tune,
@@ -182,6 +186,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                                       ),
                                     );
                                   },
+                                  isDark: isDark,
                                 ),
                                 _menuTile(
                                   Icons.medical_services_outlined,
@@ -196,6 +201,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                                       ),
                                     );
                                   },
+                                  isDark: isDark,
                                 ),
                                 _menuTile(
                                   Icons.verified_user_outlined,
@@ -210,6 +216,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                                       ),
                                     );
                                   },
+                                  isDark: isDark,
                                 ),
                                 _menuTile(
                                   Icons.settings_outlined,
@@ -223,6 +230,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                                       ),
                                     );
                                   },
+                                  isDark: isDark,
                                 ),
                                 const SizedBox(height: 24),
                                 Container(
@@ -356,7 +364,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     );
   }
 
-  Widget _menuTile(IconData icon, String title, String sub, VoidCallback tap) {
+  Widget _menuTile(
+    IconData icon,
+    String title,
+    String sub,
+    VoidCallback tap, {
+    bool isDark = false,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -388,8 +402,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Color(0xFF1B1B22),
+          style: TextStyle(
+            color: const Color(0xFF1B1B22),
             fontWeight: FontWeight.w900,
             fontSize: 15,
           ),
@@ -398,8 +412,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
           padding: const EdgeInsets.only(top: 3),
           child: Text(
             sub,
-            style: const TextStyle(
-              color: Color(0xFF747A86),
+            style: TextStyle(
+              color: const Color(0xFF747A86),
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
             ),
@@ -413,9 +427,9 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
             color: const Color(0xFFF4F5F7),
             border: Border.all(color: const Color(0xFFE8EAF0)),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.chevron_right,
-            color: Color(0xFF1B1B22),
+            color: const Color(0xFF1B1B22),
             size: 18,
           ),
         ),

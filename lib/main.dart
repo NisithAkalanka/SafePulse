@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'firebase_options.dart';
+import 'package:provider/provider.dart';
 
+import 'firebase_options.dart';
 import 'screens/navigation_screen.dart';
 import 'screens/sos_system/onboarding_screen.dart';
 import 'screens/sos_system/login_screen.dart';
+import 'screens/sos_system/theme_provider.dart';
 import 'services/notification_service.dart';
 import 'services/help_request_service.dart';
 
@@ -31,7 +33,12 @@ void main() async {
     debugPrint("SafePulse Error During Start: $e");
   }
 
-  runApp(const SafePulseApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const SafePulseApp(),
+    ),
+  );
 }
 
 class SafePulseApp extends StatelessWidget {
@@ -39,12 +46,17 @@ class SafePulseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SafePulse',
       theme: ThemeData(
+        brightness: Brightness.light,
+        primaryColor: Colors.redAccent,
+        scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF4B4B), // SafePulse Red
+          seedColor: Colors.red,
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -53,8 +65,28 @@ class SafePulseApp extends StatelessWidget {
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
+          centerTitle: true,
         ),
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        primaryColor: Colors.redAccent,
+        scaffoldBackgroundColor: const Color(0xFF0F0F13),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.red,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1B1B22),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        cardColor: const Color(0xFF1B1B22),
+      ),
+      themeMode: themeProvider.themeMode,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {

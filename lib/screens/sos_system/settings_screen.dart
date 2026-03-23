@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,13 +14,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Theme එක වෙනස් කරන එක පාලනය කරන කෙනා ගමු
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final bool isDark = themeProvider.themeMode == ThemeMode.dark;
+
+    // Dark/Light අනුව මාරු වන වර්ණ ටික මෙතැන සෙට් කරමු
+    final Color bgColor = isDark
+        ? const Color(0xFF0F0F13)
+        : const Color(0xFFF5F6FA);
+    final Color cardColor = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color subTextColor = isDark
+        ? Colors.white70
+        : const Color(0xFF747A86);
+    final Color tileInnerColor = isDark
+        ? Colors.white.withOpacity(0.05)
+        : const Color(0xFFF9FAFC);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: bgColor, // Dynamic Background
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1B1B22),
+        backgroundColor: Colors.transparent, // පසුබිමට කැපී පෙනෙන්න
+        foregroundColor: textColor,
         title: const Text(
           "Settings",
           style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.2),
@@ -27,6 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
+          // --- App Preferences Header (SafePulse Gradient) ---
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -36,11 +56,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 colors: [Color(0xFFFF4B4B), Color(0xFFB31217)],
               ),
               borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x22000000),
+                  color: Colors.black.withOpacity(0.2),
                   blurRadius: 16,
-                  offset: Offset(0, 8),
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -65,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 4),
@@ -73,8 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         "Control alerts and emergency behavior for your SafePulse app.",
                         style: TextStyle(
                           color: Colors.white70,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -83,83 +103,131 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 18),
+
+          const SizedBox(height: 20),
+
+          // --- Dark Mode Toggle Button Area ---
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: isDark ? Colors.white10 : Colors.transparent,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: SwitchListTile(
+              title: Text(
+                "Dark Appearance",
+                style: TextStyle(fontWeight: FontWeight.w800, color: textColor),
+              ),
+              subtitle: Text(
+                isDark ? "Dark mode is active" : "Light mode is active",
+                style: TextStyle(color: subTextColor),
+              ),
+              secondary: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark
+                      ? Colors.amber.withOpacity(0.1)
+                      : const Color(0xFFB31217).withOpacity(0.1),
+                ),
+                child: Icon(
+                  isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                  color: isDark ? Colors.amber : const Color(0xFFB31217),
+                ),
+              ),
+              activeColor: const Color(0xFFB31217),
+              value: isDark,
+              onChanged: (bool value) {
+                themeProvider.toggleTheme(
+                  value,
+                ); // මෙන්න මෙතනින් තමයි මාරු කරන්නේ
+              },
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // --- Notifications Section ---
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardColor,
               borderRadius: BorderRadius.circular(22),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x10000000),
-                  blurRadius: 14,
-                  offset: Offset(0, 6),
-                ),
-              ],
+              border: Border.all(
+                color: isDark ? Colors.white10 : Colors.transparent,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   "Notifications",
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
-                    color: Color(0xFF1B1B22),
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  "Choose how the app communicates emergency-related updates.",
-                  style: TextStyle(
-                    color: Color(0xFF747A86),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Text(
+                  "Choose how the app communicates updates.",
+                  style: TextStyle(color: subTextColor, fontSize: 12),
                 ),
                 const SizedBox(height: 16),
                 _settingTile(
+                  isDark: isDark,
+                  tileColor: tileInnerColor,
                   icon: Icons.notifications_active_outlined,
                   title: "Community Notifications",
-                  subtitle: "Receive important emergency and community alerts.",
+                  subtitle: "Receive community alerts.",
                   value: receiveAlerts,
                   onChanged: (val) => setState(() => receiveAlerts = val),
+                  textColor: textColor,
+                  subTextColor: subTextColor,
                 ),
                 const SizedBox(height: 12),
                 _settingTile(
+                  isDark: isDark,
+                  tileColor: tileInnerColor,
                   icon: Icons.volume_off_outlined,
                   title: "Silent SOS Trigger",
-                  subtitle: "Send SOS without loud feedback from the device.",
+                  subtitle: "Send SOS without siren sound.",
                   value: silentMode,
                   onChanged: (val) => setState(() => silentMode = val),
+                  textColor: textColor,
+                  subTextColor: subTextColor,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 18),
+
+          const SizedBox(height: 20),
+
+          // --- Bottom Tip Card ---
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardColor,
               borderRadius: BorderRadius.circular(22),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x10000000),
-                  blurRadius: 14,
-                  offset: Offset(0, 6),
-                ),
-              ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 46,
-                  height: 46,
+                  width: 44,
+                  height: 44,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
                       colors: [Color(0xFFFF7B7B), Color(0xFFD32F2F)],
                     ),
                   ),
@@ -170,26 +238,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         "Safety Tip",
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF1B1B22),
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
                         ),
                       ),
-                      SizedBox(height: 3),
                       Text(
-                        "Keep notifications enabled so emergency requests and safety updates are never missed.",
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF747A86),
-                          fontWeight: FontWeight.w600,
-                        ),
+                        "Keep alerts enabled for 24/7 security.",
+                        style: TextStyle(fontSize: 12, color: subTextColor),
                       ),
                     ],
                   ),
@@ -202,47 +264,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // පුංචි මෙනු ඇතුළු කරන Function එක Update කලා
   Widget _settingTile({
+    required bool isDark,
+    required Color tileColor,
     required IconData icon,
     required String title,
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
+    required Color textColor,
+    required Color subTextColor,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFC),
+        color: tileColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EAF0)),
       ),
       child: SwitchListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        secondary: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFFFFE3E3),
-          ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        secondary: CircleAvatar(
+          backgroundColor: isDark ? Colors.white12 : const Color(0xFFFFE3E3),
           child: Icon(icon, color: const Color(0xFFB31217), size: 20),
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1B1B22),
+            fontSize: 14,
+            color: textColor,
           ),
         ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 11.5,
-              color: Color(0xFF747A86),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(fontSize: 11, color: subTextColor),
         ),
         activeThumbColor: const Color(0xFFB31217),
         value: value,

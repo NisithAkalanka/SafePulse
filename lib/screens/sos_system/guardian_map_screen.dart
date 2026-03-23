@@ -20,6 +20,22 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark
+        ? const Color(0xFF121217)
+        : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFF9FAFC);
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE8EAF0);
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, authSnapshot) {
@@ -46,7 +62,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
             List guardians = userData?['guardians'] ?? [];
 
             return Scaffold(
-              backgroundColor: const Color(0xFFF6F7FB),
+              backgroundColor: pageBg,
               extendBodyBehindAppBar: true,
               appBar: AppBar(
                 title: Text(
@@ -81,41 +97,59 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                   const SizedBox(width: 6),
                 ],
               ),
-              body: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFFFF4B4B),
-                          Color(0xFFB31217),
-                          Color(0xFF1B1B1B),
-                        ],
-                        stops: [0.0, 0.62, 1.0],
+              body: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: isDark
+                                ? const [
+                                    Color(0xFFFF3B3B),
+                                    Color(0xFFE10613),
+                                    Color(0xFFB30012),
+                                    Color(0xFF140910),
+                                  ]
+                                : const [
+                                    Color(0xFFFF4B4B),
+                                    Color(0xFFB31217),
+                                    Color(0xFF1B1B1B),
+                                  ],
+                            stops: isDark
+                                ? const [0.0, 0.35, 0.72, 1.0]
+                                : const [0.0, 0.62, 1.0],
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(34),
+                            bottomRight: Radius.circular(34),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            _headerCard(role),
+                            const SizedBox(height: 12),
+                            _topInfoStrip(role),
+                          ],
+                        ),
                       ),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(34),
-                        bottomRight: Radius.circular(34),
+                      SizedBox(
+                        height:
+                            MediaQuery.of(context).size.height *
+                            (_isFullMap ? 0.82 : 0.74),
+                        child: role == "admin"
+                            ? _buildAdminStream()
+                            : _buildStudentStream(guardians),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        _headerCard(role),
-                        const SizedBox(height: 12),
-                        _topInfoStrip(role),
-                      ],
-                    ),
+                    ],
                   ),
-                  Expanded(
-                    child: role == "admin"
-                        ? _buildAdminStream()
-                        : _buildStudentStream(guardians),
-                  ),
-                ],
+                ),
               ),
             );
           },
@@ -159,6 +193,19 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
 
   // --- සජීවී සිතියම් Layout එක (Map + Overlays) ---
   Widget _buildMainMapUI(List<QueryDocumentSnapshot> docs) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFF9FAFC);
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE8EAF0);
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+
     int visibleCount = 0;
     for (final d in docs) {
       final data = d.data() as Map<String, dynamic>;
@@ -169,7 +216,6 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
-
       child: Stack(
         children: [
           if (!_isFullMap)
@@ -190,9 +236,8 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
               margin: _isFullMap
                   ? EdgeInsets.zero
                   : const EdgeInsets.only(bottom: 150),
-
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardBg,
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: const [
                   BoxShadow(
@@ -297,7 +342,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: const [
                     BoxShadow(
@@ -329,17 +374,17 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                         children: [
                           Text(
                             "$visibleCount Guardians Online",
-                            style: const TextStyle(
-                              color: Color(0xFF1B1B22),
+                            style: TextStyle(
+                              color: textPrimary,
                               fontWeight: FontWeight.w900,
                               fontSize: 12.5,
                             ),
                           ),
                           const SizedBox(height: 2),
-                          const Text(
+                          Text(
                             "Tap an avatar to open quick actions",
                             style: TextStyle(
-                              color: Color(0xFF747A86),
+                              color: textSecondary,
                               fontWeight: FontWeight.w600,
                               fontSize: 11.5,
                             ),
@@ -365,7 +410,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(26),
                   boxShadow: const [
                     BoxShadow(
@@ -389,11 +434,9 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                 vertical: 12,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF9FAFC),
+                                color: softBg,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: const Color(0xFFE8EAF0),
-                                ),
+                                border: Border.all(color: borderColor),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -406,8 +449,8 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     "Guardians ($visibleCount)",
-                                    style: const TextStyle(
-                                      color: Color(0xFF1B1B22),
+                                    style: TextStyle(
+                                      color: textPrimary,
                                       fontWeight: FontWeight.w900,
                                       fontSize: 12.5,
                                     ),
@@ -435,7 +478,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: const [
                     BoxShadow(
@@ -486,6 +529,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
 
   // --- සිතියම උඩ ඇති පාවෙන යාළුවාගේ Avatar එක ---
   Widget _buildFloatingAvatar(Map<String, dynamic> data) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     String? photo = data['profile_photo_base64'];
     String name = data['first_name'] ?? "User";
 
@@ -572,7 +616,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1B1B22) : Colors.white,
               borderRadius: BorderRadius.circular(10),
               boxShadow: const [
                 BoxShadow(
@@ -586,8 +630,8 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xFF1B1B22),
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF1B1B22),
                 fontSize: 9,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.2,
@@ -601,6 +645,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
 
   // --- "NAVIGATE TO GOOGLE MAPS" Popup පුවරුව ---
   Widget _buildNavigatePopup() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     String name = _selectedFriend!['first_name'] ?? "Guardian";
     final lat = _toDouble(_selectedFriend!['last_lat']);
     final lng = _toDouble(_selectedFriend!['last_lng']);
@@ -608,9 +653,11 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFC),
+        color: isDark ? const Color(0xFF23232B) : const Color(0xFFF9FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EAF0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0),
+        ),
       ),
       child: Row(
         children: [
@@ -634,17 +681,19 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
               children: [
                 Text(
                   "Track $name's Position?",
-                  style: const TextStyle(
-                    color: Color(0xFF1B1B22),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF1B1B22),
                     fontWeight: FontWeight.w900,
                     fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
+                Text(
                   "Open Google Maps for live navigation",
                   style: TextStyle(
-                    color: Color(0xFF747A86),
+                    color: isDark
+                        ? const Color(0xFFB7BBC6)
+                        : const Color(0xFF747A86),
                     fontWeight: FontWeight.w600,
                     fontSize: 11.5,
                   ),
@@ -655,7 +704,11 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
           IconButton(
             tooltip: "Close",
             onPressed: () => setState(() => _selectedFriend = null),
-            icon: const Icon(Icons.close, color: Color(0xFF747A86), size: 18),
+            icon: Icon(
+              Icons.close,
+              color: isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86),
+              size: 18,
+            ),
           ),
           const SizedBox(width: 4),
           ElevatedButton.icon(
@@ -714,12 +767,28 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
         .where((m) => m['student_email'] != null) // keep consistent key
         .toList();
 
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color sheetBg = isDark
+        ? const Color(0xFF121217)
+        : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFF9FAFC);
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE8EAF0);
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+
     // reset search on open for clarity
     _searchCtrl.text = "";
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: sheetBg,
       isScrollControlled: true,
       barrierColor: Colors.black.withOpacity(0.55),
       builder: (context) {
@@ -729,9 +798,11 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
           maxChildSize: 0.92,
           builder: (context, scrollCtrl) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF6F7FB),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+              decoration: BoxDecoration(
+                color: sheetBg,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(26),
+                ),
               ),
               child: StatefulBuilder(
                 builder: (context, setSheetState) {
@@ -754,7 +825,9 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                         width: 44,
                         height: 5,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFD1D5DE),
+                          color: isDark
+                              ? const Color(0xFF34343F)
+                              : const Color(0xFFD1D5DE),
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
@@ -769,11 +842,11 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                               size: 20,
                             ),
                             const SizedBox(width: 10),
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 "Guardians",
                                 style: TextStyle(
-                                  color: Color(0xFF1B1B22),
+                                  color: textPrimary,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
                                 ),
@@ -785,14 +858,14 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: cardBg,
                                 borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: Color(0xFFE8EAF0)),
+                                border: Border.all(color: borderColor),
                               ),
                               child: Text(
                                 "${filtered.length} found",
-                                style: const TextStyle(
-                                  color: Color(0xFF747A86),
+                                style: TextStyle(
+                                  color: textSecondary,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12,
                                 ),
@@ -802,9 +875,9 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                             IconButton(
                               tooltip: "Close",
                               onPressed: () => Navigator.pop(context),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.close,
-                                color: Color(0xFF747A86),
+                                color: textSecondary,
                                 size: 18,
                               ),
                             ),
@@ -816,7 +889,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                         child: TextField(
                           controller: _searchCtrl,
                           onChanged: (_) => setSheetState(() {}),
-                          style: const TextStyle(color: Color(0xFF1B1B22)),
+                          style: TextStyle(color: textPrimary),
                           decoration: InputDecoration(
                             prefixIcon: const Icon(
                               Icons.search,
@@ -828,22 +901,18 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: cardBg,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 12,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE8EAF0),
-                              ),
+                              borderSide: BorderSide(color: borderColor),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE8EAF0),
-                              ),
+                              borderSide: BorderSide(color: borderColor),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -859,9 +928,9 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                       _searchCtrl.clear();
                                       setSheetState(() {});
                                     },
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.close_rounded,
-                                      color: Color(0xFF747A86),
+                                      color: textSecondary,
                                       size: 18,
                                     ),
                                   ),
@@ -870,11 +939,11 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                       ),
                       Expanded(
                         child: filtered.isEmpty
-                            ? const Center(
+                            ? Center(
                                 child: Text(
                                   "No results.",
                                   style: TextStyle(
-                                    color: Color(0xFF9AA1AD),
+                                    color: textSecondary,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -905,11 +974,9 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                   return Container(
                                     padding: const EdgeInsets.all(14),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: cardBg,
                                       borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: const Color(0xFFE8EAF0),
-                                      ),
+                                      border: Border.all(color: borderColor),
                                     ),
                                     child: ListTile(
                                       onTap: () {
@@ -957,8 +1024,8 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                         name,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Color(0xFF1B1B22),
+                                        style: TextStyle(
+                                          color: textPrimary,
                                           fontWeight: FontWeight.w900,
                                         ),
                                       ),
@@ -966,15 +1033,15 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                                         email,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Color(0xFF747A86),
+                                        style: TextStyle(
+                                          color: textSecondary,
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                         ),
                                       ),
-                                      trailing: const Icon(
+                                      trailing: Icon(
                                         Icons.chevron_right,
-                                        color: Color(0xFF9AA1AD),
+                                        color: textSecondary,
                                       ),
                                     ),
                                   );
@@ -1008,6 +1075,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
     required String tooltip,
     required VoidCallback onTap,
   }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1019,9 +1087,13 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFC),
+              color: isDark ? const Color(0xFF23232B) : const Color(0xFFF9FAFC),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE8EAF0)),
+              border: Border.all(
+                color: isDark
+                    ? const Color(0xFF34343F)
+                    : const Color(0xFFE8EAF0),
+              ),
             ),
             child: Icon(icon, color: const Color(0xFFB31217), size: 20),
           ),
@@ -1057,13 +1129,17 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
 
   Widget _blockedUI() {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF121217)
+          : const Color(0xFFF6F7FB),
       body: Center(
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 24),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1B1B22)
+                : Colors.white,
             borderRadius: BorderRadius.circular(24),
             boxShadow: const [
               BoxShadow(
@@ -1073,9 +1149,9 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
               ),
             ],
           ),
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: const [
               CircleAvatar(
                 radius: 32,
                 backgroundColor: Color(0xFFFFE3E3),
@@ -1086,23 +1162,10 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
                 ),
               ),
               SizedBox(height: 14),
-              Text(
-                "Locked Area",
-                style: TextStyle(
-                  color: Color(0xFF1B1B22),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              // Title
+              _BlockedTitle(),
               SizedBox(height: 6),
-              Text(
-                "Sign in to access guardian map tracking.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF747A86),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              _BlockedSubtitle(),
             ],
           ),
         ),
@@ -1123,7 +1186,9 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 24),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1B1B22)
+              : Colors.white,
           borderRadius: BorderRadius.circular(24),
           boxShadow: const [
             BoxShadow(
@@ -1149,8 +1214,10 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
             Text(
               msg,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF1B1B22),
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : const Color(0xFF1B1B22),
                 fontWeight: FontWeight.w900,
                 fontSize: 16,
               ),
@@ -1160,7 +1227,45 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
       ),
     );
   }
+}
 
+class _BlockedTitle extends StatelessWidget {
+  const _BlockedTitle();
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      "Locked Area",
+      style: TextStyle(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.white
+            : const Color(0xFF1B1B22),
+        fontSize: 18,
+        fontWeight: FontWeight.w900,
+      ),
+    );
+  }
+}
+
+class _BlockedSubtitle extends StatelessWidget {
+  const _BlockedSubtitle();
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      "Sign in to access guardian map tracking.",
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFB7BBC6)
+            : const Color(0xFF747A86),
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+// Move methods to _GuardianMapScreenState:
+
+extension _GuardianMapScreenStateHeader on _GuardianMapScreenState {
   Widget _headerCard(String role) {
     return Container(
       width: double.infinity,

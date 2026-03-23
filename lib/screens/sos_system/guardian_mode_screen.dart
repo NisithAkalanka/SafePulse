@@ -65,8 +65,28 @@ class _GuardianModeScreenState extends State<GuardianModeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark
+        ? const Color(0xFF121217)
+        : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark
+        ? const Color(0xFF1B1B22)
+        : Colors.white;
+    final Color textPrimary = isDark
+        ? Colors.white
+        : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFF9FAFC);
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE8EAF0);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: pageBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -82,157 +102,179 @@ class _GuardianModeScreenState extends State<GuardianModeScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF4B4B),
-                  Color(0xFFB31217),
-                  Color(0xFF1B1B1B),
-                ],
-                stops: [0.0, 0.62, 1.0],
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: isDark
+                        ? const [
+                            Color(0xFFFF3B3B),
+                            Color(0xFFE10613),
+                            Color(0xFFB30012),
+                            Color(0xFF140910),
+                          ]
+                        : const [
+                            Color(0xFFFF4B4B),
+                            Color(0xFFB31217),
+                            Color(0xFF1B1B1B),
+                          ],
+                    stops: isDark
+                        ? const [0.0, 0.35, 0.72, 1.0]
+                        : const [0.0, 0.62, 1.0],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(34),
+                    bottomRight: Radius.circular(34),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _headerCard(),
+                    const SizedBox(height: 12),
+                    _topInfoStrip(),
+                  ],
+                ),
               ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(34),
-                bottomRight: Radius.circular(34),
-              ),
-            ),
-            child: Column(
-              children: [
-                _headerCard(),
-                const SizedBox(height: 12),
-                _topInfoStrip(),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-              child: Column(
-                children: [
-                  _addGuardianCard(),
-                  const SizedBox(height: 14),
-                  Row(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Container(
-                          height: 1,
-                          color: const Color(0xFFE5E7EE),
-                        ),
+                      _addGuardianCard(),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              color: isDark
+                                  ? const Color(0xFF34343F)
+                                  : const Color(0xFFE5E7EE),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            "MY CURRENT GUARDIANS",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: isDark
+                                  ? const Color(0xFFB7BBC6)
+                                  : const Color(0xFF7A808C),
+                              fontSize: 11.5,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              color: isDark
+                                  ? const Color(0xFF34343F)
+                                  : const Color(0xFFE5E7EE),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      const Text(
-                        "MY CURRENT GUARDIANS",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF7A808C),
-                          fontSize: 11.5,
-                          letterSpacing: 0.8,
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(26),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x12000000),
+                              blurRadius: 18,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Container(
-                          height: 1,
-                          color: const Color(0xFFE5E7EE),
+                        child: StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(user!.uid)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFB31217),
+                                ),
+                              );
+                            }
+
+                            var userData =
+                                snapshot.data!.data() as Map<String, dynamic>?;
+                            List guardians = userData?['guardians'] ?? [];
+
+                            if (guardians.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const CircleAvatar(
+                                      radius: 30,
+                                      backgroundColor: Color(0xFFFFE3E3),
+                                      child: Icon(
+                                        Icons.shield_outlined,
+                                        color: Color(0xFFB31217),
+                                        size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      "No guardians added yet",
+                                      style: TextStyle(
+                                        color: textPrimary,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "Add trusted contacts to receive SOS alerts and live location.",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: textSecondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              itemCount: guardians.length,
+                              padding: const EdgeInsets.only(bottom: 8),
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemBuilder: (context, index) {
+                                final email = guardians[index].toString();
+                                return _guardianTile(email);
+                              },
+                            );
+                          },
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(26),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x12000000),
-                            blurRadius: 18,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(user!.uid)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFFB31217),
-                              ),
-                            );
-                          }
-
-                          var userData =
-                              snapshot.data!.data() as Map<String, dynamic>?;
-                          List guardians = userData?['guardians'] ?? [];
-
-                          if (guardians.isEmpty) {
-                            return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  CircleAvatar(
-                                    radius: 30,
-                                    backgroundColor: Color(0xFFFFE3E3),
-                                    child: Icon(
-                                      Icons.shield_outlined,
-                                      color: Color(0xFFB31217),
-                                      size: 28,
-                                    ),
-                                  ),
-                                  SizedBox(height: 14),
-                                  Text(
-                                    "No guardians added yet",
-                                    style: TextStyle(
-                                      color: Color(0xFF1B1B22),
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  SizedBox(height: 6),
-                                  Text(
-                                    "Add trusted contacts to receive SOS alerts and live location.",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Color(0xFF747A86),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-
-                          return ListView.builder(
-                            itemCount: guardians.length,
-                            padding: const EdgeInsets.only(bottom: 8),
-                            itemBuilder: (context, index) {
-                              final email = guardians[index].toString();
-                              return _guardianTile(email);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -361,6 +403,10 @@ class _GuardianModeScreenState extends State<GuardianModeScreen> {
   }
 
   Widget _addGuardianCard() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color fieldFill = isDark ? const Color(0xFF23232B) : Colors.white;
+    final Color fieldText = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color hintColor = isDark ? const Color(0xFFB7BBC6) : const Color(0xFF9AA1AD);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -424,7 +470,7 @@ class _GuardianModeScreenState extends State<GuardianModeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: fieldFill,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
@@ -434,14 +480,14 @@ class _GuardianModeScreenState extends State<GuardianModeScreen> {
                 Expanded(
                   child: TextField(
                     controller: _emailController,
-                    style: const TextStyle(
-                      color: Color(0xFF1B1B22),
+                    style: TextStyle(
+                      color: fieldText,
                       fontWeight: FontWeight.w700,
                     ),
                     cursorColor: const Color(0xFFB31217),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: "Add via Student Email...",
-                      hintStyle: TextStyle(color: Color(0xFF9AA1AD)),
+                      hintStyle: TextStyle(color: hintColor),
                       border: InputBorder.none,
                     ),
                   ),
@@ -483,13 +529,16 @@ class _GuardianModeScreenState extends State<GuardianModeScreen> {
   }
 
   Widget _guardianTile(String email) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFC),
+        color: isDark ? const Color(0xFF23232B) : const Color(0xFFF9FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EAF0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0),
+        ),
       ),
       child: Row(
         children: [
@@ -509,18 +558,18 @@ class _GuardianModeScreenState extends State<GuardianModeScreen> {
               children: [
                 Text(
                   email,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 13.5,
-                    color: Color(0xFF1B1B22),
+                    color: isDark ? Colors.white : const Color(0xFF1B1B22),
                   ),
                 ),
                 const SizedBox(height: 3),
-                const Text(
+                Text(
                   "Trusted Contact",
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF747A86),
+                    color: isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86),
                     fontWeight: FontWeight.w600,
                   ),
                 ),

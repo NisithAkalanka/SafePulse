@@ -123,8 +123,27 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark
+        ? const Color(0xFF121217)
+        : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark
+        ? const Color(0xFF1B1B22)
+        : Colors.white;
+    final Color textPrimary = isDark
+        ? Colors.white
+        : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFF9FAFC);
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE8EAF0);
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: pageBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -144,16 +163,25 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
         children: [
           Container(
             height: 260,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF4B4B),
-                  Color(0xFFB31217),
-                  Color(0xFF1B1B1B),
-                ],
-                stops: [0.0, 0.6, 1.0],
+                colors: isDark
+                    ? const [
+                        Color(0xFFFF3B3B),
+                        Color(0xFFE10613),
+                        Color(0xFFB30012),
+                        Color(0xFF140910),
+                      ]
+                    : const [
+                        Color(0xFFFF4B4B),
+                        Color(0xFFB31217),
+                        Color(0xFF1B1B1B),
+                      ],
+                stops: isDark
+                    ? const [0.0, 0.35, 0.72, 1.0]
+                    : const [0.0, 0.6, 1.0],
               ),
             ),
           ),
@@ -165,7 +193,7 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
               height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withOpacity(isDark ? 0.06 : 0.08),
               ),
             ),
           ),
@@ -176,7 +204,7 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                 const SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF6F7FB),
+                    color: pageBg,
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: const [
                       BoxShadow(
@@ -252,7 +280,7 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                         Container(
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: cardBg,
                             borderRadius: BorderRadius.circular(22),
                             boxShadow: const [
                               BoxShadow(
@@ -265,19 +293,19 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 "Hold Duration",
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
-                                  color: Color(0xFF1B1B22),
+                                  color: textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
+                              Text(
                                 "Adjust how long the SOS button must be pressed.",
                                 style: TextStyle(
-                                  color: Color(0xFF747A86),
+                                  color: textSecondary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -305,7 +333,9 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFFE3E3),
+                                    color: isDark
+                                        ? const Color(0xFF3A2024)
+                                        : const Color(0xFFFFE3E3),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: Text(
@@ -320,25 +350,25 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                               const SizedBox(height: 14),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF9FAFC),
+                                  color: softBg,
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
-                                    color: const Color(0xFFE8EAF0),
+                                    color: borderColor,
                                   ),
                                 ),
                                 child: SwitchListTile(
-                                  title: const Text(
+                                  title: Text(
                                     "Haptic (Vibration) feedback",
                                     style: TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      color: Color(0xFF1B1B22),
+                                      color: textPrimary,
                                     ),
                                   ),
-                                  subtitle: const Text(
+                                  subtitle: Text(
                                     "Enable vibration when SOS is triggered.",
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF747A86),
+                                      color: textSecondary,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -355,7 +385,7 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                         Container(
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: cardBg,
                             borderRadius: BorderRadius.circular(22),
                             boxShadow: const [
                               BoxShadow(
@@ -368,19 +398,19 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 "Active Emergency Types",
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
-                                  color: Color(0xFF1B1B22),
+                                  color: textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
+                              Text(
                                 "Select visible categories or add new ones.",
                                 style: TextStyle(
-                                  color: Color(0xFF747A86),
+                                  color: textSecondary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -391,10 +421,10 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                   horizontal: 10,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF9FAFC),
+                                  color: softBg,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: const Color(0xFFE8EAF0),
+                                    color: borderColor,
                                   ),
                                 ),
                                 child: Row(
@@ -402,10 +432,14 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                     Expanded(
                                       child: TextField(
                                         controller: _customTypeController,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           hintText: "Add e.g. Police, Fire",
+                                          hintStyle: TextStyle(
+                                            color: textSecondary,
+                                          ),
                                           border: InputBorder.none,
                                         ),
+                                        style: TextStyle(color: textPrimary),
                                       ),
                                     ),
                                     IconButton(
@@ -421,10 +455,10 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                               const SizedBox(height: 16),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF9FAFC),
+                                  color: softBg,
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
-                                    color: const Color(0xFFE8EAF0),
+                                    color: borderColor,
                                   ),
                                 ),
                                 child: Column(
@@ -441,16 +475,16 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                       ),
                                       title: Text(
                                         key,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w700,
-                                          color: Color(0xFF1B1B22),
+                                          color: textPrimary,
                                         ),
                                       ),
                                       trailing: IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                           Icons.delete_outline,
-                                          color: Color(0xFF747A86),
+                                          color: textSecondary,
                                           size: 20,
                                         ),
                                         onPressed: () async {

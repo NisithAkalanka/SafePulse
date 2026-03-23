@@ -68,114 +68,143 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark
+        ? const Color(0xFF121217)
+        : const Color(0xFFF6F7FB);
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: pageBg,
       body: _isRinging ? _buildIncomingCallUI() : _buildCountdownUI(),
     );
   }
 
-  // --- කවුන්ටවුන් එක පෙන්වන Screen එක (Glass Effect) ---
+  // --- Redesigned countdown UI with Dark Mode and scrolling header ---
   Widget _buildCountdownUI() {
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(18, 72, 18, 28),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFFF4B4B), Color(0xFFB31217), Color(0xFF1B1B1B)],
-              stops: [0.0, 0.62, 1.0],
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(34),
-              bottomRight: Radius.circular(34),
-            ),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.18),
-                    width: 1.2,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.14),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.18),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.ring_volume_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Protective Fake Call",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            "SafePulse will trigger a realistic incoming call in a few seconds.",
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFF9FAFC);
+
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(18, 72, 18, 28),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: isDark
+                      ? const [
+                          Color(0xFFFF3B3B),
+                          Color(0xFFE10613),
+                          Color(0xFFB30012),
+                          Color(0xFF140910),
+                        ]
+                      : const [
+                          Color(0xFFFF4B4B),
+                          Color(0xFFB31217),
+                          Color(0xFF1B1B1B),
                         ],
-                      ),
-                    ),
-                  ],
+                  stops: isDark
+                      ? const [0.0, 0.35, 0.72, 1.0]
+                      : const [0.0, 0.62, 1.0],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(34),
+                  bottomRight: Radius.circular(34),
                 ),
               ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(26),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x12000000),
-                        blurRadius: 18,
-                        offset: Offset(0, 8),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.18),
+                        width: 1.2,
                       ),
-                    ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.14),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.18),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.ring_volume_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Protective Fake Call",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                "SafePulse will trigger a realistic incoming call in a few seconds.",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: SingleChildScrollView(
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(26),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x12000000),
+                          blurRadius: 18,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -197,11 +226,11 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        const Text(
+                        Text(
                           "Triggering Protective Fake Call",
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF1B1B22),
+                            color: textPrimary,
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
                           ),
@@ -210,8 +239,8 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
                         Text(
                           "Incoming call from ${widget.callerName} will start automatically.",
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFF747A86),
+                          style: TextStyle(
+                            color: textSecondary,
                             fontWeight: FontWeight.w600,
                             height: 1.35,
                           ),
@@ -224,17 +253,21 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
                             vertical: 18,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFC),
-                            border: Border.all(color: const Color(0xFFFFD6D6)),
+                            color: softBg,
+                            border: Border.all(
+                              color: isDark
+                                  ? const Color(0xFF4A2D31)
+                                  : const Color(0xFFFFD6D6),
+                            ),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: Column(
                             children: [
-                              const Text(
+                              Text(
                                 "Starting In",
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF747A86),
+                                  color: textSecondary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -249,11 +282,11 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text(
+                              Text(
                                 "seconds",
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Color(0xFF747A86),
+                                  color: textSecondary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -346,9 +379,9 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
                 ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -530,14 +563,16 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
     );
   }
 
-
   Widget _infoMiniCard(IconData icon, String label, String value) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFC),
+        color: isDark ? const Color(0xFF23232B) : const Color(0xFFF9FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EAF0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -554,9 +589,9 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
           const SizedBox(height: 10),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
-              color: Color(0xFF747A86),
+              color: isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -565,9 +600,9 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: Color(0xFF1B1B22),
+              color: isDark ? Colors.white : const Color(0xFF1B1B22),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -575,8 +610,6 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
       ),
     );
   }
-
-
 
   @override
   void dispose() {

@@ -16,33 +16,40 @@ class PlaceholderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: isDark ? const Color(0xFF1B1B22) : Colors.white,
+        foregroundColor: isDark ? Colors.white : Colors.black,
         elevation: 1,
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.engineering_outlined,
               size: 80,
-              color: Colors.grey,
+              color: isDark ? const Color(0xFFB7BBC6) : Colors.grey,
             ),
             const SizedBox(height: 10),
             Text(
               "$title Section",
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF1B1B22),
+              ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               "Member's implementation coming soon...",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(
+                color: isDark ? const Color(0xFFB7BBC6) : Colors.grey,
+              ),
             ),
           ],
         ),
@@ -57,27 +64,59 @@ class LegacyHelpHubMenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(title: const Text("Help & Support"), centerTitle: true),
+      appBar: AppBar(
+        title: const Text("Help & Support"),
+        centerTitle: true,
+        backgroundColor: isDark ? const Color(0xFF1B1B22) : null,
+        foregroundColor: isDark ? Colors.white : null,
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _helpTile(context, Icons.volunteer_activism, "Request Help"),
-          _helpTile(context, Icons.support_agent, "Offer Help"),
-          _helpTile(context, Icons.info_outline, "Help Guidelines"),
+          _helpTile(
+            context,
+            Icons.volunteer_activism,
+            "Request Help",
+            isDark: isDark,
+          ),
+          _helpTile(context, Icons.support_agent, "Offer Help", isDark: isDark),
+          _helpTile(
+            context,
+            Icons.info_outline,
+            "Help Guidelines",
+            isDark: isDark,
+          ),
         ],
       ),
     );
   }
 
-  Widget _helpTile(BuildContext context, IconData icon, String title) {
+  Widget _helpTile(
+    BuildContext context,
+    IconData icon,
+    String title, {
+    bool isDark = false,
+  }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 15),
+      color: isDark ? const Color(0xFF1B1B22) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: ListTile(
         leading: Icon(icon, color: Colors.redAccent),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF1B1B22),
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: isDark ? const Color(0xFFB7BBC6) : null,
+        ),
         onTap: () {
           ScaffoldMessenger.of(
             context,
@@ -150,16 +189,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   void _applyInitialTabIfNeeded() {
-    if (_initialTabApplied ||
-        widget.initialTabIndex == null ||
-        !mounted) {
+    if (_initialTabApplied || widget.initialTabIndex == null || !mounted) {
       return;
     }
     final screens = _getScreens();
     if (screens.isEmpty) return;
     setState(() {
-      _selectedIndex =
-          widget.initialTabIndex!.clamp(0, screens.length - 1);
+      _selectedIndex = widget.initialTabIndex!.clamp(0, screens.length - 1);
       _initialTabApplied = true;
     });
   }
@@ -200,13 +236,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final screens = _getScreens();
     final navItems = buildMainNavBarItems(_userRole);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_selectedIndex >= screens.length) {
       _selectedIndex = 0;
     }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: isDark
+          ? const Color(0xFF121217)
+          : const Color(0xFFF6F7FB),
       extendBody: true,
       body: IndexedStack(index: _selectedIndex, children: screens),
       bottomNavigationBar: MainBottomNavigationBarView(

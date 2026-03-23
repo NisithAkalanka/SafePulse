@@ -566,8 +566,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFF1C2230),
+      backgroundColor: isDark
+          ? const Color(0xFF1C2230)
+          : const Color(0xFFF6C9D1),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -630,17 +633,26 @@ class _HomeScreenState extends State<HomeScreen>
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFF5363B),
-                  Color(0xFFC90714),
-                  Color(0xFF6B0009),
-                  Color(0xFF140910),
-                ],
-                stops: [0.0, 0.42, 0.78, 1.0],
+                colors: isDark
+                    ? const [
+                        Color(0xFFFF3B3B),
+                        Color(0xFFE10613),
+                        Color(0xFFB30012),
+                        Color(0xFF7A000D),
+                        Color(0xFF1A0005),
+                      ]
+                    : const [
+                        Color(0xFFFF5968),
+                        Color(0xFFF29AA8),
+                        Color(0xFFF4C2CB),
+                      ],
+                stops: isDark
+                    ? const [0.0, 0.25, 0.55, 0.80, 1.0]
+                    : const [0.0, 0.42, 1.0],
               ),
             ),
           ),
@@ -653,7 +665,11 @@ class _HomeScreenState extends State<HomeScreen>
                 height: 260,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFFFF8A80).withOpacity(0.10),
+                  color:
+                      (isDark
+                              ? const Color(0xFFFF8A80)
+                              : const Color(0xFFFFE3E8))
+                          .withOpacity(isDark ? 0.07 : 0.18),
                 ),
               ),
             ),
@@ -667,7 +683,11 @@ class _HomeScreenState extends State<HomeScreen>
                 height: 220,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF3D0008).withOpacity(0.16),
+                  color:
+                      (isDark
+                              ? const Color(0xFF3D0008)
+                              : const Color(0xFFD96A78))
+                          .withOpacity(isDark ? 0.24 : 0.14),
                 ),
               ),
             ),
@@ -679,20 +699,29 @@ class _HomeScreenState extends State<HomeScreen>
             child: IgnorePointer(
               child: Container(
                 height: 170,
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.elliptical(260, 58),
                     topRight: Radius.elliptical(260, 58),
                   ),
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFFF5A63),
-                      Color(0xFFD3192A),
-                      Color(0x00140910),
-                    ],
-                    stops: [0.0, 0.24, 1.0],
+                    colors: isDark
+                        ? const [
+                            Color(0xFFFF5A5F),
+                            Color(0xFFE10613),
+                            Color(0xFF7A000D),
+                            Color(0x001A0005),
+                          ]
+                        : const [
+                            Color(0xFFFF5463),
+                            Color(0xFFFF8D99),
+                            Color(0x00FFFFFF),
+                          ],
+                    stops: isDark
+                        ? const [0.0, 0.22, 0.65, 1.0]
+                        : const [0.0, 0.24, 1.0],
                   ),
                 ),
               ),
@@ -703,9 +732,15 @@ class _HomeScreenState extends State<HomeScreen>
               animation: _sosFlashOpacity,
               builder: (context, child) {
                 return Container(
-                  color: const Color(
-                    0xFFFF2D3D,
-                  ).withOpacity(_sosFlashOpacity.value),
+                  color:
+                      (isDark
+                              ? const Color(0xFFFF2D3D)
+                              : const Color(0xFFFF6678))
+                          .withOpacity(
+                            isDark
+                                ? _sosFlashOpacity.value * 1.15
+                                : _sosFlashOpacity.value,
+                          ),
                 );
               },
             ),
