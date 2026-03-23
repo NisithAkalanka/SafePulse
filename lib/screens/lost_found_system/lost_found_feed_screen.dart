@@ -5,7 +5,11 @@ import 'create_item_screen.dart';
 import 'lost_item_model.dart';
 import 'lost_found_service.dart';
 import 'mock_chat_screen.dart';
+<<<<<<< Updated upstream
 import '../profile_screen.dart';
+=======
+import '../sos_system/profile_screen.dart';
+>>>>>>> Stashed changes
 
 const Color lfRed = Color(0xFFE53935);
 const Color lfDark = Color(0xFFB71C1C);
