@@ -329,6 +329,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
   }
 
   Widget _buildEmptyHelpState() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
@@ -343,7 +344,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
           'No open requests',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: GuardianUi.textPrimary,
+            color: isDark ? Colors.white : GuardianUi.textPrimary,
             fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
@@ -353,7 +354,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
           'Pull down to refresh. New help posts will show up here.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: GuardianUi.textSecondary,
+            color: isDark ? const Color(0xFFB7BBC6) : GuardianUi.textSecondary,
             fontWeight: FontWeight.w600,
             fontSize: 13,
             height: 1.35,
@@ -365,13 +366,20 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ValueListenableBuilder<List<HelpRequest>>(
       valueListenable: HelpRequestsStore.instance.requests,
       builder: (context, all, _) {
         final requests = _sortedRequests(all);
+        final Color pageBg = isDark
+            ? const Color(0xFF121217)
+            : GuardianUi.surface;
+        final Color cardBg = isDark
+            ? const Color(0xFF1B1B22)
+            : Colors.white;
 
         return Scaffold(
-          backgroundColor: GuardianUi.surface,
+          backgroundColor: pageBg,
           extendBodyBehindAppBar: true,
           appBar: AppBar(
             title: const Text(
@@ -418,60 +426,71 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
               const SizedBox(width: 6),
             ],
           ),
-          body: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
-                decoration: const BoxDecoration(
-                  gradient: GuardianUi.headerGradient,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(34),
-                    bottomRight: Radius.circular(34),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    _buildHelpHeaderCard(),
-                    const SizedBox(height: 12),
-                    _buildHelpTopInfoStrip(requests.length),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
-                  child: Container(
+          body: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: GuardianUi.cardShadow,
+                      gradient: isDark
+                          ? const LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Color(0xFFFF3B3B),
+                                Color(0xFFE10613),
+                                Color(0xFFB30012),
+                                Color(0xFF140910),
+                              ],
+                              stops: [0.0, 0.35, 0.72, 1.0],
+                            )
+                          : GuardianUi.headerGradient,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(34),
+                        bottomRight: Radius.circular(34),
+                      ),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: RefreshIndicator(
-                      color: GuardianUi.redPrimary,
-                      onRefresh: () =>
-                          HelpRequestService.instance.refreshOnce(),
-                      child: requests.isEmpty
-                          ? _buildEmptyHelpState()
-                          : ListView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(
-                                14,
-                                16,
-                                14,
-                                24,
-                              ),
-                              itemCount: requests.length,
-                              itemBuilder: (context, index) {
-                                return _featuredCard(requests[index]);
-                              },
-                            ),
+                    child: Column(
+                      children: [
+                        _buildHelpHeaderCard(),
+                        const SizedBox(height: 12),
+                        _buildHelpTopInfoStrip(requests.length),
+                      ],
                     ),
                   ),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: GuardianUi.cardShadow,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: RefreshIndicator(
+                        color: GuardianUi.redPrimary,
+                        onRefresh: () => HelpRequestService.instance.refreshOnce(),
+                        child: requests.isEmpty
+                            ? _buildEmptyHelpState()
+                            : ListView.builder(
+                                physics: const NeverScrollableScrollPhysics(),
+                                shrinkWrap: true,
+                                padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+                                itemCount: requests.length,
+                                itemBuilder: (context, index) {
+                                  return _featuredCard(requests[index]);
+                                },
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -480,13 +499,16 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
 
   Widget _featuredCard(HelpRequest request) {
     const Color redPrimary = GuardianUi.redPrimary;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final s = _styleFor(request);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: GuardianUi.surfaceMuted,
+        color: isDark ? const Color(0xFF23232B) : GuardianUi.surfaceMuted,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EAF0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0),
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -528,10 +550,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     children: [
                       Text(
                         request.category,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color: GuardianUi.textPrimary,
+                          color: isDark ? Colors.white : GuardianUi.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -539,19 +561,21 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                         request.requesterName.isNotEmpty
                             ? request.requesterName
                             : 'Requester',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: GuardianUi.textSecondary,
+                          color: isDark
+                              ? const Color(0xFFB7BBC6)
+                              : GuardianUi.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         request.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: GuardianUi.textPrimary,
+                          color: isDark ? Colors.white : GuardianUi.textPrimary,
                         ),
                       ),
                       if (request.description.trim().isNotEmpty) ...[
@@ -563,7 +587,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             height: 1.35,
-                            color: GuardianUi.textSecondary.withOpacity(0.9),
+                            color: (isDark
+                                    ? const Color(0xFFB7BBC6)
+                                    : GuardianUi.textSecondary)
+                                .withOpacity(0.9),
                           ),
                         ),
                       ],
@@ -603,9 +630,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           Expanded(
                             child: Text(
                               request.locationName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF747A86),
+                                color: isDark
+                                    ? const Color(0xFFB7BBC6)
+                                    : const Color(0xFF747A86),
                                 fontWeight: FontWeight.w600,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -614,9 +643,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           const SizedBox(width: 8),
                           Text(
                             _distanceLabel(request),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF747A86),
+                              color: isDark
+                                  ? const Color(0xFFB7BBC6)
+                                  : const Color(0xFF747A86),
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -633,9 +664,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           const SizedBox(width: 4),
                           Text(
                             _timeAgoLabel(request.createdAt),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF747A86),
+                              color: isDark
+                                  ? const Color(0xFFB7BBC6)
+                                  : const Color(0xFF747A86),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -653,9 +686,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           Expanded(
                             child: Text(
                               'Needed ${DateFormat.yMMMd().add_jm().format(request.neededAt)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: GuardianUi.textPrimary,
+                                color: isDark ? Colors.white : GuardianUi.textPrimary,
                                 fontWeight: FontWeight.w700,
                               ),
                               overflow: TextOverflow.ellipsis,
