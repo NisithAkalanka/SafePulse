@@ -395,6 +395,16 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       HelpRequestsStore.instance.upsert(updated);
       if (ok) {
         await HelpRequestService.instance.refreshOnce();
+        // Also sync to `alerts` so the "Active Safety Alerts" notification page updates.
+        await _upsertEmergencyAlertFromHelpRequest(
+          alertId: _persistedDocId!,
+          type: category,
+          address: locationText.isEmpty ? 'Nearby' : locationText,
+          lat: lat,
+          lng: lng,
+          requesterEmail:
+              FirebaseAuth.instance.currentUser?.email ?? requesterName,
+        );
       }
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -444,6 +454,19 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
 
     if (!mounted) return;
 
+    // Also sync to `alerts` so the "Active Safety Alerts" notification page updates.
+    if (docId != null) {
+      await _upsertEmergencyAlertFromHelpRequest(
+        alertId: docId,
+        type: category,
+        address: locationText.isEmpty ? 'Nearby' : locationText,
+        lat: lat,
+        lng: lng,
+        requesterEmail:
+            FirebaseAuth.instance.currentUser?.email ?? requesterName,
+      );
+    }
+
     if (docId == null) {
       HelpRequestsStore.instance.add(created);
       if (mounted) {
@@ -486,6 +509,31 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       categoryLabel: category,
       locationText: locationText,
     );
+  }
+
+  Future<void> _upsertEmergencyAlertFromHelpRequest({
+    required String alertId,
+    required String type,
+    required String address,
+    required double? lat,
+    required double? lng,
+    required String requesterEmail,
+  }) async {
+    try {
+      await FirebaseFirestore.instance.collection('alerts').doc(alertId).set({
+        'time': FieldValue.serverTimestamp(),
+        'type': type.isNotEmpty ? type : 'HELP REQUEST',
+        'address': address,
+        'user_email': requesterEmail,
+        'lat': lat ?? 0.0,
+        'lng': lng ?? 0.0,
+        // Optional fields used by tracking screen.
+        'user_phone': '',
+      }, SetOptions(merge: true));
+    } catch (e, st) {
+      debugPrint('_upsertEmergencyAlertFromHelpRequest failed: $e');
+      debugPrint('$st');
+    }
   }
 
   void _showPostedDialog({
@@ -563,7 +611,6 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final redPrimary = GuardianUi.redPrimary;
-    final redDark = GuardianUi.redDark;
 
     final topBelowAppBar =
         MediaQuery.paddingOf(context).top + kToolbarHeight + 10;
@@ -959,126 +1006,101 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                               const SizedBox(height: 10),
                             ],
                           ),
+                          const SizedBox(height: 18),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _isSubmitting ? null : _submitRequest,
+                              borderRadius: BorderRadius.circular(18),
+                              child: Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [Colors.white, Color(0xFFFFF8F8)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: GuardianUi.redPrimary.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: GuardianUi.redPrimary.withValues(
+                                        alpha: 0.22,
+                                      ),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                alignment: Alignment.center,
+                                child: _isSubmitting
+                                    ? SizedBox(
+                                        width: 26,
+                                        height: 26,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            redPrimary,
+                                          ),
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              gradient: GuardianUi.ctaGradient,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: GuardianUi.redPrimary
+                                                      .withValues(alpha: 0.35),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 3),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(
+                                              Icons.check_rounded,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          ShaderMask(
+                                            blendMode: BlendMode.srcIn,
+                                            shaderCallback: (bounds) =>
+                                                GuardianUi.ctaGradient
+                                                    .createShader(bounds),
+                                            child: Text(
+                                              _isUpdateMode
+                                                  ? 'UPDATE REQUEST'
+                                                  : 'CONFIRM REQUEST',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 16,
+                                                letterSpacing: 0.85,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    height: 3,
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          GuardianUi.redAccent,
-                          GuardianUi.redPrimary,
-                          GuardianUi.redDark,
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                    decoration: BoxDecoration(
-                      color: redDark.withValues(alpha: 0.98),
-                      boxShadow: GuardianUi.footerBarShadow,
-                    ),
-                    child: SafeArea(
-                      top: false,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _isSubmitting ? null : _submitRequest,
-                          borderRadius: BorderRadius.circular(18),
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Colors.white, Color(0xFFFFF8F8)],
-                              ),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: GuardianUi.redPrimary.withValues(
-                                  alpha: 0.12,
-                                ),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: GuardianUi.redPrimary.withValues(
-                                    alpha: 0.22,
-                                  ),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: _isSubmitting
-                                ? SizedBox(
-                                    width: 26,
-                                    height: 26,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        redPrimary,
-                                      ),
-                                    ),
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: GuardianUi.ctaGradient,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: GuardianUi.redPrimary
-                                                  .withValues(alpha: 0.35),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.check_rounded,
-                                          size: 18,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      ShaderMask(
-                                        blendMode: BlendMode.srcIn,
-                                        shaderCallback: (bounds) => GuardianUi
-                                            .ctaGradient
-                                            .createShader(bounds),
-                                        child: Text(
-                                          _isUpdateMode
-                                              ? 'UPDATE REQUEST'
-                                              : 'CONFIRM REQUEST',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 16,
-                                            letterSpacing: 0.85,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
