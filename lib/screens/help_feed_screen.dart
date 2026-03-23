@@ -131,7 +131,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
       markerColor = Colors.redAccent;
     }
 
-    return (tagColor: tagColor, markerColor: markerColor, statusLabel: statusLabel);
+    return (
+      tagColor: tagColor,
+      markerColor: markerColor,
+      statusLabel: statusLabel,
+    );
   }
 
   void _showRequestAccepted(HelpRequest request) {
@@ -401,8 +405,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     height: 22,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.2,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   ),
                 )
@@ -672,9 +675,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     decoration: BoxDecoration(
                       color: GuardianUi.redTint,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: redPrimary.withOpacity(0.35),
-                      ),
+                      border: Border.all(color: redPrimary.withOpacity(0.35)),
                     ),
                     child: Text(
                       'Urgent',
