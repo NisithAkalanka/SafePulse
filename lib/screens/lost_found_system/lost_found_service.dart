@@ -1,11 +1,14 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'lost_item_model.dart';
 
 class LostFoundService {
   static const String _col = 'lost_found_posts';
+
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   Stream<List<LostItem>> getItemsStream(String type) {
     _cleanupReturnedItems();
@@ -46,8 +49,21 @@ class LostFoundService {
   }
 
   Future<void> createPost(LostItem item, File? imageFile) async {
+    String imageUrl = '';
+
+    if (imageFile != null) {
+      final fileName =
+          'lost_found/${DateTime.now().millisecondsSinceEpoch}_${item.userId}.jpg';
+
+      final ref = _storage.ref().child(fileName);
+      await ref.putFile(imageFile);
+      imageUrl = await ref.getDownloadURL();
+    }
+
     final data = item.toMap();
+    data['imageUrl'] = imageUrl;
     data['timestamp'] = FieldValue.serverTimestamp();
+
     await _db.collection(_col).add(data);
   }
 
