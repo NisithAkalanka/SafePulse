@@ -5,14 +5,19 @@ import 'create_item_screen.dart';
 import 'lost_item_model.dart';
 import 'lost_found_service.dart';
 import 'mock_chat_screen.dart';
-import '../sos_system/main_menu_screen.dart';
+import '../sos_system/profile_screen.dart';
 
 const Color lfRed = Color(0xFFE53935);
 const Color lfDark = Color(0xFFB71C1C);
 const Color lfBg = Color(0xFFF6F6F7);
 
+const Color lfTextPrimary = Color(0xFF1E1E1E);
+const Color lfTextSecondary = Color(0xFF4B4B4B);
+const Color lfTextMuted = Color(0xFF707070);
+const Color lfHint = Color(0xFFB58E8E);
+
 class LostFoundFeedScreen extends StatefulWidget {
-  const LostFoundFeedScreen({super.key});
+  const LostFoundFeedScreen({Key? key}) : super(key: key);
 
   @override
   State<LostFoundFeedScreen> createState() => _LostFoundFeedScreenState();
@@ -76,18 +81,32 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Filter by location"),
+        title: const Text(
+          "Filter by location",
+          style: TextStyle(color: lfTextPrimary, fontWeight: FontWeight.w700),
+        ),
         content: TextField(
           controller: c,
+          style: const TextStyle(
+            color: lfTextPrimary,
+            fontWeight: FontWeight.w500,
+          ),
           decoration: const InputDecoration(
             hintText: "e.g. Main Gate, Library, Canteen...",
+            hintStyle: TextStyle(color: lfTextMuted),
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(
+                color: lfTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: lfRed),
@@ -138,6 +157,7 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: lfTextPrimary,
                         ),
                       ),
                     ),
@@ -155,7 +175,13 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
                                   : _iconForCategory(category),
                               color: lfRed,
                             ),
-                            title: Text(category),
+                            title: Text(
+                              category,
+                              style: const TextStyle(
+                                color: lfTextPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             trailing: _selectedCategory == category
                                 ? const Icon(Icons.check, color: lfRed)
                                 : null,
@@ -180,7 +206,7 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
   void _openProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const MainMenuScreen()),
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
     );
   }
 
@@ -250,8 +276,8 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
               title,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: active ? lfRed : Colors.black,
+                fontWeight: FontWeight.w700,
+                color: active ? lfRed : lfTextPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -303,7 +329,7 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
                 Text(
                   "Report, track, and recover lost and found items inside the campus system.",
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Color(0xFFF7EAEA),
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -409,9 +435,14 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
         ],
       ),
       child: TextField(
+        style: const TextStyle(
+          color: lfTextPrimary,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: const InputDecoration(
           icon: Icon(Icons.search, color: lfRed),
           hintText: "Search by title, category, location...",
+          hintStyle: TextStyle(color: lfHint, fontWeight: FontWeight.w500),
           border: InputBorder.none,
         ),
         onChanged: (val) => setState(() => _searchQuery = val.trim()),
@@ -629,6 +660,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: lfTextPrimary,
                         ),
                       ),
                     ),
@@ -646,7 +678,13 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                                   : _iconForCategory(category),
                               color: lfRed,
                             ),
-                            title: Text(category),
+                            title: Text(
+                              category,
+                              style: const TextStyle(
+                                color: lfTextPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             trailing: _selectedCategory == category
                                 ? const Icon(Icons.check, color: lfRed)
                                 : null,
@@ -710,7 +748,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                 Text(
                   "Manage and review your lost and found posts.",
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Color(0xFFF7EAEA),
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -739,9 +777,14 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
         ],
       ),
       child: TextField(
+        style: const TextStyle(
+          color: lfTextPrimary,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: const InputDecoration(
           icon: Icon(Icons.search, color: lfRed),
           hintText: "Search by title, category, location...",
+          hintStyle: TextStyle(color: lfHint, fontWeight: FontWeight.w500),
           border: InputBorder.none,
         ),
         onChanged: (val) => setState(() => _searchQuery = val.trim()),
@@ -844,6 +887,13 @@ class _ItemsSection extends StatelessWidget {
     return matchCategory && matchSearch && matchLoc && matchMine;
   }
 
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return now.year == date.year &&
+        now.month == date.month &&
+        now.day == date.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
@@ -853,7 +903,13 @@ class _ItemsSection extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(
-            child: Text("Loading error. Please reopen Lost & Found."),
+            child: Text(
+              "Loading error. Please reopen Lost & Found.",
+              style: TextStyle(
+                color: lfTextPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           );
         }
 
@@ -863,6 +919,10 @@ class _ItemsSection extends StatelessWidget {
 
         final filtered = snapshot.data!
             .where((i) => _matchFilters(i, currentUid))
+            .toList();
+
+        final todayPosts = filtered
+            .where((i) => _isToday(i.timestamp))
             .toList();
 
         return SingleChildScrollView(
@@ -908,6 +968,7 @@ class _ItemsSection extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.bold,
+                        color: lfTextPrimary,
                       ),
                     ),
                   ),
@@ -938,7 +999,8 @@ class _ItemsSection extends StatelessWidget {
                               category,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
+                                color: lfTextPrimary,
                               ),
                             ),
                           ),
@@ -956,7 +1018,57 @@ class _ItemsSection extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 12),
+              const Text(
+                "Today",
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: lfTextPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (todayPosts.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    "No posts added today.",
+                    style: TextStyle(
+                      color: lfTextMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 210,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: todayPosts.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      return SizedBox(
+                        width: 162,
+                        child: _ItemCard(
+                          item: todayPosts[index],
+                          compact: true,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 14),
+              const Text(
+                "All Posts",
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: lfTextPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
               if (filtered.isEmpty)
                 Container(
                   width: double.infinity,
@@ -966,6 +1078,10 @@ class _ItemsSection extends StatelessWidget {
                     category == "All"
                         ? "No items found."
                         : "No items found in $category.",
+                    style: const TextStyle(
+                      color: lfTextMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 )
               else
@@ -977,7 +1093,7 @@ class _ItemsSection extends StatelessWidget {
                     crossAxisCount: 2,
                     crossAxisSpacing: 14,
                     mainAxisSpacing: 14,
-                    childAspectRatio: 0.72,
+                    childAspectRatio: 0.84,
                   ),
                   itemBuilder: (context, index) {
                     return _ItemCard(item: filtered[index]);
@@ -993,8 +1109,9 @@ class _ItemsSection extends StatelessWidget {
 
 class _ItemCard extends StatefulWidget {
   final LostItem item;
+  final bool compact;
 
-  const _ItemCard({required this.item});
+  const _ItemCard({required this.item, this.compact = false});
 
   @override
   State<_ItemCard> createState() => _ItemCardState();
@@ -1013,12 +1130,11 @@ class _ItemCardState extends State<_ItemCard> {
       case 'Active':
         return (bg: const Color(0xFFB71C1C), text: Colors.white);
       case 'Chat Enabled':
+      case 'Answer Submitted':
         return (bg: const Color(0xFFEAF2FF), text: const Color(0xFF1565C0));
       case 'Claim Pending':
       case 'Verification Pending':
         return (bg: const Color(0xFFFFF4DB), text: const Color(0xFFB26A00));
-      case 'Answer Submitted':
-        return (bg: const Color(0xFFEAF2FF), text: const Color(0xFF1565C0));
       case 'Returned':
         return (bg: const Color(0xFFE8F6EA), text: const Color(0xFF2E7D32));
       default:
@@ -1051,10 +1167,10 @@ class _ItemCardState extends State<_ItemCard> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: colors.bg,
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
             widget.item.status,
@@ -1062,15 +1178,15 @@ class _ItemCardState extends State<_ItemCard> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: colors.text,
-              fontSize: 9.8,
+              fontSize: 9.0,
               fontWeight: FontWeight.w800,
             ),
           ),
         ),
         if (widget.item.status == 'Returned') ...[
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.68),
               borderRadius: BorderRadius.circular(10),
@@ -1079,7 +1195,7 @@ class _ItemCardState extends State<_ItemCard> {
               _remainingDeleteTime(),
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 9.2,
+                fontSize: 8.4,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1099,6 +1215,7 @@ class _ItemCardState extends State<_ItemCard> {
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    final double imageHeight = widget.compact ? 84 : 94;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -1144,7 +1261,7 @@ class _ItemCardState extends State<_ItemCard> {
                 Stack(
                   children: [
                     Container(
-                      height: 124,
+                      height: imageHeight,
                       width: double.infinity,
                       decoration: const BoxDecoration(
                         color: Color(0xFFF2F2F2),
@@ -1164,7 +1281,7 @@ class _ItemCardState extends State<_ItemCard> {
                                   child: Icon(
                                     Icons.image_not_supported_outlined,
                                     color: lfRed,
-                                    size: 36,
+                                    size: 30,
                                   ),
                                 ),
                               ),
@@ -1172,7 +1289,7 @@ class _ItemCardState extends State<_ItemCard> {
                           : const Center(
                               child: Icon(
                                 Icons.inventory_2_outlined,
-                                size: 42,
+                                size: 34,
                                 color: lfRed,
                               ),
                             ),
@@ -1181,7 +1298,7 @@ class _ItemCardState extends State<_ItemCard> {
                       top: 8,
                       right: 8,
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 98),
+                        constraints: const BoxConstraints(maxWidth: 92),
                         child: _buildStatusOverlay(),
                       ),
                     ),
@@ -1190,8 +1307,8 @@ class _ItemCardState extends State<_ItemCard> {
                         top: 8,
                         left: 8,
                         child: Container(
-                          width: 30,
-                          height: 30,
+                          width: 26,
+                          height: 26,
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.95),
                             shape: BoxShape.circle,
@@ -1199,7 +1316,7 @@ class _ItemCardState extends State<_ItemCard> {
                           child: const Icon(
                             Icons.bookmark_border,
                             color: lfRed,
-                            size: 18,
+                            size: 17,
                           ),
                         ),
                       ),
@@ -1207,7 +1324,7 @@ class _ItemCardState extends State<_ItemCard> {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                    padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1215,13 +1332,14 @@ class _ItemCardState extends State<_ItemCard> {
                           item.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            height: 1.2,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: widget.compact ? 13.2 : 14,
+                            height: 1.18,
+                            color: lfTextPrimary,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 7),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1229,22 +1347,23 @@ class _ItemCardState extends State<_ItemCard> {
                               padding: EdgeInsets.only(top: 1),
                               child: Icon(
                                 Icons.place_outlined,
-                                size: 15,
-                                color: Colors.grey,
+                                size: 14,
+                                color: lfTextMuted,
                               ),
                             ),
-                            const SizedBox(width: 5),
+                            const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 item.location.isEmpty
                                     ? "Location not added"
                                     : item.location,
-                                maxLines: 3,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                  fontSize: 12.5,
-                                  height: 1.25,
+                                style: const TextStyle(
+                                  color: lfTextSecondary,
+                                  fontSize: 11.5,
+                                  height: 1.18,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
@@ -1338,14 +1457,22 @@ class _DetailScreenState extends State<_DetailScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Ask verification question"),
+        title: const Text(
+          "Ask verification question",
+          style: TextStyle(color: lfTextPrimary, fontWeight: FontWeight.w700),
+        ),
         content: Form(
           key: formKey,
           child: TextFormField(
             controller: controller,
+            style: const TextStyle(
+              color: lfTextPrimary,
+              fontWeight: FontWeight.w500,
+            ),
             validator: _validateQuestion,
             decoration: const InputDecoration(
               hintText: "e.g. Any special marks on the item?",
+              hintStyle: TextStyle(color: lfTextMuted),
               border: OutlineInputBorder(),
             ),
           ),
@@ -1353,7 +1480,13 @@ class _DetailScreenState extends State<_DetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(
+                color: lfTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: lfRed),
@@ -1391,19 +1524,33 @@ class _DetailScreenState extends State<_DetailScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Answer verification question"),
+        title: const Text(
+          "Answer verification question",
+          style: TextStyle(color: lfTextPrimary, fontWeight: FontWeight.w700),
+        ),
         content: Form(
           key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(question),
+              Text(
+                question,
+                style: const TextStyle(
+                  color: lfTextPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: controller,
+                style: const TextStyle(
+                  color: lfTextPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
                 validator: _validateAnswer,
                 decoration: const InputDecoration(
                   hintText: "Type your answer",
+                  hintStyle: TextStyle(color: lfTextMuted),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1413,7 +1560,13 @@ class _DetailScreenState extends State<_DetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(
+                color: lfTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: lfRed),
@@ -1444,19 +1597,33 @@ class _DetailScreenState extends State<_DetailScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Verification Required"),
+        title: const Text(
+          "Verification Required",
+          style: TextStyle(color: lfTextPrimary, fontWeight: FontWeight.w700),
+        ),
         content: Form(
           key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Describe any special marks or unique details."),
+              const Text(
+                "Describe any special marks or unique details.",
+                style: TextStyle(
+                  color: lfTextPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: controller,
+                style: const TextStyle(
+                  color: lfTextPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
                 validator: _validateProof,
                 decoration: const InputDecoration(
                   hintText: "Type proof here",
+                  hintStyle: TextStyle(color: lfTextMuted),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1466,7 +1633,13 @@ class _DetailScreenState extends State<_DetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(
+                color: lfTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: lfRed),
@@ -1505,178 +1678,372 @@ class _DetailScreenState extends State<_DetailScreen> {
     );
   }
 
+  String _detailDeleteTime() {
+    final returnedAt = widget.item.returnedAt;
+    if (returnedAt == null) return "Deletes in 1h 0m";
+
+    final expiry = returnedAt.add(const Duration(hours: 1));
+    final remaining = expiry.difference(DateTime.now());
+
+    if (remaining.isNegative) return "Deleting soon";
+
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes.remainder(60);
+
+    if (hours > 0) {
+      return "Deletes in ${hours}h ${minutes}m";
+    }
+    return "Deletes in ${minutes}m";
+  }
+
+  Widget _buildHeaderChip() {
+    final bool isLost = widget.item.type == 'Lost';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: lfRed,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: lfRed.withOpacity(0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isLost ? Icons.search_off_outlined : Icons.check_circle_outline,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isLost ? 'Lost Item Details' : 'Found Item Details',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final bool isLost = widget.item.type == 'Lost';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 100, 18, 18),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFF4B4B), Color(0xFFB31217), Color(0xFF1B1B1B)],
+          stops: [0.0, 0.62, 1.0],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(34),
+          bottomRight: Radius.circular(34),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isLost
+                ? 'Review the lost item details carefully.'
+                : 'Review the found item details carefully.',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _buildHeaderChip(),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusBadge() {
+    Color bg;
+    Color fg;
+
+    switch (widget.item.status) {
+      case 'Returned':
+        bg = const Color(0xFFE8F6EA);
+        fg = const Color(0xFF2E7D32);
+        break;
+      case 'Claim Pending':
+      case 'Verification Pending':
+        bg = const Color(0xFFFFF4DB);
+        fg = const Color(0xFFB26A00);
+        break;
+      case 'Chat Enabled':
+      case 'Answer Submitted':
+        bg = const Color(0xFFEAF2FF);
+        fg = const Color(0xFF1565C0);
+        break;
+      default:
+        bg = lfRed.withOpacity(0.08);
+        fg = lfRed;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        widget.item.status,
+        style: TextStyle(color: fg, fontWeight: FontWeight.w800, fontSize: 12),
+      ),
+    );
+  }
+
+  Widget _detailsTopCard() {
+    final item = widget.item;
+
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 230,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F3F3),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: item.imageUrl.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.network(
+                      item.imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => const Center(
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 40,
+                          color: lfRed,
+                        ),
+                      ),
+                    ),
+                  )
+                : const Center(
+                    child: Icon(
+                      Icons.inventory_2_outlined,
+                      size: 42,
+                      color: lfRed,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: lfTextPrimary,
+                  ),
+                ),
+              ),
+              if (isOwner)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: lfRed.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    "You posted",
+                    style: TextStyle(
+                      color: lfRed,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.place_outlined, size: 18, color: lfTextMuted),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  item.location,
+                  style: const TextStyle(
+                    color: lfTextSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            item.category,
+            style: const TextStyle(
+              color: lfTextSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Text(
+                "Status:",
+                style: TextStyle(
+                  color: lfTextPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _statusBadge(),
+            ],
+          ),
+          if (item.status == 'Returned' && item.returnedAt != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _detailDeleteTime(),
+              style: TextStyle(
+                color: Colors.green.shade700,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          const Text(
+            "Description",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: lfTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            item.description.isEmpty
+                ? "No description provided."
+                : item.description,
+            style: const TextStyle(
+              color: lfTextSecondary,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+            ),
+          ),
+          if (item.requesterName != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              "Requested by: ${item.requesterName}",
+              style: const TextStyle(
+                color: lfTextSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
 
     return Scaffold(
       backgroundColor: lfBg,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: lfRed,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
-        title: const Text("Details"),
+        title: const Text(
+          "Details",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
+          ),
+        ),
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _panel(
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 230,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F3F3),
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: item.imageUrl.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: Image.network(
-                              item.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (c, e, s) => const Center(
-                                child: Icon(
-                                  Icons.image_not_supported_outlined,
-                                  size: 40,
-                                ),
-                              ),
-                            ),
-                          )
-                        : const Center(
-                            child: Icon(
-                              Icons.inventory_2_outlined,
-                              size: 42,
-                              color: lfRed,
-                            ),
-                          ),
-                  ),
+                  _detailsTopCard(),
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      if (isOwner)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: lfRed.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            "You posted",
-                            style: TextStyle(
-                              color: lfRed,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.place_outlined,
-                        size: 18,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          item.location,
-                          style: TextStyle(color: Colors.grey.shade700),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    item.category,
-                    style: TextStyle(color: Colors.grey.shade700),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Status: ${item.status}",
-                    style: TextStyle(
-                      color: Colors.grey.shade800,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (item.status == 'Returned' && item.returnedAt != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      "Deletes in ${item.returnedAt!.add(const Duration(hours: 1)).difference(DateTime.now()).isNegative ? '0m' : '${item.returnedAt!.add(const Duration(hours: 1)).difference(DateTime.now()).inHours > 0 ? '${item.returnedAt!.add(const Duration(hours: 1)).difference(DateTime.now()).inHours}h ' : ''}${item.returnedAt!.add(const Duration(hours: 1)).difference(DateTime.now()).inMinutes.remainder(60)}m'}",
-                      style: TextStyle(
-                        color: Colors.green.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Description",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    item.description.isEmpty
-                        ? "No description provided."
-                        : item.description,
-                    style: TextStyle(color: Colors.grey.shade800),
-                  ),
-                  if (item.requesterName != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      "Requested by: ${item.requesterName}",
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
+                  if (item.status == 'Returned') ...[
+                    _buildSuccessMessage("Item Returned Successfully"),
+                  ] else if (item.chatEnabled && (isOwner || isRequester)) ...[
+                    _chatEnabledActions(),
+                  ] else if (item.type == 'Lost' &&
+                      !isOwner &&
+                      item.status == 'Active') ...[
+                    _primaryButton("I FOUND THIS", _showFoundQuestionDialog),
+                  ] else if (item.type == 'Lost' &&
+                      isOwner &&
+                      item.status == 'Verification Pending') ...[
+                    _ownerLostVerificationCard(),
+                  ] else if (item.type == 'Lost' &&
+                      isRequester &&
+                      item.status == 'Answer Submitted') ...[
+                    _finderApprovalCard(),
+                  ] else if (item.type == 'Found' &&
+                      !isOwner &&
+                      item.status == 'Active') ...[
+                    _primaryButton("THIS IS MINE", _showClaimDialog),
+                  ] else if (item.type == 'Found' &&
+                      isOwner &&
+                      item.status == 'Claim Pending') ...[
+                    _foundOwnerApprovalCard(),
                   ],
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            if (item.status == 'Returned') ...[
-              _buildSuccessMessage("Item Returned Successfully"),
-            ] else if (item.chatEnabled && (isOwner || isRequester)) ...[
-              _chatEnabledActions(),
-            ] else if (item.type == 'Lost' &&
-                !isOwner &&
-                item.status == 'Active') ...[
-              _primaryButton("I FOUND THIS", _showFoundQuestionDialog),
-            ] else if (item.type == 'Lost' &&
-                isOwner &&
-                item.status == 'Verification Pending') ...[
-              _ownerLostVerificationCard(),
-            ] else if (item.type == 'Lost' &&
-                isRequester &&
-                item.status == 'Answer Submitted') ...[
-              _finderApprovalCard(),
-            ] else if (item.type == 'Found' &&
-                !isOwner &&
-                item.status == 'Active') ...[
-              _primaryButton("THIS IS MINE", _showClaimDialog),
-            ] else if (item.type == 'Found' &&
-                isOwner &&
-                item.status == 'Claim Pending') ...[
-              _foundOwnerApprovalCard(),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1716,10 +2083,20 @@ class _DetailScreenState extends State<_DetailScreen> {
             children: [
               const Text(
                 "Finder verification request",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: lfTextPrimary,
+                ),
               ),
               const SizedBox(height: 8),
-              Text(question),
+              Text(
+                question,
+                style: const TextStyle(
+                  color: lfTextSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const SizedBox(height: 14),
               _primaryButton("ANSWER QUESTION", _showOwnerAnswerDialog),
             ],
@@ -1740,10 +2117,20 @@ class _DetailScreenState extends State<_DetailScreen> {
             children: [
               const Text(
                 "Owner's verification answer",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: lfTextPrimary,
+                ),
               ),
               const SizedBox(height: 8),
-              Text(answer),
+              Text(
+                answer,
+                style: const TextStyle(
+                  color: lfTextSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -1761,7 +2148,13 @@ class _DetailScreenState extends State<_DetailScreen> {
                         side: BorderSide(color: Colors.grey.shade400),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text("Reject"),
+                      child: const Text(
+                        "Reject",
+                        style: TextStyle(
+                          color: lfTextPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1807,10 +2200,20 @@ class _DetailScreenState extends State<_DetailScreen> {
             children: [
               const Text(
                 "Claim verification",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: lfTextPrimary,
+                ),
               ),
               const SizedBox(height: 8),
-              Text(proof),
+              Text(
+                proof,
+                style: const TextStyle(
+                  color: lfTextSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -1828,7 +2231,13 @@ class _DetailScreenState extends State<_DetailScreen> {
                         side: BorderSide(color: Colors.grey.shade400),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text("Reject"),
+                      child: const Text(
+                        "Reject",
+                        style: TextStyle(
+                          color: lfTextPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1869,7 +2278,7 @@ class _DetailScreenState extends State<_DetailScreen> {
         children: [
           const Text(
             "Verification completed. Private chat is enabled.",
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: TextStyle(fontWeight: FontWeight.w600, color: lfTextPrimary),
           ),
           const SizedBox(height: 14),
           Row(
@@ -1880,6 +2289,7 @@ class _DetailScreenState extends State<_DetailScreen> {
                   icon: const Icon(Icons.chat_bubble_outline),
                   label: const Text("Open Chat"),
                   style: OutlinedButton.styleFrom(
+                    foregroundColor: lfTextPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -1925,12 +2335,19 @@ class _DetailScreenState extends State<_DetailScreen> {
           const SizedBox(height: 8),
           Text(
             msg,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 17,
+              color: lfTextPrimary,
+            ),
           ),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             "This item will be removed automatically after 1 hour.",
-            style: TextStyle(color: Colors.grey.shade700),
+            style: TextStyle(
+              color: lfTextSecondary,
+              fontWeight: FontWeight.w500,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
