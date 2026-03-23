@@ -6,8 +6,13 @@ import 'lost_item_model.dart';
 import 'lost_found_service.dart';
 import 'mock_chat_screen.dart';
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import '../profile_screen.dart';
 =======
+import '../sos_system/profile_screen.dart';
+>>>>>>> Stashed changes
+=======
+
 import '../sos_system/profile_screen.dart';
 >>>>>>> Stashed changes
 

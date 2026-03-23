@@ -10,8 +10,12 @@ plugins {
 
 android {
     namespace = "com.example.safeplus"
+<<<<<<< Updated upstream
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+=======
+    compileSdk = 36
+>>>>>>> Stashed changes
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -26,7 +30,11 @@ android {
     defaultConfig {
         applicationId = "com.example.safeplus"
         minSdk = flutter.minSdkVersion
+<<<<<<< Updated upstream
         targetSdk = flutter.targetSdkVersion
+=======
+        targetSdk = 36
+>>>>>>> Stashed changes
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -42,6 +50,7 @@ dependencies {
     // Required for flutter_local_notifications (desugaring)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
+<<<<<<< Updated upstream
 
 flutter {
     source = "../.."
@@ -57,4 +66,16 @@ dependencies {
 <<<<<<< Updated upstream
 >>>>>>> Stashed changes
 =======
+>>>>>>> Stashed changes
+=======
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+flutter {
+    source = "../.."
+}
 >>>>>>> Stashed changes
