@@ -86,17 +86,15 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
       await LostFoundService().createPost(newItem, _selectedImage);
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  InputDecoration _fieldDeco({
-    required String label,
-    required IconData icon,
-  }) {
+  InputDecoration _fieldDeco({required String label, required IconData icon}) {
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: Colors.white.withOpacity(0.85)),
@@ -200,8 +198,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(18),
-                            border:
-                                Border.all(color: Colors.white.withOpacity(0.14)),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.14),
+                            ),
                           ),
                           child: _selectedImage != null
                               ? ClipRRect(
@@ -245,8 +244,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                       TextFormField(
                         controller: _titleController,
                         style: const TextStyle(color: Colors.white),
-                        decoration:
-                            _fieldDeco(label: "What is it?", icon: Icons.shopping_bag),
+                        decoration: _fieldDeco(
+                          label: "What is it?",
+                          icon: Icons.shopping_bag,
+                        ),
                         validator: (val) => val!.isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 12),
@@ -265,8 +266,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                             value: c,
                             child: Row(
                               children: [
-                                Icon(_iconForCategory(c),
-                                    color: Colors.white.withOpacity(0.95)),
+                                Icon(
+                                  _iconForCategory(c),
+                                  color: Colors.white.withOpacity(0.95),
+                                ),
                                 const SizedBox(width: 10),
                                 Text(c),
                               ],
@@ -307,8 +310,9 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                           onPressed: _isLoading ? null : _submit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
-                            disabledBackgroundColor:
-                                Colors.white.withOpacity(0.55),
+                            disabledBackgroundColor: Colors.white.withOpacity(
+                              0.55,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
