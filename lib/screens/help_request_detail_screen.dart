@@ -100,6 +100,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
   static const double _kFigmaRadius = 12;
   static const Color _kFigmaFieldFill = Color(0xFFF5F5F5);
   static const Color _kFigmaFieldBorder = Color(0xFFE0E0E0);
+
   /// Primary red from spec (#D32F2F) — focus ring & cursor on inputs.
   static const Color _kFigmaAccent = Color(0xFFD32F2F);
   static const Color _kFigmaInk = Color(0xFF212121);
@@ -892,86 +893,93 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _slitBuildings.entries.map((entry) {
-                                  final key = entry.key;
-                                  final loc = entry.value;
-                                  final isSel = _selectedSlitLocationKey == key;
-                                  return Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: _isEditing
-                                          ? () {
-                                              setState(() {
-                                                _selectedSlitLocationKey = key;
-                                              });
-                                            }
-                                          : null,
-                                      borderRadius: BorderRadius.circular(24),
-                                      child: AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 180,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          gradient: isSel
-                                              ? GuardianUi.ctaGradient
-                                              : null,
-                                          color: isSel
-                                              ? null
-                                              : _kFigmaFieldFill,
-                                          borderRadius: BorderRadius.circular(
-                                            24,
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _slitBuildings.entries.map((entry) {
+                                    final key = entry.key;
+                                    final loc = entry.value;
+                                    final isSel =
+                                        _selectedSlitLocationKey == key;
+                                    return Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: _isEditing
+                                            ? () {
+                                                setState(() {
+                                                  _selectedSlitLocationKey =
+                                                      key;
+                                                });
+                                              }
+                                            : null,
+                                        borderRadius: BorderRadius.circular(24),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 180,
                                           ),
-                                          border: Border.all(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 10,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            gradient: isSel
+                                                ? GuardianUi.ctaGradient
+                                                : null,
                                             color: isSel
-                                                ? Colors.transparent
-                                                : _kFigmaFieldBorder,
-                                            width: isSel ? 0 : 1,
-                                          ),
-                                          boxShadow: isSel
-                                              ? [
-                                                  BoxShadow(
-                                                    color: GuardianUi.redPrimary
-                                                        .withValues(
-                                                          alpha: 0.28,
-                                                        ),
-                                                    blurRadius: 10,
-                                                    offset: const Offset(0, 4),
-                                                  ),
-                                                ]
-                                              : null,
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (isSel)
-                                              const Icon(
-                                                Icons.check_rounded,
-                                                size: 18,
-                                                color: Colors.white,
-                                              ),
-                                            if (isSel) const SizedBox(width: 6),
-                                            Text(
-                                              loc.label,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 12,
-                                                color: isSel
-                                                    ? Colors.white
-                                                    : _kFigmaInk,
-                                              ),
+                                                ? null
+                                                : _kFigmaFieldFill,
+                                            borderRadius: BorderRadius.circular(
+                                              24,
                                             ),
-                                          ],
+                                            border: Border.all(
+                                              color: isSel
+                                                  ? Colors.transparent
+                                                  : _kFigmaFieldBorder,
+                                              width: isSel ? 0 : 1,
+                                            ),
+                                            boxShadow: isSel
+                                                ? [
+                                                    BoxShadow(
+                                                      color: GuardianUi
+                                                          .redPrimary
+                                                          .withValues(
+                                                            alpha: 0.28,
+                                                          ),
+                                                      blurRadius: 10,
+                                                      offset: const Offset(
+                                                        0,
+                                                        4,
+                                                      ),
+                                                    ),
+                                                  ]
+                                                : null,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (isSel)
+                                                const Icon(
+                                                  Icons.check_rounded,
+                                                  size: 18,
+                                                  color: Colors.white,
+                                                ),
+                                              if (isSel)
+                                                const SizedBox(width: 6),
+                                              Text(
+                                                loc.label,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 12,
+                                                  color: isSel
+                                                      ? Colors.white
+                                                      : _kFigmaInk,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                }).toList(),
+                                    );
+                                  }).toList(),
                                 ),
                                 const SizedBox(height: 12),
                               ],
@@ -1045,8 +1053,8 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                           strokeWidth: 2.5,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                            redPrimary,
-                                          ),
+                                                redPrimary,
+                                              ),
                                         ),
                                       )
                                     : Row(
@@ -1200,11 +1208,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.schedule_rounded,
-                      size: 20,
-                      color: _kFigmaMuted,
-                    ),
+                    Icon(Icons.schedule_rounded, size: 20, color: _kFigmaMuted),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -1748,26 +1752,20 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
   }
 
   TextStyle get _inputTextStyle => const TextStyle(
-        fontSize: 15,
-        height: 1.45,
-        fontWeight: FontWeight.w400,
-        color: _kFigmaInk,
-        letterSpacing: 0.02,
-      );
+    fontSize: 15,
+    height: 1.45,
+    fontWeight: FontWeight.w400,
+    color: _kFigmaInk,
+    letterSpacing: 0.02,
+  );
 
-  InputDecoration _inputDecoration({
-    required String hint,
-    Widget? prefixIcon,
-  }) {
+  InputDecoration _inputDecoration({required String hint, Widget? prefixIcon}) {
     final r = BorderRadius.circular(_kFigmaRadius);
     const errorColor = Color(0xFFC62828);
     final prefix = prefixIcon == null
         ? null
         : IconTheme.merge(
-            data: const IconThemeData(
-              size: 21,
-              color: _kFigmaMuted,
-            ),
+            data: const IconThemeData(size: 21, color: _kFigmaMuted),
             child: prefixIcon,
           );
 
@@ -1780,10 +1778,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
         fontWeight: FontWeight.w400,
       ),
       prefixIcon: prefix,
-      prefixIconConstraints: const BoxConstraints(
-        minWidth: 48,
-        minHeight: 48,
-      ),
+      prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
       filled: true,
       fillColor: _kFigmaFieldFill,
       isDense: false,
@@ -1801,7 +1796,9 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       ),
       disabledBorder: OutlineInputBorder(
         borderRadius: r,
-        borderSide: BorderSide(color: _kFigmaFieldBorder.withValues(alpha: 0.7)),
+        borderSide: BorderSide(
+          color: _kFigmaFieldBorder.withValues(alpha: 0.7),
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: r,

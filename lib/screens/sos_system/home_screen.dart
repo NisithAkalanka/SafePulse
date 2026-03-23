@@ -568,21 +568,22 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF1C2230)
-          : const Color(0xFFF6C9D1),
+      backgroundColor: isDark ? const Color(0xFF1C2230) : Colors.white,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
+        title: Text(
           "SafePulse",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.notifications_none_rounded,
               color: Colors.white,
               size: 30,
@@ -593,11 +594,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           IconButton(
-            icon: const Icon(
-              Icons.more_vert_rounded,
-              color: Colors.white,
-              size: 30,
-            ),
+            icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: 30),
             onPressed: () {
               Navigator.of(context).push(
                 PageRouteBuilder(
@@ -646,9 +643,9 @@ class _HomeScreenState extends State<HomeScreen>
                         Color(0xFF1A0005),
                       ]
                     : const [
-                        Color(0xFFFF5968),
-                        Color(0xFFF29AA8),
-                        Color(0xFFF4C2CB),
+                        Color(0xFFFF2A2A),
+                        Color(0xFFE00012),
+                        Color(0xFFFFFFFF),
                       ],
                 stops: isDark
                     ? const [0.0, 0.25, 0.55, 0.80, 1.0]
@@ -669,7 +666,7 @@ class _HomeScreenState extends State<HomeScreen>
                       (isDark
                               ? const Color(0xFFFF8A80)
                               : const Color(0xFFFFE3E8))
-                          .withOpacity(isDark ? 0.07 : 0.18),
+                          .withOpacity(isDark ? 0.07 : 0.26),
                 ),
               ),
             ),
@@ -686,8 +683,8 @@ class _HomeScreenState extends State<HomeScreen>
                   color:
                       (isDark
                               ? const Color(0xFF3D0008)
-                              : const Color(0xFFD96A78))
-                          .withOpacity(isDark ? 0.24 : 0.14),
+                              : const Color(0xFFD93131))
+                          .withOpacity(isDark ? 0.24 : 0.18),
                 ),
               ),
             ),
@@ -715,13 +712,13 @@ class _HomeScreenState extends State<HomeScreen>
                             Color(0x001A0005),
                           ]
                         : const [
-                            Color(0xFFFF5463),
-                            Color(0xFFFF8D99),
+                            Color(0xFFFF2A2A),
+                            Color(0xFFE00012),
                             Color(0x00FFFFFF),
                           ],
                     stops: isDark
                         ? const [0.0, 0.22, 0.65, 1.0]
-                        : const [0.0, 0.24, 1.0],
+                        : const [0.0, 0.34, 1.0],
                   ),
                 ),
               ),
@@ -796,7 +793,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
+                                      Text(
                                         "Current Location",
                                         style: TextStyle(
                                           color: Colors.white70,
@@ -809,7 +806,7 @@ class _HomeScreenState extends State<HomeScreen>
                                         _currentAddress,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -831,14 +828,14 @@ class _HomeScreenState extends State<HomeScreen>
                                       color: Colors.white.withOpacity(0.16),
                                     ),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     children: [
                                       Icon(
                                         Icons.cloud_done,
                                         color: Colors.white,
                                         size: 13,
                                       ),
-                                      SizedBox(width: 5),
+                                      const SizedBox(width: 5),
                                       Text(
                                         "Cloud Sync",
                                         style: TextStyle(
@@ -854,8 +851,8 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           ),
                           const SizedBox(height: 18),
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(28, 0, 28, 0),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(28, 0, 28, 0),
                             child: Text(
                               "Shake your phone or hold SOS for instant help — your guardians will be notified.",
                               textAlign: TextAlign.center,
@@ -883,6 +880,17 @@ class _HomeScreenState extends State<HomeScreen>
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
+                                  if (!isDark)
+                                    Container(
+                                      width: 245,
+                                      height: 245,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: const Color(
+                                          0xFFE11D34,
+                                        ).withOpacity(0.08),
+                                      ),
+                                    ),
                                   _ripple(300, 0.05),
                                   _ripple(255, 0.085),
                                   _ripple(215, 0.12),
@@ -1257,8 +1265,8 @@ class _HomeScreenState extends State<HomeScreen>
                                         );
                                       }
 
-                                      return const Padding(
-                                        padding: EdgeInsets.symmetric(
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
                                           vertical: 10,
                                         ),
                                         child: Row(
@@ -1267,16 +1275,20 @@ class _HomeScreenState extends State<HomeScreen>
                                           children: [
                                             Icon(
                                               Icons.lock_outline,
-                                              color: Colors.white70,
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : Colors.black54,
                                               size: 16,
                                             ),
-                                            SizedBox(width: 8),
+                                            const SizedBox(width: 8),
                                             Flexible(
                                               child: Text(
                                                 "Login to enable Safe Walk & Guardians",
                                                 textAlign: TextAlign.center,
                                                 style: TextStyle(
-                                                  color: Colors.white70,
+                                                  color: isDark
+                                                      ? Colors.white70
+                                                      : Colors.black54,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                 ),
