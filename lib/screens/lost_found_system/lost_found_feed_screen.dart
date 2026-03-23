@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'create_item_screen.dart';
 import 'lost_item_model.dart';
 import 'lost_found_service.dart';
-import 'mock_chat_screen.dart';
 import '../sos_system/main_menu_screen.dart';
 
 const Color lfRed = Color(0xFFE53935);
