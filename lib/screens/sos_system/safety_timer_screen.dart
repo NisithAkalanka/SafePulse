@@ -223,8 +223,23 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark
+        ? const Color(0xFF121217)
+        : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFF9FAFC);
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE2E5EC);
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: pageBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -240,68 +255,86 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF4B4B),
-                  Color(0xFFB31217),
-                  Color(0xFF1B1B1B),
-                ],
-                stops: [0.0, 0.62, 1.0],
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(34),
-                bottomRight: Radius.circular(34),
-              ),
-            ),
-            child: Column(
-              children: [
-                _walkingHeader(),
-                if (!_isTimerRunning) ...[
-                  const SizedBox(height: 12),
-                  _walkingAnimation(),
-                ],
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: !_isTimerRunning
-                      ? _buildSetupContent()
-                      : _buildActiveContent(),
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: isDark
+                        ? const [
+                            Color(0xFFFF3B3B),
+                            Color(0xFFE10613),
+                            Color(0xFFB30012),
+                            Color(0xFF140910),
+                          ]
+                        : const [
+                            Color(0xFFFF4B4B),
+                            Color(0xFFB31217),
+                            Color(0xFF1B1B1B),
+                          ],
+                    stops: isDark
+                        ? const [0.0, 0.35, 0.72, 1.0]
+                        : const [0.0, 0.62, 1.0],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(34),
+                    bottomRight: Radius.circular(34),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _walkingHeader(),
+                    if (!_isTimerRunning) ...[
+                      const SizedBox(height: 12),
+                      _walkingAnimation(),
+                    ],
+                  ],
                 ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: !_isTimerRunning
+                        ? _buildSetupContent()
+                        : _buildActiveContent(),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _quickSelect(int min, String label) {
+  Widget _quickSelect(int min, String label, {bool isDark = false}) {
     bool isSelected = _selectedMinutes == min;
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE2E5EC);
     return OutlinedButton(
       onPressed: () => setState(() => _selectedMinutes = min),
       style: OutlinedButton.styleFrom(
         foregroundColor: isSelected
             ? const Color(0xFFB31217)
-            : const Color(0xFF1B1B22),
+            : (isDark ? Colors.white : const Color(0xFF1B1B22)),
         side: BorderSide(
-          color: isSelected ? const Color(0xFFB31217) : const Color(0xFFE2E5EC),
+          color: isSelected ? const Color(0xFFB31217) : borderColor,
         ),
-        backgroundColor: isSelected ? const Color(0xFFFFE3E3) : Colors.white,
+        backgroundColor: isSelected
+            ? (isDark ? const Color(0xFF3A2024) : const Color(0xFFFFE3E3))
+            : cardBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       ),
@@ -451,6 +484,15 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
   }
 
   Widget _buildSetupContent() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFF9FAFC);
     return Column(
       children: [
         Container(
@@ -515,7 +557,7 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardBg,
             borderRadius: BorderRadius.circular(26),
             boxShadow: const [
               BoxShadow(
@@ -545,21 +587,21 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 "Set Your Expected Arrival Time",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF1B1B22),
+                  color: textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 "If you do not check in on time, an automatic SOS alert will be sent.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xFF747A86),
+                  color: textSecondary,
                   height: 1.35,
                   fontWeight: FontWeight.w600,
                 ),
@@ -574,8 +616,12 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                     vertical: 16,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFC),
-                    border: Border.all(color: const Color(0xFFFFD6D6)),
+                    color: softBg,
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF4A2D31)
+                          : const Color(0xFFFFD6D6),
+                    ),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
@@ -598,21 +644,21 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "Selected Duration",
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF747A86),
+                                color: textSecondary,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               "$_selectedMinutes Minutes",
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 18,
-                                color: Color(0xFF1B1B22),
+                                color: textPrimary,
                               ),
                             ),
                           ],
@@ -709,9 +755,9 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _quickSelect(1, "1min (Test)"),
-                  _quickSelect(10, "10min"),
-                  _quickSelect(30, "30min"),
+                  _quickSelect(1, "1min (Test)", isDark: isDark),
+                  _quickSelect(10, "10min", isDark: isDark),
+                  _quickSelect(30, "30min", isDark: isDark),
                 ],
               ),
             ],
@@ -722,6 +768,18 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
   }
 
   Widget _buildActiveContent() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color softBg = isDark
+        ? const Color(0xFF23232B)
+        : const Color(0xFFFFF5F5);
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE2E5EC);
     return Column(
       children: [
         Container(
@@ -786,7 +844,7 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
           width: double.infinity,
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardBg,
             borderRadius: BorderRadius.circular(26),
             boxShadow: const [
               BoxShadow(
@@ -818,10 +876,10 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
               const SizedBox(height: 18),
               Text(
                 "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 58,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF1B1B22),
+                  color: textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -841,7 +899,9 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                       ? 0
                       : _secondsRemaining / _initialTimerSeconds,
                   minHeight: 10,
-                  backgroundColor: const Color(0xFFFFE3E3),
+                  backgroundColor: isDark
+                      ? const Color(0xFF3A2024)
+                      : const Color(0xFFFFE3E3),
                   valueColor: const AlwaysStoppedAnimation<Color>(
                     Color(0xFFB31217),
                   ),
@@ -850,8 +910,8 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
               const SizedBox(height: 10),
               Text(
                 "${((_initialTimerSeconds - _secondsRemaining) / 60).clamp(0, _selectedMinutes).toStringAsFixed(1)} min completed",
-                style: const TextStyle(
-                  color: Color(0xFF747A86),
+                style: TextStyle(
+                  color: textSecondary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -863,12 +923,16 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                       onPressed: () => _extendTimer(5),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 54),
-                        side: const BorderSide(color: Color(0xFFFFD6D6)),
+                        side: BorderSide(
+                          color: isDark
+                              ? const Color(0xFF4A2D31)
+                              : const Color(0xFFFFD6D6),
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                         foregroundColor: const Color(0xFFB31217),
-                        backgroundColor: const Color(0xFFFFF5F5),
+                        backgroundColor: softBg,
                       ),
                       icon: const Icon(Icons.add_alarm_rounded, size: 18),
                       label: const Text(
@@ -922,12 +986,12 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                 onPressed: _stopTimer,
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 52),
-                  side: const BorderSide(color: Color(0xFFE2E5EC)),
+                  side: BorderSide(color: borderColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  foregroundColor: const Color(0xFF1B1B22),
-                  backgroundColor: Colors.white,
+                  foregroundColor: textPrimary,
+                  backgroundColor: cardBg,
                 ),
                 icon: const Icon(Icons.close_rounded, size: 18),
                 label: const Text(
@@ -936,11 +1000,11 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 "Check in to cancel the automatic SOS alert.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xFF747A86),
+                  color: textSecondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -952,12 +1016,15 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
   }
 
   Widget _infoStatCard(IconData icon, String label, String value) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFC),
+        color: isDark ? const Color(0xFF23232B) : const Color(0xFFF9FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EAF0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -974,9 +1041,9 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
           const SizedBox(height: 10),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
-              color: Color(0xFF747A86),
+              color: isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -985,9 +1052,9 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: Color(0xFF1B1B22),
+              color: isDark ? Colors.white : const Color(0xFF1B1B22),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -997,12 +1064,15 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
   }
 
   Widget _featurePill(IconData icon, String label) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF5F5),
+        color: isDark ? const Color(0xFF23232B) : const Color(0xFFFFF5F5),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFFD6D6)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF4A2D31) : const Color(0xFFFFD6D6),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1025,6 +1095,7 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
     );
   }
 
+<<<<<<< Updated upstream
   Widget _topMiniChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1054,6 +1125,8 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
     );
   }
 
+=======
+>>>>>>> Stashed changes
   @override
   void dispose() {
     _timer?.cancel();

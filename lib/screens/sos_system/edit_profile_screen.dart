@@ -149,8 +149,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark
+        ? const Color(0xFF121217)
+        : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark
+        ? const Color(0xFF1B1B22)
+        : const Color(0xFFF6F7FB);
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color fieldFill = isDark ? const Color(0xFF23232B) : Colors.white;
+    final Color disabledFill = isDark
+        ? const Color(0xFF2A2A33)
+        : const Color(0xFFF1F3F6);
+    final Color fieldBorder = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE2E5EC);
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: pageBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -174,16 +192,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               children: [
                 Container(
                   height: 270,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFFFF4B4B),
-                        Color(0xFFB31217),
-                        Color(0xFF1B1B1B),
-                      ],
-                      stops: [0.0, 0.6, 1.0],
+                      colors: isDark
+                          ? const [
+                              Color(0xFFFF3B3B),
+                              Color(0xFFE10613),
+                              Color(0xFFB30012),
+                              Color(0xFF140910),
+                            ]
+                          : const [
+                              Color(0xFFFF4B4B),
+                              Color(0xFFB31217),
+                              Color(0xFF1B1B1B),
+                            ],
+                      stops: isDark
+                          ? const [0.0, 0.35, 0.72, 1.0]
+                          : const [0.0, 0.6, 1.0],
                     ),
                   ),
                 ),
@@ -195,7 +222,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     height: 180,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.08),
+                      color: Colors.white.withOpacity(isDark ? 0.06 : 0.08),
                     ),
                   ),
                 ),
@@ -210,7 +237,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF6F7FB),
+                              color: cardBg,
                               borderRadius: BorderRadius.circular(30),
                               boxShadow: const [
                                 BoxShadow(
@@ -254,9 +281,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                           ),
                                           child: CircleAvatar(
                                             radius: 54,
-                                            backgroundColor: const Color(
-                                              0xFF24131A,
-                                            ),
+                                            backgroundColor: isDark
+                                                ? const Color(0xFF24131A)
+                                                : const Color(0xFF24131A),
                                             backgroundImage:
                                                 _profileImageBase64 != null
                                                 ? MemoryImage(
@@ -324,6 +351,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       }
                                       return null;
                                     },
+                                    isDark: isDark,
+                                    fieldFill: fieldFill,
+                                    disabledFill: disabledFill,
+                                    fieldBorder: fieldBorder,
                                   ),
                                   _buildField(
                                     _lastNameController,
@@ -340,6 +371,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       }
                                       return null;
                                     },
+                                    isDark: isDark,
+                                    fieldFill: fieldFill,
+                                    disabledFill: disabledFill,
+                                    fieldBorder: fieldBorder,
                                   ),
                                   _buildField(
                                     _sliitIdController,
@@ -347,6 +382,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     Icons.badge_outlined,
                                     enabled: false,
                                     readOnly: true,
+                                    isDark: isDark,
+                                    fieldFill: fieldFill,
+                                    disabledFill: disabledFill,
+                                    fieldBorder: fieldBorder,
                                   ),
                                   _buildField(
                                     _phoneController,
@@ -362,6 +401,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       }
                                       return null;
                                     },
+                                    isDark: isDark,
+                                    fieldFill: fieldFill,
+                                    disabledFill: disabledFill,
+                                    fieldBorder: fieldBorder,
                                   ),
                                   _buildField(
                                     _degreeController,
@@ -369,6 +412,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     Icons.school_outlined,
                                     enabled: false,
                                     readOnly: true,
+                                    isDark: isDark,
+                                    fieldFill: fieldFill,
+                                    disabledFill: disabledFill,
+                                    fieldBorder: fieldBorder,
                                   ),
                                   Row(
                                     children: [
@@ -380,6 +427,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                           keyboard: TextInputType.number,
                                           enabled: false,
                                           readOnly: true,
+                                          isDark: isDark,
+                                          fieldFill: fieldFill,
+                                          disabledFill: disabledFill,
+                                          fieldBorder: fieldBorder,
                                         ),
                                       ),
                                       const SizedBox(width: 14),
@@ -399,6 +450,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                             }
                                             return null;
                                           },
+                                          isDark: isDark,
+                                          fieldFill: fieldFill,
+                                          disabledFill: disabledFill,
+                                          fieldBorder: fieldBorder,
                                         ),
                                       ),
                                     ],
@@ -406,14 +461,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   const SizedBox(height: 4),
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: fieldFill,
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
                                         color:
                                             _birthDateTouched &&
                                                 _birthDate == "Select Birthday"
                                             ? Colors.redAccent
-                                            : const Color(0xFFE2E5EC),
+                                            : fieldBorder,
                                       ),
                                       boxShadow: const [
                                         BoxShadow(
@@ -433,8 +488,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                         style: TextStyle(
                                           fontSize: 15,
                                           color: _birthDate == "Select Birthday"
-                                              ? Colors.grey[700]
-                                              : const Color(0xFF1B1B22),
+                                              ? (isDark
+                                                    ? const Color(0xFFB7BBC6)
+                                                    : Colors.grey[700])
+                                              : textPrimary,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -549,6 +606,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     String? Function(String?)? validator,
     bool enabled = true,
     bool readOnly = false,
+    bool isDark = false,
+    Color fieldFill = Colors.white,
+    Color disabledFill = const Color(0xFFF1F3F6),
+    Color fieldBorder = const Color(0xFFE2E5EC),
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
@@ -558,13 +619,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         validator: validator,
         enabled: enabled,
         readOnly: readOnly,
+        style: TextStyle(
+          color: enabled
+              ? (isDark ? Colors.white : const Color(0xFF1B1B22))
+              : (isDark ? const Color(0xFFB7BBC6) : const Color(0xFF666C78)),
+        ),
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon, color: const Color(0xFFB31217)),
           filled: true,
-          fillColor: enabled ? Colors.white : const Color(0xFFF1F3F6),
+          fillColor: enabled ? fieldFill : disabledFill,
           labelStyle: TextStyle(
-            color: enabled ? const Color(0xFF666C78) : const Color(0xFF8C93A1),
+            color: enabled
+                ? (isDark ? const Color(0xFFB7BBC6) : const Color(0xFF666C78))
+                : (isDark ? const Color(0xFF8C93A1) : const Color(0xFF8C93A1)),
             fontWeight: FontWeight.w600,
           ),
           contentPadding: const EdgeInsets.symmetric(
@@ -573,15 +641,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFE2E5EC)),
+            borderSide: BorderSide(color: fieldBorder),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFE2E5EC)),
+            borderSide: BorderSide(color: fieldBorder),
           ),
           disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFE2E5EC)),
+            borderSide: BorderSide(color: fieldBorder),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),

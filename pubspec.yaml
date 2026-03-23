@@ -13,25 +13,26 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  
-  # --- Backend & Auth ---
+
+  # --- Firebase Services ---
   firebase_core: ^4.4.0
   firebase_auth: ^6.1.4
   cloud_firestore: ^6.1.2
-  firebase_storage: ^13.0.6
-  
+  firebase_storage: ^13.0.6  # මෙහි ඉහළ වර්ෂනය පාවිච්චි කිරීම වඩා සුදුසුයි
+
   # --- Maps & Location ---
   geolocator: ^14.0.2
   google_maps_flutter: ^2.14.2
   geocoding: ^4.0.0
-  
-  # --- Advanced Security Features ---
+
+  # --- Security & Alerts ---
   shake: ^3.0.0
   permission_handler: ^12.0.1
   flutter_local_notifications: ^20.1.0
   flutter_background_service: ^5.1.0
-  
-  # --- System Utilities ---
+  record: ^6.2.0
+
+  # --- Utilities ---
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.4
   intl: ^0.20.2
@@ -43,11 +44,29 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # --- App Icon එක සෑදීම සඳහා මෙය අවශ්‍යයි ---
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
 
+<<<<<<< Updated upstream
   # --- මෙන්න මෙතන තමයි සිතියමේ රූපය Register වෙලා තියෙන්නේ ---
+=======
+  # --- සියලුම Assets (පින්තූර සහ ශබ්ද) මෙතැන පවතී ---
+>>>>>>> Stashed changes
   assets:
     - assets/images/sliit_map.png
+<<<<<<< Updated upstream
     - assets/sounds/iphone_ringtone.mp3
+=======
+    - assets/images/app_icon.png
+    - assets/sounds/iphone_ringtone.mp3
+
+# --- App Logo එක හදන්න කියන විධානය ---
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  adaptive_icon_background: "#ffffff"
+>>>>>>> Stashed changes

@@ -50,13 +50,23 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark
+        ? const Color(0xFF121217)
+        : const Color(0xFFF5F6FA);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color appBarBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: pageBg,
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1B1B22),
+        backgroundColor: appBarBg,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF1B1B22),
         title: const Text(
           "Security Checkup",
           style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.2),
@@ -140,7 +150,7 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: cardBg,
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: const [
                       BoxShadow(
@@ -153,19 +163,19 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         "Protection Status",
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
-                          color: Color(0xFF1B1B22),
+                          color: textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
+                      Text(
                         "Tap any item below to manage or improve your security setup.",
                         style: TextStyle(
-                          color: Color(0xFF747A86),
+                          color: textSecondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -192,6 +202,7 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                                   ),
                                 );
                               },
+                        isDark: isDark,
                       ),
                       const SizedBox(height: 12),
                       _securityTile(
@@ -201,6 +212,7 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                             : "Server Connection Lost",
                         Icons.wifi_tethering,
                         _isNodeActive ? Colors.blue : Colors.grey,
+                        isDark: isDark,
                       ),
                       const SizedBox(height: 12),
                       _securityTile(
@@ -213,6 +225,7 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                         onTap: () {
                           _toggleTwoFactor();
                         },
+                        isDark: isDark,
                       ),
                       const SizedBox(height: 12),
                       _securityTile(
@@ -230,6 +243,7 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                             ),
                           ).then((_) => _performSecurityScan());
                         },
+                        isDark: isDark,
                       ),
                     ],
                   ),
@@ -238,7 +252,7 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: cardBg,
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: const [
                       BoxShadow(
@@ -268,7 +282,7 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -277,15 +291,15 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF1B1B22),
+                                color: textPrimary,
                               ),
                             ),
-                            SizedBox(height: 3),
+                            const SizedBox(height: 3),
                             Text(
                               "Your current account protection status is being monitored for reliable emergency use.",
                               style: TextStyle(
                                 fontSize: 11.5,
-                                color: Color(0xFF747A86),
+                                color: textSecondary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -320,12 +334,15 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
     IconData i,
     Color c, {
     VoidCallback? onTap,
+    bool isDark = false,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFC),
+        color: isDark ? const Color(0xFF23232B) : const Color(0xFFF9FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EAF0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0),
+        ),
       ),
       child: ListTile(
         onTap: onTap,
@@ -336,7 +353,11 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
         ),
         title: Text(
           t,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            color: isDark ? Colors.white : const Color(0xFF1B1B22),
+          ),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 2),
@@ -349,10 +370,10 @@ class _SecurityStatusScreenState extends State<SecurityStatusScreen> {
             ),
           ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.chevron_right_rounded,
           size: 18,
-          color: Color(0xFF747A86),
+          color: isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86),
         ),
       ),
     );
