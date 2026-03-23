@@ -13,6 +13,10 @@ class LostItem {
   String status;
   DateTime timestamp;
 
+  String? firstName;
+  String? lastName;
+  DateTime? reportedDateTime;
+
   String? requesterId;
   String? requesterName;
   String? requestType; // "found" or "claim"
@@ -33,6 +37,9 @@ class LostItem {
     required this.imageUrl,
     required this.status,
     required this.timestamp,
+    this.firstName,
+    this.lastName,
+    this.reportedDateTime,
     this.requesterId,
     this.requesterName,
     this.requestType,
@@ -54,6 +61,11 @@ class LostItem {
       'imageUrl': imageUrl,
       'status': status,
       'timestamp': Timestamp.fromDate(timestamp),
+      'firstName': firstName,
+      'lastName': lastName,
+      'reportedDateTime': reportedDateTime == null
+          ? null
+          : Timestamp.fromDate(reportedDateTime!),
       'requesterId': requesterId,
       'requesterName': requesterName,
       'requestType': requestType,
@@ -81,6 +93,14 @@ class LostItem {
       safeReturnedAt = rt;
     }
 
+    DateTime? safeReportedDateTime;
+    final rdt = map['reportedDateTime'];
+    if (rdt is Timestamp) {
+      safeReportedDateTime = rdt.toDate();
+    } else if (rdt is DateTime) {
+      safeReportedDateTime = rdt;
+    }
+
     return LostItem(
       id: docId,
       userId: map['userId'] ?? '',
@@ -93,6 +113,9 @@ class LostItem {
       imageUrl: map['imageUrl'] ?? '',
       status: map['status'] ?? 'Active',
       timestamp: safeTime,
+      firstName: map['firstName'],
+      lastName: map['lastName'],
+      reportedDateTime: safeReportedDateTime,
       requesterId: map['requesterId'],
       requesterName: map['requesterName'],
       requestType: map['requestType'],
