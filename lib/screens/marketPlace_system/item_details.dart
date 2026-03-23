@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'negotiation_chat.dart';
 
 class ItemDetails extends StatefulWidget {
+  final String? docId; // මෙය අනිවාර්යයෙන්ම තිබිය යුතුයි
   final String? itemName;
   final String? itemPrice;
   final String? itemImage;
@@ -11,6 +12,7 @@ class ItemDetails extends StatefulWidget {
 
   const ItemDetails({
     super.key,
+    this.docId, // පරණ පේජ් එකෙන් එන ID එක
     this.itemName,
     this.itemPrice,
     this.itemImage,
@@ -32,12 +34,15 @@ class _ItemDetailsState extends State<ItemDetails> {
   // Firebase Toggle logic for Favourites & Saved
   void _toggleCollection(String collectionName, bool currentState, Function(bool) updateState) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final docId = "${user.uid}_${widget.itemName}";
+    if (user == null || widget.docId == null) return;
+    
+    // ලිස්ට් එකට දත්ත ඇතුලත් කිරීමේදී docId එක භාවිත කරමු
+    final uniqueId = "${user.uid}_${widget.docId}";
 
     if (!currentState) {
-      await FirebaseFirestore.instance.collection(collectionName).doc(docId).set({
+      await FirebaseFirestore.instance.collection(collectionName).doc(uniqueId).set({
         'userId': user.uid,
+        'listingId': widget.docId, // සැබෑ Item ID එක
         'name': widget.itemName,
         'price': widget.itemPrice,
         'image': widget.itemImage,
@@ -45,7 +50,7 @@ class _ItemDetailsState extends State<ItemDetails> {
       });
       _showSnack("Added to $collectionName");
     } else {
-      await FirebaseFirestore.instance.collection(collectionName).doc(docId).delete();
+      await FirebaseFirestore.instance.collection(collectionName).doc(uniqueId).delete();
       _showSnack("Removed from $collectionName");
     }
     setState(() => updateState(!currentState));
@@ -98,7 +103,7 @@ class _ItemDetailsState extends State<ItemDetails> {
 
                   const SizedBox(height: 25),
 
-                  // --- 3. MODIFIED MESSENGER BOX ---
+                  // --- 3. MESSENGER BOX (WITH NAVIGATION FIX) ---
                   Container(
                     padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
@@ -118,7 +123,6 @@ class _ItemDetailsState extends State<ItemDetails> {
                         const SizedBox(height: 15),
                         Row(
                           children: [
-                            // "Hello, is this still available?" ලියන ලද පෙට්ටිය
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -128,13 +132,12 @@ class _ItemDetailsState extends State<ItemDetails> {
                                   border: Border.all(color: Colors.grey.shade200),
                                 ),
                                 child: const Text(
-                                  "Hello, is this still available?", // ඔබ ඉල්ලූ TEXT එක
+                                  "Hello, is this still available?",
                                   style: TextStyle(color: Colors.black54, fontSize: 13),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // SEND බටන් එක
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: intenseRed,
@@ -143,15 +146,16 @@ class _ItemDetailsState extends State<ItemDetails> {
                                 elevation: 3,
                               ),
                               onPressed: () {
-                                // චැට් පේජ් එකට යාම (මැසේජ් එකත් සමග)
+                                // --- පියවර: සියලුම දත්ත (docId ඇතුළුව) මෙතනින් Chat පේජ් එකට යවයි ---
                                 Navigator.push(
                                   context, 
                                   MaterialPageRoute(
                                     builder: (context) => NegotiationChat(
+                                      docId: widget.docId, // ඉතාම වැදගත්! මෙය නොමැතිව Mark as Sold කළ නොහැක
                                       itemName: widget.itemName,
                                       itemPrice: widget.itemPrice,
                                       itemImage: widget.itemImage,
-                                      initialMessage: "Hello, is this still available?", // මෙතනින් දත්ත යවනවා
+                                      initialMessage: "Hello, is this still available?",
                                     ),
                                   ),
                                 );
@@ -166,7 +170,7 @@ class _ItemDetailsState extends State<ItemDetails> {
 
                   const SizedBox(height: 35),
 
-                  // 4. MODIFIED ACTION ROW (Icons Red + Saved Icon changed)
+                  // 4. ACTION ROW
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -187,17 +191,17 @@ class _ItemDetailsState extends State<ItemDetails> {
                   // 5. DESCRIPTION
                   const Text("Full Description", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: intenseRed)),
                   const SizedBox(height: 10),
-                  Text(widget.itemDescription ?? "Secure student transaction. Available for pickup on campus ground areas.", 
+                  Text(widget.itemDescription ?? "Verified student gear available for campus deals. Secured meetups suggested.", 
                       style: const TextStyle(fontSize: 15, color: Colors.black87, height: 1.5)),
 
                   const Divider(height: 50, thickness: 1.2),
 
-                  // 6. SPECIFICATIONS LIST
-                  const Text("Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: intenseRed)),
+                  // 6. SPECIFICATIONS
+                  const Text("Item Specification", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: intenseRed)),
                   const SizedBox(height: 15),
-                  _buildSpecRow("Condition", "Used - Very Clean"),
-                  _buildSpecRow("Safe Verified", "By SafePulse Core"),
-                  _buildSpecRow("Campus", "Main Area"),
+                  _buildSpecRow("Item Status", "Safe Verified"),
+                  _buildSpecRow("Delivery", "Hand-to-Hand"),
+                  _buildSpecRow("Listing Id", widget.docId != null ? widget.docId!.substring(0,6) : "N/A"),
 
                   const SizedBox(height: 80),
                 ],
@@ -209,7 +213,6 @@ class _ItemDetailsState extends State<ItemDetails> {
     );
   }
 
-  // Helper for Actions
   Widget _buildActionCircle(IconData icon, String label, bool isActive, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -231,7 +234,6 @@ class _ItemDetailsState extends State<ItemDetails> {
     );
   }
 
-  // Helper for specs
   Widget _buildSpecRow(String left, String right) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15.0),
