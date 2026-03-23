@@ -15,19 +15,26 @@ class CreateItemScreen extends StatefulWidget {
 
 class _CreateItemScreenState extends State<CreateItemScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
   final _locationController = TextEditingController();
+
+  DateTime _selectedDate = DateTime.now();
+  TimeOfDay _selectedTime = TimeOfDay.now();
 
   String _selectedCategory = 'Electronics';
   File? _selectedImage;
   bool _isLoading = false;
 
-  // SafePulse palette (matching leader style)
   static const Color spRed = Color(0xFFE53935);
   static const Color spDark = Color(0xFFB71C1C);
+  static const Color formBg = Color(0xFFF3F3F4);
+  static const Color textDark = Color(0xFF222222);
+  static const Color borderSoft = Color(0xFFE4E4E7);
 
-  // ✅ UPDATED categories (Removed Clothing, added Watch + Student ID Card)
   final List<String> categories = const [
     'Electronics',
     'ID/Documents',
@@ -37,6 +44,16 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     'Books',
     'Others',
   ];
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _titleController.dispose();
+    _descController.dispose();
+    _locationController.dispose();
+    super.dispose();
+  }
 
   IconData _iconForCategory(String c) {
     switch (c) {
@@ -59,63 +76,265 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
 
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) setState(() => _selectedImage = File(picked.path));
+    if (picked != null) {
+      setState(() => _selectedImage = File(picked.path));
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+    );
+
+    if (picked != null) {
+      setState(() => _selectedTime = picked);
+    }
+  }
+
+  DateTime _combineDateAndTime(DateTime date, TimeOfDay time) {
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    const weekdays = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    final weekday = weekdays[date.weekday];
+    final month = months[date.month];
+    return '$weekday, $month ${date.day}, ${date.year}';
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
   }
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
+      final reportedDateTime = _combineDateAndTime(
+        _selectedDate,
+        _selectedTime,
+      );
 
       final newItem = LostItem(
         id: '',
         userId: user?.uid ?? 'unknown',
         userName: user?.email?.split('@')[0] ?? 'Student',
         type: widget.postType,
-        title: _titleController.text,
+        title: _titleController.text.trim(),
         category: _selectedCategory,
-        description: _descController.text,
-        location: _locationController.text,
-        imageUrl: '', // Handled in Service (mock/memory mode)
+        description: _descController.text.trim(),
+        location: _locationController.text.trim(),
+        imageUrl: '',
         status: 'Active',
         timestamp: DateTime.now(),
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        reportedDateTime: reportedDateTime,
       );
 
       await LostFoundService().createPost(newItem, _selectedImage);
+
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  InputDecoration _fieldDeco({required String label, required IconData icon}) {
+  InputDecoration _fieldDecoration({
+    required String hint,
+    required IconData icon,
+  }) {
     return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: Colors.white.withOpacity(0.85)),
-      prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.9)),
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey.shade500),
+      prefixIcon: Icon(icon, color: spRed),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.10),
+      fillColor: formBg,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.18)),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: borderSoft),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.35)),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: spRed, width: 1.2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.orangeAccent),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.redAccent),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.orangeAccent),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.redAccent),
+      ),
+    );
+  }
+
+  Widget _buildTopToggle() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F2F2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: spRed,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: spRed.withOpacity(0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  widget.postType == 'Lost'
+                      ? 'Report Lost Item'
+                      : 'Report Found Item',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+          const Expanded(
+            child: Center(
+              child: Text(
+                'Fill details',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: textDark),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: textDark,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _dateTimeCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: formBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderSoft),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: spRed),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: textDark,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -125,219 +344,285 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [spRed, spDark],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
+          colors: [Color(0xFF8E0E00), Color(0xFFB31217), Color(0xFF7B1113)],
         ),
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: Text("Report ${widget.postType} Item"),
+          title: Text(
+            widget.postType == 'Lost'
+                ? 'Report Lost Item'
+                : 'Report Found Item',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          centerTitle: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
           foregroundColor: Colors.white,
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        body: SafeArea(
           child: Column(
             children: [
-              // Top info card (leader style)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withOpacity(0.14)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(Icons.report, color: Colors.white),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "Add details clearly so others can identify it fast.",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.92),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Main glass card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Colors.white.withOpacity(0.14)),
-                ),
-                child: Form(
-                  key: _formKey,
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Image upload (more like leader)
-                      GestureDetector(
-                        onTap: _pickImage,
-                        child: Container(
-                          height: 185,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.14),
-                            ),
+                      _buildTopToggle(),
+                      const SizedBox(height: 22),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _sectionLabel(
+                                Icons.person_outline,
+                                'Reporter details',
+                              ),
+                              const SizedBox(height: 14),
+
+                              TextFormField(
+                                controller: _firstNameController,
+                                decoration: _fieldDecoration(
+                                  hint: 'First name',
+                                  icon: Icons.badge_outlined,
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'First name is required';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+
+                              TextFormField(
+                                controller: _lastNameController,
+                                decoration: _fieldDecoration(
+                                  hint: 'Last name',
+                                  icon: Icons.person_outline,
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Last name is required';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 18),
+
+                              _sectionLabel(
+                                Icons.calendar_month_outlined,
+                                'Date you lost it',
+                              ),
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  _dateTimeCard(
+                                    icon: Icons.calendar_today_outlined,
+                                    label: 'Date',
+                                    value: _formatDate(_selectedDate),
+                                    onTap: _pickDate,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  _dateTimeCard(
+                                    icon: Icons.access_time,
+                                    label: 'Time',
+                                    value: _formatTime(_selectedTime),
+                                    onTap: _pickTime,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+
+                              _sectionLabel(
+                                Icons.inventory_2_outlined,
+                                'Item details',
+                              ),
+                              const SizedBox(height: 14),
+
+                              GestureDetector(
+                                onTap: _pickImage,
+                                child: Container(
+                                  height: 180,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: formBg,
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: borderSoft),
+                                  ),
+                                  child: _selectedImage != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
+                                          child: Image.file(
+                                            _selectedImage!,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                          ),
+                                        )
+                                      : Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.add_a_photo_outlined,
+                                              size: 44,
+                                              color: spRed.withOpacity(0.85),
+                                            ),
+                                            const SizedBox(height: 10),
+                                            const Text(
+                                              'Tap to upload photo',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                color: textDark,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Recommended for faster verification',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              TextFormField(
+                                controller: _titleController,
+                                decoration: _fieldDecoration(
+                                  hint: 'What is it?',
+                                  icon: Icons.shopping_bag_outlined,
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Item name is required';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+
+                              DropdownButtonFormField<String>(
+                                value: _selectedCategory,
+                                decoration: _fieldDecoration(
+                                  hint: 'Category',
+                                  icon: Icons.category_outlined,
+                                ),
+                                items: categories.map((c) {
+                                  return DropdownMenuItem<String>(
+                                    value: c,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          _iconForCategory(c),
+                                          color: spRed,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(c),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() => _selectedCategory = val);
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: 12),
+
+                              TextFormField(
+                                controller: _locationController,
+                                decoration: _fieldDecoration(
+                                  hint: 'Where? (Location)',
+                                  icon: Icons.location_on_outlined,
+                                ),
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Location is required';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+
+                              TextFormField(
+                                controller: _descController,
+                                maxLines: 4,
+                                decoration: _fieldDecoration(
+                                  hint: 'Description (marks, color...)',
+                                  icon: Icons.description_outlined,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: _selectedImage != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: Image.file(
-                                    _selectedImage!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_a_photo,
-                                      size: 46,
-                                      color: Colors.white.withOpacity(0.9),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      "Tap to upload photo",
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.92),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Recommended for faster verification",
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.75),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      TextFormField(
-                        controller: _titleController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _fieldDeco(
-                          label: "What is it?",
-                          icon: Icons.shopping_bag,
-                        ),
-                        validator: (val) => val!.isEmpty ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Category dropdown with icons
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedCategory,
-                        dropdownColor: const Color(0xFF7A0F0F),
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _fieldDeco(
-                          label: "Category",
-                          icon: Icons.category,
-                        ),
-                        items: categories.map((c) {
-                          return DropdownMenuItem<String>(
-                            value: c,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  _iconForCategory(c),
-                                  color: Colors.white.withOpacity(0.95),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(c),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) =>
-                            setState(() => _selectedCategory = val.toString()),
-                      ),
-                      const SizedBox(height: 12),
-
-                      TextFormField(
-                        controller: _locationController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _fieldDeco(
-                          label: "Where? (Location)",
-                          icon: Icons.location_on,
-                        ),
-                        validator: (val) => val!.isEmpty ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 12),
-
-                      TextFormField(
-                        controller: _descController,
-                        style: const TextStyle(color: Colors.white),
-                        maxLines: 3,
-                        decoration: _fieldDeco(
-                          label: "Description (marks, color...)",
-                          icon: Icons.description,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Primary CTA (leader style)
-                      SizedBox(
-                        height: 54,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            disabledBackgroundColor: Colors.white.withOpacity(
-                              0.55,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: CircularProgressIndicator(
-                                    color: spDark,
-                                    strokeWidth: 2.4,
-                                  ),
-                                )
-                              : const Text(
-                                  "SUBMIT REPORT",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: spDark,
-                                  ),
-                                ),
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ),
+
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
+                child: SafeArea(
+                  top: false,
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _submit,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check_circle_outline),
+                      label: Text(
+                        _isLoading ? 'Submitting...' : 'SUBMIT REPORT',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: spRed,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: spRed.withOpacity(0.6),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
