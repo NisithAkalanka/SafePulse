@@ -1,237 +1,209 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ඔබේ පද්ධතියේ ගොනු (Paths ඔබේ VS Code එකට අනුව නිවැරදි දැයි බලන්න)
+// පද්ධතියේ අනෙක් ගොනු
 import 'create_listing.dart';
 import 'item_details.dart';
-import 'all_listings.dart';
-import 'favourite_saved_list.dart';
-import 'notifications_screen.dart'; // Notification පේජ් එක
+import 'all_listings.dart'; 
+import 'favourite_saved_list.dart'; 
+import 'manage_listings.dart';
+import 'notifications_screen.dart';
 import '../sos_system/main_menu_screen.dart';
 
-class MarketHome extends StatelessWidget {
+class MarketHome extends StatefulWidget {
   const MarketHome({super.key});
 
-  // SafePulse Branding Colors
+  @override
+  State<MarketHome> createState() => _MarketHomeState();
+}
+
+class _MarketHomeState extends State<MarketHome> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchText = "";
+
+  // SafePulse Brand Colors
   static const Color primaryRed = Color(0xFFD32F2F);
-  static const Color intenseRed = Color(0xFFFF1744);
-  static const Color darkBg = Color(0xFF121212);
+  static const Color intenseRed = Color(0xFFFF1744); 
+  static const Color darkBg = Color(0xFF101010); 
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchText = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFCFCFC), // පිරිසිදු සුදු පසුබිම
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            // --- 1. PREMIUM HEADER SECTION (Profile සහ Notifications සහිතව) ---
+            // --- 1. COMPACT PREMIUM HEADER (උස අඩු කළ හෙඩර් කොටස) ---
             Container(
-              padding: const EdgeInsets.only(
-                top: 60,
-                left: 20,
-                right: 20,
-                bottom: 25,
-              ),
+              padding: const EdgeInsets.only(top: 55, left: 20, right: 20, bottom: 25), // bottom padding adu kala
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [intenseRed, darkBg],
+                  colors: [intenseRed, darkBg], 
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(35),
-                  bottomRight: Radius.circular(35),
+                  bottomLeft: Radius.circular(50), 
+                  bottomRight: Radius.circular(50),
                 ),
               ),
               child: Column(
                 children: [
+                  // App Bar Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         "Marketplace",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
                       ),
                       Row(
                         children: [
-                          // --- පියවර: Notifications Icon එක ---
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const MarketNotificationsScreen(),
-                                ),
-                              );
-                            },
-                            child: _buildHeaderAction(
-                              Icons.notifications_none_rounded,
-                            ),
-                          ),
+                          _buildHeaderIcon(Icons.notifications_none_rounded, const MarketNotificationsScreen()),
                           const SizedBox(width: 12),
-
-                          // --- Dot 3 Menu ---
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MainMenuScreen(),
-                                ),
-                              );
-                            },
-                            child: _buildHeaderAction(Icons.more_vert_rounded),
-                          ),
+                          _buildHeaderIcon(Icons.more_vert_rounded, const MainMenuScreen()),
                         ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 20), // Spacing adu kala
 
-                  // --- SEARCH BAR (Modern UI) ---
+                  // Campus Market Small Info Box
                   Container(
-                    height: 52,
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), // internal padding adu kala
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
+                      color: Colors.white.withOpacity(0.12), 
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.storefront_rounded, color: Colors.white, size: 28),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                "Campus Market", 
+                                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                "The trusted student network for campus trading.",
+                                style: TextStyle(color: Colors.white70, fontSize: 13),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                    child: const TextField(
-                      decoration: InputDecoration(
-                        hintText: "What are you searching for?",
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                        prefixIcon: Icon(Icons.search, color: primaryRed),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 16),
-                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
+            const SizedBox(height: 15),
+
+            // --- 2. SEARCH BAR ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: primaryRed.withOpacity(0.1)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: "What are you searching for?",
+                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+                    prefixIcon: const Icon(Icons.search, color: primaryRed, size: 22),
+                    suffixIcon: _searchText.isNotEmpty 
+                        ? IconButton(icon: const Icon(Icons.clear, size: 18, color: Colors.grey), onPressed: () => _searchController.clear())
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 25),
 
-            // --- 2. QUICK ACTIONS (Sell, Favourites, Saved, Category) ---
+            // --- 3. CLEAN QUICK ACTIONS (ඔබ එවූ රූපය අනුව සකස් කළා) ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildQuickAction(
-                    context,
-                    Icons.add_circle_outline_rounded,
-                    "Sell",
-                  ),
-                  _buildQuickAction(
-                    context,
-                    Icons.favorite_outline_rounded,
-                    "Favourites",
-                  ),
-                  _buildQuickAction(
-                    context,
-                    Icons.bookmark_outline_rounded,
-                    "Saved",
-                  ),
-                  _buildQuickAction(
-                    context,
-                    Icons.grid_view_rounded,
-                    "Category",
-                  ),
+                  _buildMarketAction(Icons.add_circle_outline_rounded, "Sell"),
+                  _buildMarketAction(Icons.favorite_border_rounded, "Favourites"),
+                  _buildMarketAction(Icons.bookmark_outline_rounded, "Saved"),
+                  _buildMarketAction(Icons.assignment_ind_outlined, "My Ads"), 
                 ],
               ),
             ),
 
             const SizedBox(height: 35),
 
-            // --- 3. RECENT POSTS SECTION ---
+            // --- 4. ITEM GRID HEADER ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
+              padding: const EdgeInsets.symmetric(horizontal: 25),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Recommended For You",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-
-                  // --- "See all" මගින් සියලු අයිතම පෙන්වයි ---
+                  const Text("For You", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AllListingsScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      "See all",
-                      style: TextStyle(
-                        color: primaryRed,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const AllListingsScreen())),
+                    child: const Text("See all", style: TextStyle(color: primaryRed, fontWeight: FontWeight.bold, fontSize: 14)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 15),
 
-            // --- 4. REAL-TIME DATA STREAM FROM FIRESTORE ---
             StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('listings')
-                  .orderBy('createdAt', descending: true)
-                  .limit(8)
-                  .snapshots(),
+              stream: FirebaseFirestore.instance.collection('listings').snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(30.0),
-                      child: CircularProgressIndicator(color: primaryRed),
-                    ),
-                  );
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      "No items posted yet.",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: primaryRed));
+                
+                final docs = snapshot.data!.docs.where((doc) {
+                  final name = (doc['name'] as String).toLowerCase();
+                  return name.contains(_searchText);
+                }).toList();
 
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 15,
-                    mainAxisSpacing: 15,
-                    childAspectRatio: 0.78,
-                  ),
-                  itemCount: snapshot.data!.docs.length,
+                    crossAxisCount: 2, crossAxisSpacing: 15, mainAxisSpacing: 15, childAspectRatio: 0.8),
+                  itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    var item = snapshot.data!.docs[index];
-                    return _buildSafePulseProductCard(context, item);
+                    var data = docs[index].data() as Map<String, dynamic>;
+                    return _buildSafePulseCard(docs[index].id, data);
                   },
                 );
               },
@@ -243,165 +215,66 @@ class MarketHome extends StatelessWidget {
     );
   }
 
-  // --- Helper UI Widgets ---
+  // --- UI Widget Helpers ---
 
-  Widget _buildHeaderAction(IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: Colors.white24,
-        borderRadius: BorderRadius.circular(12),
+  Widget _buildHeaderIcon(IconData icon, Widget target) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => target)),
+      child: Container(
+        padding: const EdgeInsets.all(10), 
+        decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(12)), 
+        child: Icon(icon, color: Colors.white, size: 22)
       ),
-      child: Icon(icon, color: Colors.white, size: 24),
     );
   }
 
-  Widget _buildQuickAction(BuildContext context, IconData icon, String label) {
+  // පින්තූරයේ ආකාරයට නිර්මාණය කළ පිරිසිදු බොත්තම් UI එක
+  Widget _buildMarketAction(IconData icon, String label) {
     return GestureDetector(
       onTap: () {
-        if (label == "Sell") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateListing()),
-          );
-        } else if (label == "Favourites") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const FavoriteSavedScreen(
-                title: "My Favourites",
-                collectionName: "user_favourites",
-              ),
-            ),
-          );
-        } else if (label == "Saved") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const FavoriteSavedScreen(
-                title: "My Saved Items",
-                collectionName: "user_saved",
-              ),
-            ),
-          );
-        }
+        if (label == "Sell") Navigator.push(context, MaterialPageRoute(builder: (c) => const CreateListing()));
+        if (label == "Favourites") Navigator.push(context, MaterialPageRoute(builder: (c) => const FavoriteSavedScreen(title: "Favourites", collectionName: "user_favourites")));
+        if (label == "Saved") Navigator.push(context, MaterialPageRoute(builder: (c) => const FavoriteSavedScreen(title: "Saved Items", collectionName: "user_saved")));
+        if (label == "My Ads") Navigator.push(context, MaterialPageRoute(builder: (c) => const ManageListingsScreen()));
       },
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16), 
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
+              color: Colors.white, // No color background (Pure White)
+              borderRadius: BorderRadius.circular(18), // Rounded corner boxes
               boxShadow: [
-                BoxShadow(
-                  color: primaryRed.withOpacity(0.08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
+                BoxShadow(color: Colors.red.withOpacity(0.04), blurRadius: 15, spreadRadius: 1)
               ],
-              border: Border.all(color: Colors.red.shade50),
-            ),
-            child: Icon(icon, color: primaryRed, size: 28),
+              border: Border.all(color: Colors.grey.shade50), // Subtle light border
+            ), 
+            child: Icon(icon, color: primaryRed, size: 30), 
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
+          const SizedBox(height: 10), 
+          Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.black87)),
         ],
       ),
     );
   }
 
-  Widget _buildSafePulseProductCard(
-    BuildContext context,
-    DocumentSnapshot doc,
-  ) {
-    var data = doc.data() as Map<String, dynamic>;
+  Widget _buildSafePulseCard(String docId, Map data) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ItemDetails(
-              itemName: data['name'],
-              itemPrice: data['price'],
-              itemImage: data['image'],
-            ),
-          ),
-        );
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => ItemDetails(docId: docId, itemName: data['name'], itemPrice: data['price'], itemImage: data['image']))),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: const LinearGradient(
-            colors: [primaryRed, Color(0xFF1A1A1A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(25),
+          gradient: const LinearGradient(colors: [primaryRed, darkBg], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: const Offset(0, 4))],
         ),
-        child: Column(
-          children: [
-            Expanded(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(5),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Image.network(
-                    data['image'],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (c, e, s) =>
-                        const Icon(Icons.broken_image, color: Colors.white),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      data['name'],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      data['price'],
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: Column(children: [
+          Expanded(child: Padding(padding: const EdgeInsets.all(5), child: ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.network(data['image'] ?? "", fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.image, color: Colors.white))))),
+          Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(data['name'] ?? "", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
+            Text(data['price'] ?? "", style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          ])),
+        ]),
       ),
     );
   }

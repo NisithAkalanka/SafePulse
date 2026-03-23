@@ -1,31 +1,35 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
+    // leader ගේ project එකේ namespace එක හරියටම චෙක් කරන්න (සාමාන්‍යයෙන් මෙය වේ)
     namespace = "com.example.safeplus"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+
+    // වැදගත්ම දේ: මෙය 35 සිට 36 දක්වා මම වැඩි කළා
+    compileSdk = 36
 
     compileOptions {
-        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
     defaultConfig {
         applicationId = "com.example.safeplus"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // targetSdk එකත් මම 36 දක්වා වැඩි කළා
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -33,10 +37,6 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-}
-
-flutter {
-    source = "../.."
 }
 
 dependencies {
@@ -47,4 +47,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
+
+flutter {
+    source = "../.."
 }
