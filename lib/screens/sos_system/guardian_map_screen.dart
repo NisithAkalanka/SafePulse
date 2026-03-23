@@ -215,7 +215,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 150),
       child: Stack(
         children: [
           if (!_isFullMap)
@@ -406,7 +406,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
             Positioned(
               left: 0,
               right: 0,
-              bottom: 10,
+              bottom: 34,
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

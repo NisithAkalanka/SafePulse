@@ -7,7 +7,7 @@ import 'firebase_options.dart';
 import 'screens/navigation_screen.dart';
 import 'screens/sos_system/onboarding_screen.dart';
 import 'screens/sos_system/login_screen.dart';
-import 'screens/sos_system/theme_provider.dart';
+import 'theme_provider.dart';
 import 'services/notification_service.dart';
 import 'services/help_request_service.dart';
 
