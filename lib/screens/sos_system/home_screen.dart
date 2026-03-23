@@ -7,13 +7,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:shake/shake.dart'; // ✅ SHAKE import
 
-import '../admin_full_dashboard.dart';
-import '../alerts_hub_screen.dart';
-import '../guardian_mode_screen.dart';
-import '../login_screen.dart';
-import '../main_menu_screen.dart';
-import '../profile_screen.dart';
-import '../safety_timer_screen.dart';
+import 'main_menu_screen.dart';
+import 'profile_screen.dart';
+import 'login_screen.dart';
+import 'safety_timer_screen.dart';
+import 'guardian_mode_screen.dart';
+import 'alerts_hub_screen.dart';
+import 'admin_full_dashboard.dart';
 import 'fake_call_screen.dart';
 import '../../services/notification_service.dart';
 
@@ -25,7 +25,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   String _currentAddress = "Detecting location...";
   Position? _currentPosition;
   String _userRole = "student";
@@ -33,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen>
   Timer? _locationSyncTimer;
   StreamSubscription<User?>? _authSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _myAlertSub;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
 
   late final AnimationController _sosFlashController;
   late final Animation<double> _sosFlashOpacity;
@@ -50,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _sosFlashController = AnimationController(
       vsync: this,
@@ -62,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen>
     _getCurrentLocation();
     _listenForGlobalAlerts();
     _loadUserStatus();
+    _listenToUserSettings();
     _startLiveLocationSync();
 
     _initShakeDetection(); // ✅ start shake detection
@@ -70,17 +73,58 @@ class _HomeScreenState extends State<HomeScreen>
     _authSub = FirebaseAuth.instance.authStateChanges().listen((u) {
       if (!mounted) return;
       if (u == null) {
+        _userDocSub?.cancel();
         setState(() {
           _userRole = 'student';
+          _shakeEnabled = true;
+          _sosCategories = {
+            "🚨 Medical Emergency": true,
+            "⚠️ Threat / Hazard": true,
+            "💥 Accident / Crash": true,
+          };
         });
       } else {
         _loadUserStatus();
+        _listenToUserSettings();
       }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkProfileStatus();
     });
+  }
+
+  void _listenToUserSettings() {
+    _userDocSub?.cancel();
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _userDocSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen((doc) {
+          if (!mounted || !doc.exists) return;
+          final data = doc.data();
+          if (data == null) return;
+
+          setState(() {
+            _userRole = (data['role'] ?? 'student').toString();
+            _shakeEnabled = data['shake_enabled'] ?? true;
+            if (data['sos_categories'] != null) {
+              _sosCategories = Map<String, bool>.from(data['sos_categories']);
+            }
+          });
+        });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadUserStatus();
+      _listenToUserSettings();
+    }
   }
 
   // --- SNAP-STYLE MAP SYNC (සෑම තත්පර 30කට වරක් ලොකේෂන් Update කරයි) ---
@@ -384,21 +428,19 @@ class _HomeScreenState extends State<HomeScreen>
                         controller: scrollController,
                         padding: EdgeInsets.zero,
                         children: [
-                          ...activeTypes
-                              .map(
-                                (type) => ListTile(
-                                  leading: const Icon(
-                                    Icons.flash_on,
-                                    color: Colors.redAccent,
-                                  ),
-                                  title: Text(type),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    _sendToFirebase(type);
-                                  },
-                                ),
-                              )
-                              ,
+                          ...activeTypes.map(
+                            (type) => ListTile(
+                              leading: const Icon(
+                                Icons.flash_on,
+                                color: Colors.redAccent,
+                              ),
+                              title: Text(type),
+                              onTap: () {
+                                Navigator.pop(context);
+                                _sendToFirebase(type);
+                              },
+                            ),
+                          ),
                           const SizedBox(height: 10),
                         ],
                       ),
@@ -1254,6 +1296,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _userDocSub?.cancel();
     _shakeDetector?.stopListening(); // ✅ stop shake
     _globalAlertsSub?.cancel();
     _locationSyncTimer?.cancel();

@@ -168,7 +168,8 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
+
       child: Stack(
         children: [
           if (!_isFullMap)
@@ -188,7 +189,8 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
             child: Container(
               margin: _isFullMap
                   ? EdgeInsets.zero
-                  : const EdgeInsets.only(bottom: 88),
+                  : const EdgeInsets.only(bottom: 150),
+
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
@@ -359,7 +361,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
             Positioned(
               left: 0,
               right: 0,
-              bottom: 0,
+              bottom: 10,
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1052,6 +1054,7 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
   }
 
   // --- Decorations & Shared Helpers ---
+
   Widget _blockedUI() {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),

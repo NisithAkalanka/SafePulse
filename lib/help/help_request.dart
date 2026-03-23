@@ -56,9 +56,7 @@ class HelpRequest {
   }
 
   static HelpRequest fromMap(String id, Map<String, dynamic> data, String? currentUid) {
-    final createdAt = data['createdAt'] is int
-        ? DateTime.fromMillisecondsSinceEpoch(data['createdAt'] as int)
-        : DateTime.now();
+    final createdAt = _parseDateTime(data['createdAt']) ?? DateTime.now();
     final creatorUid = data['creatorUid'] as String?;
     Map<String, dynamic>? prefs;
     final raw = data['helperPreferences'];
@@ -95,5 +93,13 @@ class HelpRequest {
       helperPreferences: prefs,
     );
   }
-}
 
+  static DateTime? _parseDateTime(Object? raw) {
+    if (raw == null) return null;
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw);
+    if (raw is double) return DateTime.fromMillisecondsSinceEpoch(raw.round());
+    if (raw is num) return DateTime.fromMillisecondsSinceEpoch(raw.toInt());
+    return null;
+  }
+}

@@ -530,6 +530,7 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
     );
   }
 
+
   Widget _infoMiniCard(IconData icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -574,6 +575,8 @@ class _FakeCallScreenState extends State<FakeCallScreen> {
       ),
     );
   }
+
+
 
   @override
   void dispose() {

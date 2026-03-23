@@ -6,13 +6,20 @@ class LostItem {
   String userName;
   String type; // "Lost" or "Found"
   String title;
-  String category; // "Electronics", "Keys", etc.
+  String category;
   String description;
   String location;
   String imageUrl;
-  String status; // "Active", "Claimed", "Returned"
+  String status;
   DateTime timestamp;
-  String? claimerId; // Who is trying to claim it?
+
+  String? requesterId;
+  String? requesterName;
+  String? requestType; // "found" or "claim"
+  String? verificationQuestion;
+  String? verificationAnswer;
+  bool chatEnabled;
+  DateTime? returnedAt;
 
   LostItem({
     required this.id,
@@ -26,10 +33,15 @@ class LostItem {
     required this.imageUrl,
     required this.status,
     required this.timestamp,
-    this.claimerId,
+    this.requesterId,
+    this.requesterName,
+    this.requestType,
+    this.verificationQuestion,
+    this.verificationAnswer,
+    this.chatEnabled = false,
+    this.returnedAt,
   });
 
-  // Convert to Map for Firebase
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
@@ -42,12 +54,33 @@ class LostItem {
       'imageUrl': imageUrl,
       'status': status,
       'timestamp': Timestamp.fromDate(timestamp),
-      'claimerId': claimerId,
+      'requesterId': requesterId,
+      'requesterName': requesterName,
+      'requestType': requestType,
+      'verificationQuestion': verificationQuestion,
+      'verificationAnswer': verificationAnswer,
+      'chatEnabled': chatEnabled,
+      'returnedAt': returnedAt == null ? null : Timestamp.fromDate(returnedAt!),
     };
   }
 
-  // Create Object from Firebase Data
   factory LostItem.fromMap(Map<String, dynamic> map, String docId) {
+    DateTime safeTime = DateTime.now();
+    final ts = map['timestamp'];
+    if (ts is Timestamp) {
+      safeTime = ts.toDate();
+    } else if (ts is DateTime) {
+      safeTime = ts;
+    }
+
+    DateTime? safeReturnedAt;
+    final rt = map['returnedAt'];
+    if (rt is Timestamp) {
+      safeReturnedAt = rt.toDate();
+    } else if (rt is DateTime) {
+      safeReturnedAt = rt;
+    }
+
     return LostItem(
       id: docId,
       userId: map['userId'] ?? '',
@@ -59,8 +92,14 @@ class LostItem {
       location: map['location'] ?? '',
       imageUrl: map['imageUrl'] ?? '',
       status: map['status'] ?? 'Active',
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
-      claimerId: map['claimerId'],
+      timestamp: safeTime,
+      requesterId: map['requesterId'],
+      requesterName: map['requesterName'],
+      requestType: map['requestType'],
+      verificationQuestion: map['verificationQuestion'],
+      verificationAnswer: map['verificationAnswer'],
+      chatEnabled: map['chatEnabled'] ?? false,
+      returnedAt: safeReturnedAt,
     );
   }
 }

@@ -20,7 +20,7 @@ class _SecurityPinScreenState extends State<SecurityPinScreen> {
   }
 
   // 1. කලින් සෙට් කරලා තියෙන පින් එකක් තියෙනවද බලමු
-  _checkExistingPin() async {
+  Future<void> _checkExistingPin() async {
     var doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user!.uid)

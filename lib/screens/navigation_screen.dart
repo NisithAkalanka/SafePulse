@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'home_screen.dart';
-import 'login_screen.dart';
-import 'guardian_map_screen.dart';
-import 'admin_full_dashboard.dart';
+import 'sos_system/home_screen.dart';
+import 'sos_system/guardian_map_screen.dart';
+import 'sos_system/admin_full_dashboard.dart';
 import 'lost_found_system/lost_found_feed_screen.dart';
 import 'marketPlace_system/market_home.dart';
 import 'help_screen.dart';
+import '../widgets/main_bottom_navigation_bar.dart';
 
-// Placeholder (අනිත් අයගේ වැඩ වෙනුවෙන්)
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   const PlaceholderScreen(this.title, {super.key});
@@ -52,8 +51,9 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-class HelpFeedScreen extends StatelessWidget {
-  const HelpFeedScreen({super.key});
+/// Unused legacy menu (Help tab uses [HelpScreen] from `help_screen.dart`).
+class LegacyHelpHubMenuScreen extends StatelessWidget {
+  const LegacyHelpHubMenuScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +89,10 @@ class HelpFeedScreen extends StatelessWidget {
 }
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  /// Optional tab to select after role is loaded (e.g. from embedded nav).
+  final int? initialTabIndex;
+
+  const MainNavigationScreen({super.key, this.initialTabIndex});
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
@@ -97,16 +100,23 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   String _userRole = 'student';
+  bool _initialTabApplied = false;
 
   @override
   void initState() {
     super.initState();
     _checkUserRole();
 
-    // Login/logout වෙද්දී role refresh වෙනවා
-    FirebaseAuth.instance.authStateChanges().listen((_) {
+    FirebaseAuth.instance.authStateChanges().listen((user) {
       if (!mounted) return;
-      _checkUserRole();
+      if (user == null) {
+        setState(() {
+          _userRole = 'student';
+          _selectedIndex = 0;
+        });
+      } else {
+        _checkUserRole();
+      }
     });
   }
 
@@ -116,6 +126,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     if (user == null) {
       if (!mounted) return;
       setState(() => _userRole = 'student');
+      _applyInitialTabIfNeeded();
       return;
     }
 
@@ -129,134 +140,80 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       setState(() {
         _userRole = (doc.data()?['role'] ?? 'student').toString();
       });
+      _applyInitialTabIfNeeded();
     } catch (e) {
       debugPrint('Role check failed: $e');
       if (!mounted) return;
       setState(() => _userRole = 'student');
+      _applyInitialTabIfNeeded();
     }
+  }
+
+  void _applyInitialTabIfNeeded() {
+    if (_initialTabApplied ||
+        widget.initialTabIndex == null ||
+        !mounted) {
+      return;
+    }
+    final screens = _getScreens();
+    if (screens.isEmpty) return;
+    setState(() {
+      _selectedIndex =
+          widget.initialTabIndex!.clamp(0, screens.length - 1);
+      _initialTabApplied = true;
+    });
   }
 
   List<Widget> _getScreens() {
-    // Admins: SOS + Dashboard + Map + Help + Lost&Found + Market
     if (_userRole == 'admin') {
       return [
-        const HomeScreen(),          // SOS
-        const AdminFullDashboard(),  // DASHBOARD
-        const GuardianMapScreen(),   // MAP
-        const HelpScreen(),          // HELP
-        const LostFoundFeedScreen(), // LOST
-        MarketHome(),                // MARKET
+        const HomeScreen(),
+        const AdminFullDashboard(),
+        const GuardianMapScreen(),
+        const HelpScreen(),
+        const LostFoundFeedScreen(),
+        MarketHome(),
       ];
     }
 
-    // Students: SOS + Map + Help + Lost&Found + Market
     return [
-      const HomeScreen(),          // SOS
-      const GuardianMapScreen(),   // MAP
-      const HelpScreen(),          // HELP
-      const LostFoundFeedScreen(), // LOST
-      MarketHome(),                // MARKET
+      const HomeScreen(),
+      const GuardianMapScreen(),
+      const HelpScreen(),
+      const LostFoundFeedScreen(),
+      MarketHome(),
     ];
-  }
-
-  List<BottomNavigationBarItem> _getNavItems() {
-    final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.security_outlined),
-        activeIcon: Icon(Icons.security),
-        label: 'SOS',
-      ),
-    ];
-
-    if (_userRole == 'admin') {
-      items.add(
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.analytics_outlined),
-          activeIcon: Icon(Icons.analytics),
-          label: 'DASHBOARD',
-        ),
-      );
-    }
-
-    items.addAll(const [
-      BottomNavigationBarItem(
-        icon: Icon(Icons.map_outlined),
-        activeIcon: Icon(Icons.map_rounded),
-        label: 'MAP',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.handshake_outlined),
-        activeIcon: Icon(Icons.handshake),
-        label: 'HELP',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.search_outlined),
-        activeIcon: Icon(Icons.search_rounded),
-        label: 'LOST',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.store_outlined),
-        activeIcon: Icon(Icons.store),
-        label: 'MARKET',
-      ),
-    ]);
-
-    return items;
   }
 
   Future<void> _onItemTapped(int index) async {
-    // SOS tab always available
-    if (index == 0) {
-      setState(() => _selectedIndex = index);
-      return;
-    }
-
-    // Everything else requires login
-    if (FirebaseAuth.instance.currentUser == null) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-
-      // If user logged in after returning
-      if (FirebaseAuth.instance.currentUser != null) {
+    await handleMainNavBarTap(context, index, (resolved) async {
+      if (!mounted) return;
+      if (resolved != 0) {
         await _checkUserRole();
-
-        if (!mounted) return;
-        setState(() => _selectedIndex = index);
       }
-
-      return;
-    }
-
-    setState(() => _selectedIndex = index);
+      if (!mounted) return;
+      setState(() => _selectedIndex = resolved);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final screens = _getScreens();
-    final navItems = _getNavItems();
+    final navItems = buildMainNavBarItems(_userRole);
 
-    // Safety guard: if role changed and index is out of range, reset
     if (_selectedIndex >= screens.length) {
       _selectedIndex = 0;
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
       body: IndexedStack(index: _selectedIndex, children: screens),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: MainBottomNavigationBarView(
         currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.redAccent,
-        unselectedItemColor: Colors.grey,
-        onTap: (i) => _onItemTapped(i),
-        selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 11,
-        ),
-        unselectedLabelStyle: const TextStyle(fontSize: 10),
         items: navItems,
+        onTap: _onItemTapped,
       ),
     );
   }
-} //original code: 2024-06-01
+}

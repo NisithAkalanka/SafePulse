@@ -16,8 +16,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       'status': 'Resolved',
       'resolved_at': FieldValue.serverTimestamp(),
     });
-    if(!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Alert Resolved Successfully!")));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Alert Resolved Successfully!")),
+    );
   }
 
   @override
@@ -26,7 +28,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Guardian Security Admin", style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text(
+            "Guardian Security Admin",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           bottom: const TabBar(
@@ -51,15 +56,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('alerts')
-          .where('status', isEqualTo: activeOnly ? 'Active SOS' : 'Resolved') // 'New Alert' හෝ 'Active SOS' පරීක්ෂා කරන්න
+          .where(
+            'status',
+            isEqualTo: activeOnly ? 'Active SOS' : 'Resolved',
+          ) // 'New Alert' හෝ 'Active SOS' පරීක්ෂා කරන්න
           .orderBy('time', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         var alerts = snapshot.data!.docs;
-        if (alerts.isEmpty) return Center(child: Text(activeOnly ? "No Active Alerts Found" : "No Past Records"));
+        if (alerts.isEmpty) {
+          return Center(
+            child: Text(
+              activeOnly ? "No Active Alerts Found" : "No Past Records",
+            ),
+          );
+        }
 
         return ListView.builder(
           itemCount: alerts.length,
@@ -70,40 +88,65 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
               child: ExpansionTile(
                 leading: CircleAvatar(
                   backgroundColor: activeOnly ? Colors.red : Colors.green,
                   child: const Icon(Icons.person, color: Colors.white),
                 ),
-                title: Text(data['user_email'] ?? "Unknown", style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  data['user_email'] ?? "Unknown",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text("🚨 ${data['type'] ?? 'Emergency'}"),
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(15.0),
                     child: Column(
                       children: [
-                        ListTile(dense: true, leading: const Icon(Icons.location_on), title: Text(data['address'] ?? "No address")),
+                        ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.location_on),
+                          title: Text(data['address'] ?? "No address"),
+                        ),
                         const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             ElevatedButton.icon(
-                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SOSTrackingMap(victimEmail: data['user_email'], alertId: id))),
-                              icon: const Icon(Icons.map, size: 18), label: const Text("VIEW MAP"),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SOSTrackingMap(
+                                    victimEmail: data['user_email'],
+                                    alertId: id,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(Icons.map, size: 18),
+                              label: const Text("VIEW MAP"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
                             ),
                             if (activeOnly)
-                            ElevatedButton.icon(
-                              onPressed: () => _resolveAlert(id),
-                              icon: const Icon(Icons.check, size: 18), label: const Text("RESOLVE"),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                            ),
+                              ElevatedButton.icon(
+                                onPressed: () => _resolveAlert(id),
+                                icon: const Icon(Icons.check, size: 18),
+                                label: const Text("RESOLVE"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
                           ],
-                        )
+                        ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             );

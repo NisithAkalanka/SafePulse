@@ -1024,6 +1024,7 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
     );
   }
 
+
   @override
   void dispose() {
     _timer?.cancel();
