@@ -216,10 +216,14 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
 
     return Padding(
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
 =======
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
 
+>>>>>>> Stashed changes
+=======
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 150),
 >>>>>>> Stashed changes
       child: Stack(
         children: [
@@ -415,7 +419,11 @@ class _GuardianMapScreenState extends State<GuardianMapScreen> {
             Positioned(
               left: 0,
               right: 0,
+<<<<<<< Updated upstream
               bottom: 0,
+=======
+              bottom: 34,
+>>>>>>> Stashed changes
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
