@@ -54,6 +54,21 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
   bool _isResolved = false;
   late final DateTime _sessionStart = DateTime.now();
 
+  bool _chatProceeded = false;
+  String? _requestCreatorUid;
+  String? _requestHelperUid;
+
+  bool get _isRequester {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return false;
+    if (_requestCreatorUid != null) return uid == _requestCreatorUid;
+    if (_requestHelperUid != null) return uid != _requestHelperUid;
+    // Keep requester-side gate safe until role fields load.
+    return true;
+  }
+
+  bool get _canCurrentUserSend => _chatProceeded || !_isRequester;
+
   String get _chatMode =>
       widget.title.toLowerCase().contains('study') ? 'study' : 'general';
 
@@ -61,6 +76,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   final List<_ChatMessage> _messages = [];
 
+  StreamSubscription<DocumentSnapshot>? _reqSub;
   StreamSubscription<QuerySnapshot>? _chatSub;
 
   @override
@@ -99,6 +115,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   @override
   void dispose() {
+    _reqSub?.cancel();
     _chatSub?.cancel();
     _controller.dispose();
     _scrollController.dispose();
@@ -115,6 +132,22 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
   void _subscribeToChat() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
+
+    _reqSub = FirebaseFirestore.instance
+        .collection('help_requests')
+        .doc(widget.requestId)
+        .snapshots()
+        .listen((reqSnap) {
+      if (!mounted) return;
+      final data = reqSnap.data();
+      if (data != null) {
+        setState(() {
+          _chatProceeded = data['chatProceeded'] == true;
+          _requestCreatorUid = data['creatorUid'] as String?;
+          _requestHelperUid = data['helperUid'] as String?;
+        });
+      }
+    });
 
     _chatSub = FirebaseFirestore.instance
         .collection('help_requests')
@@ -153,11 +186,20 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
       setState(() {
         _messages.clear();
         _messages.addAll(updated.reversed);
-        // Checking for typing status from the other part (helper/requester)
-        // This would require a separate 'typing' field in the help_requests doc
       });
       _scrollToBottom();
     });
+  }
+
+  Future<void> _proceedChat() async {
+    if (!_isRequester) return;
+    await FirebaseFirestore.instance
+        .collection('help_requests')
+        .doc(widget.requestId)
+        .update({
+          'chatProceeded': true,
+          'chatProceededAt': FieldValue.serverTimestamp(),
+        });
   }
 
   void _scrollToBottom({bool jump = false}) {
@@ -213,6 +255,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   Future<void> _sendText(String text) async {
     if (_isResolved || _isRecording) return;
+    if (!_canCurrentUserSend) return;
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
 
@@ -241,6 +284,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     if (_isResolved || _isRecording) return;
+    if (!_canCurrentUserSend) return;
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source, imageQuality: 85);
     if (picked == null) return;
@@ -268,6 +312,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
   }
 
   Future<void> _sendAudioMessage(String audioPath, Duration duration) async {
+    if (!_canCurrentUserSend) return;
     if (!mounted) return;
 
     final user = FirebaseAuth.instance.currentUser;
@@ -292,6 +337,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
   }
   Future<void> _showAttachmentSheet() async {
     if (_isResolved || _isRecording) return;
+    if (!_canCurrentUserSend) return;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -379,6 +425,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   Future<void> _toggleRecording() async {
     if (_isResolved) return;
+    if (!_canCurrentUserSend) return;
 
     if (_isRecording) {
       _recordTimer?.cancel();
@@ -711,6 +758,8 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
       ),
       body: Column(
         children: [
+          if (!_chatProceeded && _isRequester)
+            _buildProceedPrompt(g),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -964,6 +1013,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                         child: TextField(
                           controller: _controller,
                           focusNode: _inputFocus,
+                          enabled: _canCurrentUserSend,
                           textInputAction: TextInputAction.send,
                           keyboardType: TextInputType.text,
                           textCapitalization: TextCapitalization.sentences,
@@ -972,7 +1022,9 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                             if (!_isRecording) _send();
                           },
                           decoration: InputDecoration(
-                            hintText: 'Type a message...',
+                            hintText: _canCurrentUserSend 
+                              ? 'Type a message...' 
+                              : 'Chat request pending...',
                             hintStyle: TextStyle(
                               color: g.textSecondary,
                               fontWeight: FontWeight.w500,
@@ -1078,6 +1130,69 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     final mm = minutes.toString().padLeft(2, '0');
     final ss = seconds.toString().padLeft(2, '0');
     return '$mm:$ss';
+  }
+
+  Widget _buildProceedPrompt(GuardianTheme g) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: g.panelBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kOutgoingBubble.withOpacity(0.3)),
+        boxShadow: g.cardShadow,
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.chat_bubble_outline_rounded,
+              color: _kOutgoingBubble, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            "Helper has messaged you.",
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: g.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Do you want to proceed with the chat?",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: g.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("CANCEL",
+                      style: TextStyle(color: g.textSecondary)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kOutgoingBubble,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _proceedChat,
+                  child: const Text("PROCEED"),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -85,4 +85,35 @@ class NotificationService {
       notificationDetails: details,
     );
   }
+
+  /// Local alert shown to helper when their offer is accepted.
+  static Future<void> showHelpAcceptedNotification({
+    required int id,
+    required String category,
+    required String title,
+  }) async {
+    const NotificationDetails details = NotificationDetails(
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        subtitle: 'Help Offer Accepted',
+      ),
+      android: AndroidNotificationDetails(
+        'help_accepted_channel_id',
+        'Help Accepted Alerts',
+        channelDescription: 'Notifications when your help offer is accepted',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+      ),
+    );
+
+    await _notificationsPlugin.show(
+      id: id,
+      title: 'Your Help Has been Accepted',
+      body: 'You can now start a private chat for $category: $title',
+      notificationDetails: details,
+    );
+  }
 }

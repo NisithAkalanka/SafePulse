@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/notification_service.dart'; // Import NotificationService
 import 'sos_tracking_map.dart'; // කලින් අපි හදපු map පේජ් එක
+import '../help_private_chat_screen.dart';
 
 class AlertsHubScreen extends StatefulWidget {
   const AlertsHubScreen({super.key});
@@ -14,6 +15,51 @@ class AlertsHubScreen extends StatefulWidget {
 class _AlertsHubScreenState extends State<AlertsHubScreen> {
   final Set<String> _processedAlertIds = {};
   final DateTime _screenStartTime = DateTime.now();
+
+  void _showAcceptedDialog(String requestId, String category, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.green[50],
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.green),
+            SizedBox(width: 10),
+            Text("Help Accepted"),
+          ],
+        ),
+        content: Text("Your help offer for $category has been accepted!"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("CLOSE"),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HelpPrivateChatScreen(
+                    requestId: requestId,
+                    title: category,
+                    subtitle: title,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+            label: const Text("CONTACT"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +210,34 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                         final uid = FirebaseAuth.instance.currentUser?.uid;
                         for (final d in offerSnap.data!.docs) {
                           final data = d.data() as Map<String, dynamic>;
+                          final String docId = d.id;
+
+                          // Trigger notification if my offer was accepted
+                          if (data['helperUid'] == uid &&
+                              data['accepted'] == true &&
+                              !_processedAlertIds.contains('accepted_$docId')) {
+                            
+                            // Using a post-frame callback to show the dialog
+                            // to avoid "setState() or markNeedsBuild() called during build" errors
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              
+                              NotificationService.showHelpAcceptedNotification(
+                                id: docId.hashCode,
+                                category: (data['requestCategory'] ?? 'Help request').toString(),
+                                title: (data['requestTitle'] ?? '').toString(),
+                              );
+                              
+                              _showAcceptedDialog(
+                                data['requestId'] ?? '',
+                                (data['requestCategory'] ?? 'Help').toString(),
+                                (data['requestTitle'] ?? '').toString(),
+                              );
+                            });
+                            
+                            _processedAlertIds.add('accepted_$docId');
+                          }
+
                           // Show as notification if I'm the recipient (normal behavior)
                           // OR if I am the helper (so I can see my sent offer here)
                           final bool isRecipient = data['recipientUid'] == uid;
@@ -174,6 +248,8 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                               'id': d.id,
                               'isOffer': true,
                               'isSentOffer': isHelper,
+                              'requestId': data['requestId'],
+                              'requestTitle': (data['requestTitle'] ?? '').toString(),
                               'title': isHelper
                                   ? "You offered help to ${data['requestCategory'] ?? 'someone'}"
                                   : (data['helperName'] ?? "A helper").toString(),
@@ -282,31 +358,94 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                                 ),
                               ),
                               trailing: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: softBg,
-                                ),
-                                child: Icon(
-                                  isOffer ? Icons.notifications_active_rounded : Icons.map_outlined,
-                                  color: isOffer
-                                      ? const Color(0xFF1E9E5A)
-                                      : const Color(0xFFB31217),
-                                ),
-                              ),
-                              onTap: isOffer
-                                  ? null
-                                  : () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => SOSTrackingMap(
-                                            victimEmail: row['title'] as String,
-                                            alertId: docId,
+                                child: isOffer
+                                    ? FilledButton.icon(
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: const Color(0xFF1E9E5A),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(999),
                                           ),
                                         ),
-                                      );
-                                    },
+                                        onPressed: () {
+                                          final requestId =
+                                              (row['requestId'] ?? '').toString();
+                                          if (requestId.isEmpty) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Request reference is missing.'),
+                                              ),
+                                            );
+                                            return;
+                                          }
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => HelpPrivateChatScreen(
+                                                requestId: requestId,
+                                                title: row['type'] as String,
+                                                subtitle: (row['requestTitle']?.toString().isNotEmpty == true)
+                                                    ? row['requestTitle'] as String
+                                                    : row['address'] as String,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.chat_bubble_outline_rounded,
+                                          size: 16,
+                                        ),
+                                        label: const Text(
+                                          'Contact',
+                                          style: TextStyle(fontWeight: FontWeight.w800),
+                                        ),
+                                      )
+                                    : Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: softBg,
+                                        ),
+                                        child: const Icon(
+                                          Icons.map_outlined,
+                                          color: Color(0xFFB31217),
+                                        ),
+                                      ),
+                              ),
+                              onTap: () {
+                                if (isOffer) {
+                                  final requestId =
+                                      (row['requestId'] ?? '').toString();
+                                  if (requestId.isEmpty) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => HelpPrivateChatScreen(
+                                        requestId: requestId,
+                                        title: row['type'] as String,
+                                        subtitle:
+                                            (row['requestTitle']?.toString().isNotEmpty == true)
+                                                ? row['requestTitle'] as String
+                                                : row['address'] as String,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SOSTrackingMap(
+                                        victimEmail: row['title'] as String,
+                                        alertId: docId,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
                           );
                         },
