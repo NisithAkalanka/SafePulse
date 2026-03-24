@@ -2,6 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../screens/sos_system/login_screen.dart';
+import '../theme/guardian_ui.dart';
+
+/// Extra bottom space for scrollable tab bodies when the shell uses
+/// [Scaffold.extendBody] + [MainBottomNavigationBarView] (content must not sit under the pill).
+double mainFloatingNavScrollPadding(BuildContext context) {
+  final safe = MediaQuery.paddingOf(context).bottom;
+  // Keep in sync with [MainBottomNavigationBarView] outer margin bottom + bar height.
+  return safe + 6 + 50;
+}
+
+/// Panel-to-nav strip on [HelpRequestDetailScreen] — same value for Request help tab
+/// ([mainFloatingNavPanelBottomInset]) so both screens match.
+const double kHelpPanelBottomGutter = 18;
+
+/// Visible gap above the floating nav for tab bodies under [Scaffold.extendBody].
+/// Uses [kHelpPanelBottomGutter] (same as help request form panel bottom padding) + nav margin.
+double mainFloatingNavPanelBottomInset(BuildContext context) {
+  final safe = MediaQuery.paddingOf(context).bottom;
+  return safe + 6 + kHelpPanelBottomGutter;
+}
 
 /// Bottom nav items — must stay in sync with [MainNavigationScreen] tab order.
 List<BottomNavigationBarItem> buildMainNavBarItems(String userRole) {
@@ -99,20 +119,27 @@ class MainBottomNavigationBarView extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final idx = currentIndex.clamp(0, items.length - 1);
+    final g = GuardianTheme.of(context);
+    // Fully opaque so list/content never shows through the floating pill.
+    final pillBg = g.panelBg;
+    final pillBorder = g.isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFFFD9DD);
+    final unselectedTint = g.isDark ? g.captionGrey : const Color(0xFF90A0AC);
 
     return SafeArea(
       top: false,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.96),
+          color: pillBg,
           borderRadius: BorderRadius.circular(34),
-          border: Border.all(color: const Color(0xFFFFD9DD), width: 1.2),
-          boxShadow: const [
+          border: Border.all(color: pillBorder, width: 1.2),
+          boxShadow: [
             BoxShadow(
-              color: Color(0x22000000),
+              color: Colors.black.withValues(alpha: g.isDark ? 0.45 : 0.13),
               blurRadius: 24,
-              offset: Offset(0, 8),
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -125,11 +152,13 @@ class MainBottomNavigationBarView extends StatelessWidget {
             ),
             child: BottomNavigationBar(
               currentIndex: idx,
-              backgroundColor: Colors.transparent,
+              backgroundColor: pillBg,
               elevation: 0,
               type: BottomNavigationBarType.fixed,
+              showSelectedLabels: false,
+              showUnselectedLabels: false,
               selectedItemColor: const Color(0xFFFF5A63),
-              unselectedItemColor: const Color(0xFF90A0AC),
+              unselectedItemColor: unselectedTint,
               onTap: onTap,
               selectedLabelStyle: const TextStyle(
                 fontWeight: FontWeight.w800,
@@ -141,7 +170,7 @@ class MainBottomNavigationBarView extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,
               ),
-              iconSize: 27,
+              iconSize: 28,
               items: items,
             ),
           ),

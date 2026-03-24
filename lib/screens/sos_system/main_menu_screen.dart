@@ -15,6 +15,28 @@ import 'login_screen.dart';
 class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key});
 
+  /// Opens the menu as a transparent overlay so background blur is visible.
+  static Future<void> showOverlay(BuildContext context) {
+    return Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.transparent,
+        pageBuilder: (_, __, ___) => const MainMenuScreen(),
+        transitionsBuilder: (_, animation, __, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          return FadeTransition(
+            opacity: Tween<double>(begin: 0, end: 1).animate(curved),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
   @override
   State<MainMenuScreen> createState() => _MainMenuScreenState();
 }

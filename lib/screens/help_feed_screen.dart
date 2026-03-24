@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'sos_system/profile_screen.dart';
+import 'sos_system/alerts_hub_screen.dart'; // Add this line
 import '../help/help_request.dart';
 import '../theme/guardian_ui.dart';
 import '../help/help_requests_store.dart';
 import '../services/help_request_service.dart';
-import 'help_private_chat_screen.dart';
-import 'help_live_location_screen.dart';
+import '../services/help_offer_notification_service.dart';
+import 'sos_system/main_menu_screen.dart';
 
 class HelpFeedScreen extends StatefulWidget {
   const HelpFeedScreen({super.key});
@@ -18,7 +20,6 @@ class HelpFeedScreen extends StatefulWidget {
 
 class _HelpFeedScreenState extends State<HelpFeedScreen> {
   Position? _currentPosition;
-  bool _loadingLocation = false;
 
   @override
   void initState() {
@@ -33,9 +34,6 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
   }
 
   Future<void> _loadLocation() async {
-    setState(() {
-      _loadingLocation = true;
-    });
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -43,22 +41,16 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        setState(() {
-          _loadingLocation = false;
-        });
         return;
       }
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      setState(() {
-        _currentPosition = position;
-        _loadingLocation = false;
-      });
+      if (mounted) {
+        setState(() => _currentPosition = position);
+      }
     } catch (_) {
-      setState(() {
-        _loadingLocation = false;
-      });
+      // Keep last known position if any.
     }
   }
 
@@ -132,88 +124,6 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     }
 
     return (tagColor: tagColor, markerColor: markerColor, statusLabel: statusLabel);
-  }
-
-  void _showRequestAccepted(HelpRequest request) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Request Accepted 🎉',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: GuardianUi.redPrimary,
-                      side: const BorderSide(color: GuardianUi.redPrimary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => HelpPrivateChatScreen(
-                            title: request.category,
-                            subtitle: request.title,
-                          ),
-                        ),
-                      );
-                    },
-                    child: const Text('Open Private Chat'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black87,
-                      side: const BorderSide(color: Color(0xFFE0E0E6)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => HelpLiveLocationScreen(
-                            title: request.title,
-                            locationName: request.locationName,
-                            lat: request.lat,
-                            lng: request.lng,
-                            creatorUid: request.creatorUid,
-                          ),
-                        ),
-                      );
-                    },
-                    child: const Text('Track Live Location'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   /// Matches [GuardianMapScreen] header glass card.
@@ -324,7 +234,8 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     );
   }
 
-  Widget _buildEmptyHelpState() {
+  Widget _buildEmptyHelpState(BuildContext context) {
+    final g = GuardianTheme.of(context);
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
@@ -339,7 +250,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
           'No open requests',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: GuardianUi.textPrimary,
+            color: g.textPrimary,
             fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
@@ -349,7 +260,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
           'Pull down to refresh. New help posts will show up here.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: GuardianUi.textSecondary,
+            color: g.textSecondary,
             fontWeight: FontWeight.w600,
             fontSize: 13,
             height: 1.35,
@@ -364,10 +275,15 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     return ValueListenableBuilder<List<HelpRequest>>(
       valueListenable: HelpRequestsStore.instance.requests,
       builder: (context, all, _) {
-        final requests = _sortedRequests(all);
+        final currentUid = FirebaseAuth.instance.currentUser?.uid;
+        // Only show requests that are NOT the user's own and have no active offer from someone else
+        final requests = _sortedRequests(all)
+            .where((r) => !r.isMine && (r.helperUid == null || r.helperUid == currentUid))
+            .toList();
+        final g = GuardianTheme.of(context);
 
         return Scaffold(
-          backgroundColor: GuardianUi.surface,
+          backgroundColor: g.scaffoldBg,
           extendBodyBehindAppBar: true,
           appBar: AppBar(
             title: const Text(
@@ -393,26 +309,13 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
               },
             ),
             actions: [
-              if (_loadingLocation)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.my_location_rounded),
-                  onPressed: _loadLocation,
-                  tooltip: 'Refresh location',
-                ),
-              const SizedBox(width: 6),
+              IconButton(
+                tooltip: 'More',
+                icon: const Icon(Icons.more_vert_rounded),
+                onPressed: () {
+                  MainMenuScreen.showOverlay(context);
+                },
+              ),
             ],
           ),
           body: Column(
@@ -420,9 +323,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
-                decoration: const BoxDecoration(
-                  gradient: GuardianUi.headerGradient,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  gradient: g.headerGradient,
+                  borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(34),
                     bottomRight: Radius.circular(34),
                   ),
@@ -440,17 +343,19 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: g.panelBg,
                       borderRadius: BorderRadius.circular(28),
-                      boxShadow: GuardianUi.cardShadow,
+                      boxShadow: g.cardShadow,
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: RefreshIndicator(
                       color: GuardianUi.redPrimary,
-                      onRefresh: () =>
-                          HelpRequestService.instance.refreshOnce(),
+                      onRefresh: () async {
+                        await _loadLocation();
+                        await HelpRequestService.instance.refreshOnce();
+                      },
                       child: requests.isEmpty
-                          ? _buildEmptyHelpState()
+                          ? _buildEmptyHelpState(context)
                           : ListView.builder(
                               physics: const AlwaysScrollableScrollPhysics(),
                               padding: const EdgeInsets.fromLTRB(
@@ -461,7 +366,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                               ),
                               itemCount: requests.length,
                               itemBuilder: (context, index) {
-                                return _featuredCard(requests[index]);
+                                return _featuredCard(context, requests[index]);
                               },
                             ),
                     ),
@@ -475,22 +380,17 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     );
   }
 
-  Widget _featuredCard(HelpRequest request) {
+  Widget _featuredCard(BuildContext context, HelpRequest request) {
     const Color redPrimary = GuardianUi.redPrimary;
+    final g = GuardianTheme.of(context);
     final s = _styleFor(request);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: GuardianUi.surfaceMuted,
+        color: g.listItemBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EAF0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: g.chipBorder),
+        boxShadow: g.cardShadow,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -525,10 +425,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     children: [
                       Text(
                         request.category,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color: GuardianUi.textPrimary,
+                          color: g.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -536,19 +436,19 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                         request.requesterName.isNotEmpty
                             ? request.requesterName
                             : 'Requester',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: GuardianUi.textSecondary,
+                          color: g.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         request.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: GuardianUi.textPrimary,
+                          color: g.textPrimary,
                         ),
                       ),
                       if (request.description.trim().isNotEmpty) ...[
@@ -560,7 +460,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             height: 1.35,
-                            color: GuardianUi.textSecondary.withOpacity(0.9),
+                            color: g.textSecondary.withOpacity(0.9),
                           ),
                         ),
                       ],
@@ -600,9 +500,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           Expanded(
                             child: Text(
                               request.locationName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF747A86),
+                                color: g.captionGrey,
                                 fontWeight: FontWeight.w600,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -611,9 +511,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           const SizedBox(width: 8),
                           Text(
                             _distanceLabel(request),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF747A86),
+                              color: g.captionGrey,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -622,17 +522,17 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.send_rounded,
                             size: 14,
-                            color: Color(0xFF747A86),
+                            color: g.captionGrey,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             _timeAgoLabel(request.createdAt),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF747A86),
+                              color: g.captionGrey,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -650,9 +550,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           Expanded(
                             child: Text(
                               'Needed ${DateFormat.yMMMd().add_jm().format(request.neededAt)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: GuardianUi.textPrimary,
+                                color: g.textPrimary,
                                 fontWeight: FontWeight.w700,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -705,7 +605,30 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     letterSpacing: 0.4,
                   ),
                 ),
-                onPressed: () => _showRequestAccepted(request),
+                onPressed: () async {
+                  final ok = await HelpOfferNotificationService.instance
+                      .notifyRequesterAboutOffer(request);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        ok
+                            ? 'Offer sent. Redirecting to Alerts Hub...'
+                            : 'Could not send offer notification. Please try again.',
+                      ),
+                    ),
+                  );
+
+                  if (ok) {
+                    // Redirect to Alerts Hub Screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AlertsHubScreen(),
+                      ),
+                    );
+                  }
+                },
                 child: const Text('OFFER HELP'),
               ),
             ),

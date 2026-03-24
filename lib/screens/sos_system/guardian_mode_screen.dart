@@ -78,12 +78,6 @@ class _GuardianModeScreenState extends State<GuardianModeScreen> {
     final Color textSecondary = isDark
         ? const Color(0xFFB7BBC6)
         : const Color(0xFF747A86);
-    final Color softBg = isDark
-        ? const Color(0xFF23232B)
-        : const Color(0xFFF9FAFC);
-    final Color borderColor = isDark
-        ? const Color(0xFF34343F)
-        : const Color(0xFFE8EAF0);
 
     return Scaffold(
       backgroundColor: pageBg,

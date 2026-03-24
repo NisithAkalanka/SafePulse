@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +10,7 @@ import '../services/help_request_service.dart';
 import '../theme/guardian_ui.dart';
 import '../widgets/main_bottom_navigation_bar.dart';
 import 'sos_system/main_menu_screen.dart';
+import 'your_requests_page.dart';
 
 class HelpRequestDetailScreen extends StatefulWidget {
   final String category;
@@ -16,11 +19,16 @@ class HelpRequestDetailScreen extends StatefulWidget {
   /// When set, the form opens in edit mode for this request (same Firestore id).
   final HelpRequest? existingRequest;
 
+  /// From **Request help** flow: run after the success dialog closes, **before**
+  /// this route is popped — e.g. select the Help hub’s “Your requests” tab.
+  final VoidCallback? onViewYourRequests;
+
   const HelpRequestDetailScreen({
     super.key,
     required this.category,
     this.initialNote = '',
     this.existingRequest,
+    this.onViewYourRequests,
   });
 
   @override
@@ -29,6 +37,7 @@ class HelpRequestDetailScreen extends StatefulWidget {
 }
 
 class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
+  final _scrollController = ScrollController();
   final _formKey = GlobalKey<FormState>();
   final _requesterNameController = TextEditingController();
   final _titleController = TextEditingController();
@@ -40,12 +49,12 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
   bool _isSubmitting = false;
   // Keep the form editable by default. We only need the "Edit request"
   // flow after submission (dialog button).
-  bool _isEditing = true;
+  final bool _isEditing = true;
 
   /// For bottom nav (same role logic as [MainNavigationScreen]).
   String _navUserRole = 'student';
 
-  /// After the first successful submit, further submits update this document.
+  /// Set when editing an existing request (loaded from Your requests).
   String? _persistedDocId;
   DateTime? _createdAtLocked;
 
@@ -98,13 +107,15 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
 
   // --- Figma-style design tokens (Help request form) ---
   static const double _kFigmaRadius = 12;
-  static const Color _kFigmaFieldFill = Color(0xFFF5F5F5);
-  static const Color _kFigmaFieldBorder = Color(0xFFE0E0E0);
   /// Primary red from spec (#D32F2F) — focus ring & cursor on inputs.
   static const Color _kFigmaAccent = Color(0xFFD32F2F);
-  static const Color _kFigmaInk = Color(0xFF212121);
-  static const Color _kFigmaMuted = Color(0xFF757575);
   static const double _kFigmaSectionGap = 16;
+
+  GuardianTheme get _g => GuardianTheme.of(context);
+  Color get _fieldFill => _g.figmaFieldFill;
+  Color get _fieldBorder => _g.figmaFieldBorder;
+  Color get _ink => _g.ink;
+  Color get _muted => _g.textSecondary;
 
   /// After first failed submit, validate as user types (pro UX).
   bool _attemptedSubmit = false;
@@ -206,10 +217,90 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     }
   }
 
-  bool get _isUpdateMode => _persistedDocId != null && _createdAtLocked != null;
-
   String get _effectiveCategory =>
       widget.existingRequest?.category ?? widget.category;
+
+  void _popThisRouteWithResult(Object? result) {
+    if (!mounted) return;
+    // Pop via the navigator that owns this [ModalRoute] (reliable vs root/nested guesswork).
+    final route = ModalRoute.of(context);
+    final nav = route?.navigator;
+    if (nav != null && nav.canPop()) {
+      nav.pop(result);
+      return;
+    }
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    if (rootNav.canPop()) {
+      rootNav.pop(result);
+    }
+  }
+
+  Future<void> _showRequestConfirmedAndExit({required bool isUpdate}) async {
+    if (!mounted) return;
+
+    bool shouldViewRequests = false;
+
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final dg = GuardianTheme.of(dialogContext);
+        return AlertDialog(
+          backgroundColor: dg.panelBg,
+          title: Text(
+            isUpdate ? 'Request updated' : 'Your request is confirmed',
+            style: TextStyle(
+              color: dg.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
+          content: Text(
+            isUpdate
+                ? 'Your changes are saved. You can review them under Your requests.'
+                : 'Your request is confirmed. We’ll take you to Your requests next.',
+            style: TextStyle(
+              color: dg.textSecondary,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () {
+                shouldViewRequests = true;
+                Navigator.of(dialogContext).pop();
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: GuardianUi.redPrimary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('View Your requests'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+    if (shouldViewRequests) {
+      widget.onViewYourRequests?.call();
+      if (mounted) {
+        if (!isUpdate) {
+          // Push YourRequestsPage and replace this form, giving the user the isolated UI directly
+          Navigator.of(context, rootNavigator: true).pushReplacement(
+            MaterialPageRoute(builder: (_) => const YourRequestsPage()),
+          );
+        } else {
+          // When updating, we are already coming from the 'Your requests' screen
+          _popThisRouteWithResult(true);
+        }
+      }
+    } else if (mounted) {
+      _popThisRouteWithResult(true);
+    }
+  }
 
   @override
   void dispose() {
@@ -219,6 +310,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     _locationController.dispose();
     _tipController.dispose();
     _physicalController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -309,8 +401,62 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
   Future<void> _submitRequest() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       if (mounted) setState(() => _attemptedSubmit = true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Check highlighted fields and try again.'),
+          ),
+        );
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
+        );
+      });
       return;
     }
+
+    // Tip / physical live under Advanced options — keep them out of [Form.validate]
+    // so a hidden invalid optional field cannot block submit with no visible error.
+    final tipErr = _validateTip(_tipController.text);
+    if (tipErr != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$tipErr Open “Advanced options” to fix the tip field, or clear it.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    final physErr = _validatePhysical(_physicalController.text);
+    if (physErr != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$physErr Open “Advanced options” to fix it, or clear the field.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    });
 
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
@@ -326,7 +472,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     });
 
     if (building == null) {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a SLIIT location.')),
@@ -344,7 +490,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     if (neededAt.isBefore(
       DateTime.now().subtract(const Duration(minutes: 1)),
     )) {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -361,12 +507,78 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       DateTime.now().add(const Duration(hours: 2)),
     );
 
+    if (uid == null) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: You must be logged in to post.')),
+        );
+      }
+      return;
+    }
+
     final category = _effectiveCategory;
     final prefs = _buildHelperPreferencesMap();
 
-    if (_persistedDocId != null && _createdAtLocked != null) {
-      final updated = HelpRequest(
-        id: _persistedDocId!,
+    try {
+      if (_persistedDocId != null && _createdAtLocked != null) {
+        final updated = HelpRequest(
+          id: _persistedDocId!,
+          category: category,
+          requesterName: requesterName,
+          title: title,
+          description: description,
+          locationName: locationText.isEmpty ? 'Nearby' : locationText,
+          lat: lat,
+          lng: lng,
+          isUrgent: isUrgent,
+          isMine: true,
+          createdAt: _createdAtLocked!,
+          neededAt: neededAt,
+          creatorUid: uid,
+          helperPreferences: prefs,
+        );
+
+        final ok = await HelpRequestService.instance
+            .updateRequest(_persistedDocId!, updated)
+            .timeout(
+              const Duration(seconds: 45),
+              onTimeout: () => false,
+            );
+
+        if (mounted) setState(() => _isSubmitting = false);
+        if (!mounted) return;
+
+        HelpRequestsStore.instance.upsert(updated);
+        if (ok) {
+          await HelpRequestService.instance.refreshOnce();
+          await _upsertEmergencyAlertFromHelpRequest(
+            alertId: _persistedDocId!,
+            type: category,
+            address: locationText.isEmpty ? 'Nearby' : locationText,
+            lat: lat,
+            lng: lng,
+            requesterEmail:
+                FirebaseAuth.instance.currentUser?.email ?? requesterName,
+          );
+        }
+        if (!ok && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not sync update. Saved locally.'),
+            ),
+          );
+          return;
+        }
+
+        if (!mounted) return;
+        await _showRequestConfirmedAndExit(isUpdate: true);
+        return;
+      }
+
+      final localId = DateTime.now().microsecondsSinceEpoch.toString();
+      final created = HelpRequest(
+        id: localId,
         category: category,
         requesterName: requesterName,
         title: title,
@@ -376,28 +588,28 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
         lng: lng,
         isUrgent: isUrgent,
         isMine: true,
-        createdAt: _createdAtLocked!,
+        createdAt: DateTime.now(),
         neededAt: neededAt,
         creatorUid: uid,
         helperPreferences: prefs,
       );
 
-      final ok = await HelpRequestService.instance.updateRequest(
-        _persistedDocId!,
-        updated,
-      );
+      final docId = await HelpRequestService.instance
+          .addRequest(created)
+          .timeout(
+            const Duration(seconds: 45),
+            onTimeout: () {
+              debugPrint('HelpRequestDetailScreen: addRequest timed out');
+              return null;
+            },
+          );
 
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isSubmitting = false);
       if (!mounted) return;
 
-      HelpRequestsStore.instance.upsert(updated);
-      if (ok) {
-        await HelpRequestService.instance.refreshOnce();
-        // Also sync to `alerts` so the "Active Safety Alerts" notification page updates.
+      if (docId != null) {
         await _upsertEmergencyAlertFromHelpRequest(
-          alertId: _persistedDocId!,
+          alertId: docId,
           type: category,
           address: locationText.isEmpty ? 'Nearby' : locationText,
           lat: lat,
@@ -406,109 +618,48 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               FirebaseAuth.instance.currentUser?.email ?? requesterName,
         );
       }
-      if (!ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not sync update. Saved locally.'),
-          ),
+
+      if (docId == null) {
+        HelpRequestsStore.instance.add(created);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved locally. Sync when online.')),
+          );
+        }
+      } else {
+        final saved = HelpRequest(
+          id: docId,
+          category: created.category,
+          requesterName: created.requesterName,
+          title: created.title,
+          description: created.description,
+          locationName: created.locationName,
+          lat: created.lat,
+          lng: created.lng,
+          isUrgent: created.isUrgent,
+          isMine: true,
+          createdAt: created.createdAt,
+          neededAt: created.neededAt,
+          creatorUid: created.creatorUid,
+          helperPreferences: created.helperPreferences,
         );
+        HelpRequestsStore.instance.upsert(saved);
+        await HelpRequestService.instance.refreshOnce();
       }
 
+      if (!mounted) return;
+      await _showRequestConfirmedAndExit(isUpdate: false);
+    } catch (e, st) {
+      debugPrint('HelpRequestDetailScreen._submitRequest: $e');
+      debugPrint('$st');
       if (mounted) {
-        setState(() => _isEditing = true);
-      }
-      _showPostedDialog(
-        isUpdate: true,
-        categoryLabel: category,
-        locationText: locationText,
-      );
-      return;
-    }
-
-    final localId = DateTime.now().microsecondsSinceEpoch.toString();
-    final created = HelpRequest(
-      id: localId,
-      category: category,
-      requesterName: requesterName,
-      title: title,
-      description: description,
-      locationName: locationText.isEmpty ? 'Nearby' : locationText,
-      lat: lat,
-      lng: lng,
-      isUrgent: isUrgent,
-      isMine: true,
-      createdAt: DateTime.now(),
-      neededAt: neededAt,
-      creatorUid: uid,
-      helperPreferences: prefs,
-    );
-
-    final docId = await HelpRequestService.instance.addRequest(created);
-    if (mounted) {
-      setState(() {
-        _isSubmitting = false;
-        _persistedDocId = docId ?? localId;
-        _createdAtLocked = created.createdAt;
-      });
-    }
-
-    if (!mounted) return;
-
-    // Also sync to `alerts` so the "Active Safety Alerts" notification page updates.
-    if (docId != null) {
-      await _upsertEmergencyAlertFromHelpRequest(
-        alertId: docId,
-        type: category,
-        address: locationText.isEmpty ? 'Nearby' : locationText,
-        lat: lat,
-        lng: lng,
-        requesterEmail:
-            FirebaseAuth.instance.currentUser?.email ?? requesterName,
-      );
-    }
-
-    if (docId == null) {
-      HelpRequestsStore.instance.add(created);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved locally. Sync when online.')),
-        );
-      }
-    } else {
-      final saved = HelpRequest(
-        id: docId,
-        category: created.category,
-        requesterName: created.requesterName,
-        title: created.title,
-        description: created.description,
-        locationName: created.locationName,
-        lat: created.lat,
-        lng: created.lng,
-        isUrgent: created.isUrgent,
-        isMine: true,
-        createdAt: created.createdAt,
-        neededAt: created.neededAt,
-        creatorUid: created.creatorUid,
-        helperPreferences: created.helperPreferences,
-      );
-      HelpRequestsStore.instance.upsert(saved);
-      await HelpRequestService.instance.refreshOnce();
-      if (mounted) {
-        setState(() {
-          _persistedDocId = docId;
-        });
+        setState(() => _isSubmitting = false);
+        final msg = e is TimeoutException
+            ? 'Request timed out. Check your connection and try again.'
+            : 'Could not submit. Please try again.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
     }
-
-    if (mounted) {
-      setState(() => _isEditing = true);
-    }
-
-    _showPostedDialog(
-      isUpdate: false,
-      categoryLabel: category,
-      locationText: locationText,
-    );
   }
 
   Future<void> _upsertEmergencyAlertFromHelpRequest({
@@ -520,13 +671,19 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     required String requesterEmail,
   }) async {
     try {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
       await FirebaseFirestore.instance.collection('alerts').doc(alertId).set({
         'time': FieldValue.serverTimestamp(),
         'type': type.isNotEmpty ? type : 'HELP REQUEST',
         'address': address,
         'user_email': requesterEmail,
+        'uid': uid,
         'lat': lat ?? 0.0,
         'lng': lng ?? 0.0,
+        'status': 'New',
+        'acceptedBy': null,
+        'helper_uid': null,
+        'helper_name': null,
         // Optional fields used by tracking screen.
         'user_phone': '',
       }, SetOptions(merge: true));
@@ -534,78 +691,6 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       debugPrint('_upsertEmergencyAlertFromHelpRequest failed: $e');
       debugPrint('$st');
     }
-  }
-
-  void _showPostedDialog({
-    required bool isUpdate,
-    required String categoryLabel,
-    required String locationText,
-  }) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            isUpdate ? 'Request updated!' : 'Help request posted!',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isUpdate
-                    ? 'Your changes under "$categoryLabel" are saved.'
-                    : 'Your request under "$categoryLabel" has been shared.',
-              ),
-              if (locationText.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text('📍 $locationText', style: const TextStyle(fontSize: 13)),
-              ],
-            ],
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB31217),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop(true);
-                },
-                child: const Text(
-                  'View my requests',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() => _isEditing = true);
-              },
-              child: const Text(
-                'Edit again',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -616,8 +701,9 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
         MediaQuery.paddingOf(context).top + kToolbarHeight + 10;
 
     return Scaffold(
-      backgroundColor: GuardianUi.surface,
+      backgroundColor: _g.scaffoldBg,
       extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: true,
       bottomNavigationBar: MainBottomNavigationBarView(
         currentIndex: mainNavHelpTabIndexForRole(_navUserRole),
         items: buildMainNavBarItems(_navUserRole),
@@ -645,134 +731,112 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
             tooltip: 'More',
             icon: const Icon(Icons.more_vert_rounded),
             onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const MainMenuScreen()));
+              MainMenuScreen.showOverlay(context);
             },
           ),
         ],
       ),
-      body: Stack(
-        fit: StackFit.expand,
+      // Same top pattern as Request help / Guardian Map: fixed gradient band +
+      // frosted hero on red, then white panel (no floating white card on the curve).
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Soft red-tinted page background (organized, on-brand).
-          const DecoratedBox(
-            decoration: BoxDecoration(gradient: GuardianUi.pageBackgroundWash),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Guardian header: gradient + content starts below AppBar (no collision).
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(34),
-                  bottomRight: Radius.circular(34),
-                ),
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    gradient: GuardianUi.headerGradient,
+          Container(
+            width: double.infinity,
+            height: 248,
+            decoration: BoxDecoration(
+              gradient: _g.headerGradient,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(34),
+                bottomRight: Radius.circular(34),
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -40,
+                  right: -28,
+                  child: Container(
+                    width: 130,
+                    height: 130,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
                   ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
+                ),
+                Positioned(
+                  bottom: -16,
+                  left: -20,
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.06),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  top: topBelowAppBar,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Positioned(
-                        top: -110,
-                        right: -50,
-                        child: IgnorePointer(
-                          child: Container(
-                            width: 240,
-                            height: 240,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: GuardianUi.orbWarm.withValues(alpha: 0.12),
-                            ),
-                          ),
+                      Text(
+                        widget.existingRequest != null
+                            ? 'Update details and save when you’re ready.'
+                            : 'Post your request shortly — helpers nearby will see it.',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontSize: 13,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.1,
                         ),
                       ),
-                      Positioned(
-                        top: 120,
-                        left: -80,
-                        child: IgnorePointer(
-                          child: Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: GuardianUi.orbCool.withValues(alpha: 0.14),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: -50,
-                        right: -40,
-                        child: Container(
-                          width: 160,
-                          height: 160,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.08),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: -20,
-                        left: -30,
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black.withValues(alpha: 0.06),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          20,
-                          topBelowAppBar,
-                          20,
-                          22,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              widget.existingRequest != null
-                                  ? 'Update details and save when you’re ready.'
-                                  : 'Post your request shortly — helpers nearby will see it.',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.92),
-                                fontSize: 13,
-                                height: 1.35,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.1,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _buildCategoryChip(context, redPrimary),
-                          ],
-                        ),
-                      ),
+                      const SizedBox(height: 12),
+                      _buildCategoryHeroGlass(),
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                18,
+                10,
+                18,
+                kHelpPanelBottomGutter,
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 160),
-                  child: _buildFormCard(
-                    context,
-                    redPrimary,
-                    child: Form(
-                      key: _formKey,
-                      autovalidateMode: _attemptedSubmit
-                          ? AutovalidateMode.onUserInteraction
-                          : AutovalidateMode.disabled,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _g.panelBg,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: _g.cardShadow,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                        child: Form(
+                          key: _formKey,
+                          autovalidateMode: _attemptedSubmit
+                              ? AutovalidateMode.onUserInteraction
+                              : AutovalidateMode.disabled,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                           _figmaFormSection(
                             icon: Icons.badge_outlined,
                             label: 'Requester name',
@@ -801,14 +865,6 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                 }
                                 if (t.length > 80) {
                                   return 'Name is too long';
-                                }
-
-                                final onlyLettersAndSpaces = RegExp(
-                                  r'^[\p{L} ]+$',
-                                  unicode: true,
-                                );
-                                if (!onlyLettersAndSpaces.hasMatch(t)) {
-                                  return 'Name should contain letters only';
                                 }
                                 return null;
                               },
@@ -861,6 +917,15 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                               controller: _descriptionController,
                               minLines: 2,
                               maxLines: 4,
+                              textInputAction: TextInputAction.done,
+                              onEditingComplete: () =>
+                                  FocusManager.instance.primaryFocus?.unfocus(),
+                              scrollPadding: const EdgeInsets.fromLTRB(
+                                20,
+                                20,
+                                20,
+                                200,
+                              ),
                               readOnly: !_isEditing,
                               style: _inputTextStyle,
                               cursorColor: _kFigmaAccent,
@@ -923,14 +988,14 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                               : null,
                                           color: isSel
                                               ? null
-                                              : _kFigmaFieldFill,
+                                              : _fieldFill,
                                           borderRadius: BorderRadius.circular(
                                             24,
                                           ),
                                           border: Border.all(
                                             color: isSel
                                                 ? Colors.transparent
-                                                : _kFigmaFieldBorder,
+                                                : _fieldBorder,
                                             width: isSel ? 0 : 1,
                                           ),
                                           boxShadow: isSel
@@ -963,7 +1028,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                                 fontSize: 12,
                                                 color: isSel
                                                     ? Colors.white
-                                                    : _kFigmaInk,
+                                                    : _ink,
                                               ),
                                             ),
                                           ],
@@ -1006,103 +1071,57 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                               const SizedBox(height: 10),
                             ],
                           ),
-                          const SizedBox(height: 18),
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _isSubmitting ? null : _submitRequest,
-                              borderRadius: BorderRadius.circular(18),
-                              child: Container(
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [Colors.white, Color(0xFFFFF8F8)],
-                                  ),
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: GuardianUi.redPrimary.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: GuardianUi.redPrimary.withValues(
-                                        alpha: 0.22,
-                                      ),
-                                      blurRadius: 16,
-                                      offset: const Offset(0, 6),
-                                    ),
-                                  ],
-                                ),
-                                alignment: Alignment.center,
-                                child: _isSubmitting
-                                    ? SizedBox(
-                                        width: 26,
-                                        height: 26,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                            redPrimary,
-                                          ),
-                                        ),
-                                      )
-                                    : Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              gradient: GuardianUi.ctaGradient,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: GuardianUi.redPrimary
-                                                      .withValues(alpha: 0.35),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 3),
-                                                ),
-                                              ],
-                                            ),
-                                            child: const Icon(
-                                              Icons.check_rounded,
-                                              size: 18,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          ShaderMask(
-                                            blendMode: BlendMode.srcIn,
-                                            shaderCallback: (bounds) =>
-                                                GuardianUi.ctaGradient
-                                                    .createShader(bounds),
-                                            child: Text(
-                                              _isUpdateMode
-                                                  ? 'UPDATE REQUEST'
-                                                  : 'CONFIRM REQUEST',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 16,
-                                                letterSpacing: 0.85,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                              ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: GuardianUi.redPrimary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            elevation: 2,
+                            shadowColor: GuardianUi.redPrimary.withValues(
+                              alpha: 0.35,
+                            ),
+                          ),
+                          onPressed: _isSubmitting
+                              ? null
+                              : () async {
+                                  await _submitRequest();
+                                },
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 26,
+                                  height: 26,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'CONFIRM REQUEST',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    letterSpacing: 0.85,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -1131,16 +1150,16 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: _kFigmaFieldFill,
+                  color: _fieldFill,
                   borderRadius: BorderRadius.circular(_kFigmaRadius),
-                  border: Border.all(color: _kFigmaFieldBorder),
+                  border: Border.all(color: _fieldBorder),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.calendar_today_rounded,
                       size: 20,
-                      color: _kFigmaMuted,
+                      color: _muted,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1151,7 +1170,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                             'Date',
                             style: TextStyle(
                               fontSize: 11,
-                              color: _kFigmaMuted,
+                              color: _muted,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.2,
                             ),
@@ -1161,10 +1180,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                             dateStr,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
-                              color: _kFigmaInk,
+                              color: _ink,
                             ),
                           ),
                         ],
@@ -1172,7 +1191,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                     ),
                     Icon(
                       Icons.expand_more_rounded,
-                      color: _kFigmaMuted,
+                      color: _muted,
                       size: 22,
                     ),
                   ],
@@ -1194,16 +1213,16 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: _kFigmaFieldFill,
+                  color: _fieldFill,
                   borderRadius: BorderRadius.circular(_kFigmaRadius),
-                  border: Border.all(color: _kFigmaFieldBorder),
+                  border: Border.all(color: _fieldBorder),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.schedule_rounded,
                       size: 20,
-                      color: _kFigmaMuted,
+                      color: _muted,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1214,7 +1233,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                             'Time',
                             style: TextStyle(
                               fontSize: 11,
-                              color: _kFigmaMuted,
+                              color: _muted,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.2,
                             ),
@@ -1222,10 +1241,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                           const SizedBox(height: 2),
                           Text(
                             timeStr,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
-                              color: _kFigmaInk,
+                              color: _ink,
                             ),
                           ),
                         ],
@@ -1233,7 +1252,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                     ),
                     Icon(
                       Icons.expand_more_rounded,
-                      color: _kFigmaMuted,
+                      color: _muted,
                       size: 22,
                     ),
                   ],
@@ -1251,7 +1270,9 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     BuildContext context,
     Color redPrimary,
   ) {
-    const cream = Color(0xFFFFF8F8);
+    final gt = GuardianTheme.of(context);
+    final innerBg =
+        gt.isDark ? const Color(0xFF1E1A1C) : const Color(0xFFFFF8F8);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(3),
@@ -1277,7 +1298,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
         decoration: BoxDecoration(
-          color: cream,
+          color: innerBg,
           borderRadius: BorderRadius.circular(19),
         ),
         child: Column(
@@ -1309,12 +1330,12 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Helper preferences',
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 16,
-                          color: GuardianUi.textPrimary,
+                          color: gt.textPrimary,
                           letterSpacing: -0.3,
                         ),
                       ),
@@ -1323,7 +1344,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.25,
-                          color: Colors.grey.shade600,
+                          color: gt.textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1336,7 +1357,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: gt.panelBg,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: GuardianUi.redPrimary.withValues(alpha: 0.22),
@@ -1440,7 +1461,6 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               decoration: _inputDecoration(
                 hint: 'E.g. LKR 100 — motivates helpers (optional)',
               ),
-              validator: _validateTip,
             ),
             const SizedBox(height: 18),
             _buildLabel(
@@ -1459,7 +1479,6 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 hint:
                     'E.g. Must lift heavy items, comfortable with wheelchair…',
               ),
-              validator: _validatePhysical,
             ),
           ],
         ),
@@ -1478,7 +1497,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: Colors.grey.shade800,
+              color: _g.textPrimary,
               letterSpacing: -0.2,
             ),
           ),
@@ -1510,7 +1529,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 gradient: isSel ? GuardianUi.ctaGradient : null,
-                color: isSel ? null : GuardianUi.surfaceMuted,
+                color: isSel ? null : _g.listItemBg,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isSel ? Colors.transparent : GuardianUi.divider,
@@ -1542,7 +1561,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
-                      color: isSel ? Colors.white : Colors.black87,
+                      color: isSel ? Colors.white : _g.textPrimary,
                     ),
                   ),
                 ],
@@ -1565,9 +1584,9 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _g.panelBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _g.chipBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -1585,10 +1604,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
-                    color: Colors.black87,
+                    color: _g.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1597,7 +1616,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                   style: TextStyle(
                     fontSize: 11.5,
                     height: 1.3,
-                    color: Colors.grey.shade600,
+                    color: _g.textSecondary,
                   ),
                 ),
               ],
@@ -1608,7 +1627,8 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
             value: value,
             activeTrackColor: redPrimary,
             activeThumbColor: Colors.white,
-            inactiveTrackColor: Colors.grey.shade300,
+            inactiveTrackColor:
+                _g.isDark ? const Color(0xFF3A3A45) : Colors.grey.shade300,
             onChanged: enabled ? onChanged : null,
           ),
         ],
@@ -1616,84 +1636,75 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  Widget _buildCategoryChip(BuildContext context, Color redPrimary) {
+  /// Frosted hero on the red band (matches Request help / Guardian Map cards).
+  Widget _buildCategoryHeroGlass() {
     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: GuardianUi.headerCardShadow,
-        border: Border.all(color: GuardianUi.divider.withValues(alpha: 0.55)),
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.18),
+          width: 1.2,
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: GuardianUi.ctaGradient,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: GuardianUi.redPrimary.withValues(alpha: 0.28),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+            ),
+            child: const Icon(
+              Icons.handshake_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.handshake_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Request type',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    fontSize: 12.3,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
                   _effectiveCategory,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.1,
                     color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
                     height: 1.2,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildFormCard(
-    BuildContext context,
-    Color redPrimary, {
-    required Widget child,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: GuardianUi.divider.withValues(alpha: 0.85)),
-        boxShadow: GuardianUi.cardShadow,
-      ),
-      child: child,
     );
   }
 
   Widget _buildLabel(IconData icon, String text, {bool required = false}) {
-    const labelStyle = TextStyle(
+    final labelStyle = TextStyle(
       fontWeight: FontWeight.w700,
       fontSize: 14,
       letterSpacing: 0.08,
       height: 1.2,
-      color: _kFigmaInk,
+      color: _ink,
     );
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -1702,11 +1713,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: _kFigmaFieldFill,
+            color: _fieldFill,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: _kFigmaFieldBorder),
+            border: Border.all(color: _fieldBorder),
           ),
-          child: Icon(icon, size: 20, color: _kFigmaMuted),
+          child: Icon(icon, size: 20, color: _muted),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1747,11 +1758,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     );
   }
 
-  TextStyle get _inputTextStyle => const TextStyle(
+  TextStyle get _inputTextStyle => TextStyle(
         fontSize: 15,
         height: 1.45,
         fontWeight: FontWeight.w400,
-        color: _kFigmaInk,
+        color: _ink,
         letterSpacing: 0.02,
       );
 
@@ -1764,9 +1775,9 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     final prefix = prefixIcon == null
         ? null
         : IconTheme.merge(
-            data: const IconThemeData(
+            data: IconThemeData(
               size: 21,
-              color: _kFigmaMuted,
+              color: _muted,
             ),
             child: prefixIcon,
           );
@@ -1774,7 +1785,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(
-        color: _kFigmaMuted.withValues(alpha: 0.88),
+        color: _muted.withValues(alpha: 0.88),
         fontSize: 14,
         height: 1.4,
         fontWeight: FontWeight.w400,
@@ -1785,7 +1796,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
         minHeight: 48,
       ),
       filled: true,
-      fillColor: _kFigmaFieldFill,
+      fillColor: _fieldFill,
       isDense: false,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       errorStyle: const TextStyle(
@@ -1797,11 +1808,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       errorMaxLines: 2,
       border: OutlineInputBorder(
         borderRadius: r,
-        borderSide: const BorderSide(color: _kFigmaFieldBorder, width: 1),
+        borderSide: BorderSide(color: _fieldBorder, width: 1),
       ),
       disabledBorder: OutlineInputBorder(
         borderRadius: r,
-        borderSide: BorderSide(color: _kFigmaFieldBorder.withValues(alpha: 0.7)),
+        borderSide: BorderSide(color: _fieldBorder.withValues(alpha: 0.7)),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: r,
@@ -1813,7 +1824,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: r,
-        borderSide: const BorderSide(color: _kFigmaFieldBorder, width: 1),
+        borderSide: BorderSide(color: _fieldBorder, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: r,

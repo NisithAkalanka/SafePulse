@@ -11,18 +11,14 @@ import 'sos_reviews_shared.dart';
 class SosHitsRatingsScreen extends StatelessWidget {
   const SosHitsRatingsScreen({super.key});
 
-  /// Muted caption — same tone as Guardian Map strips.
-  static const Color _caption = Color(0xFF747A86);
-  static const Color _chipBorder = Color(0xFFE8EAF0);
-  static const Color _chipBg = Color(0xFFF9FAFC);
-
   @override
   Widget build(BuildContext context) {
+    final g = GuardianTheme.of(context);
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final topPad = MediaQuery.paddingOf(context).top + kToolbarHeight + 12;
 
     return Scaffold(
-      backgroundColor: GuardianUi.surface,
+      backgroundColor: g.scaffoldBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -44,18 +40,9 @@ class SosHitsRatingsScreen extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(18, topPad, 18, 24),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF4B4B),
-                  Color(0xFFB31217),
-                  Color(0xFF1B1B1B),
-                ],
-                stops: [0.0, 0.62, 1.0],
-              ),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              gradient: g.headerGradient,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(34),
                 bottomRight: Radius.circular(34),
               ),
@@ -75,6 +62,7 @@ class SosHitsRatingsScreen extends StatelessWidget {
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
+                final gt = GuardianTheme.of(context);
                 if (snapshot.hasError) {
                   return Center(
                     child: Padding(
@@ -82,7 +70,10 @@ class SosHitsRatingsScreen extends StatelessWidget {
                       child: Text(
                         'Could not load reviews.\n${snapshot.error}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: _caption, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: gt.captionGrey,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   );
@@ -105,18 +96,18 @@ class SosHitsRatingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _overallStarsBlock(stats.avgRating, stats.count),
+                      _overallStarsBlock(gt, stats.avgRating, stats.count),
                       const SizedBox(height: 18),
-                      _satisfactionBlock(stats.satisfaction01, stats.count),
+                      _satisfactionBlock(gt, stats.satisfaction01, stats.count),
                       const SizedBox(height: 18),
-                      _metricsGrid(),
+                      _metricsGrid(gt),
                       const SizedBox(height: 18),
                       _shareExperienceButton(context),
                       const SizedBox(height: 26),
-                      _topReviewsHeader(context),
+                      _topReviewsHeader(context, gt),
                       const SizedBox(height: 14),
                       if (preview.isEmpty)
-                        _emptyReviewsPlaceholder()
+                        _emptyReviewsPlaceholder(gt)
                       else
                         ...preview.map(
                           (d) => Padding(
@@ -226,16 +217,16 @@ class SosHitsRatingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _overallStarsBlock(double avgRating, int count) {
+  Widget _overallStarsBlock(GuardianTheme g, double avgRating, int count) {
     final filled =
         count == 0 ? 0 : avgRating.round().clamp(0, 5);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: g.panelBg,
         borderRadius: BorderRadius.circular(28),
-        boxShadow: GuardianUi.cardShadow,
-        border: Border.all(color: _chipBorder),
+        boxShadow: g.cardShadow,
+        border: Border.all(color: g.chipBorder),
       ),
       child: Column(
         children: [
@@ -250,7 +241,7 @@ class SosHitsRatingsScreen extends StatelessWidget {
                   size: 36,
                   color: isFilled
                       ? GuardianUi.redAccent
-                      : Colors.grey.shade400,
+                      : g.starEmpty,
                 ),
               );
             }),
@@ -260,9 +251,9 @@ class SosHitsRatingsScreen extends StatelessWidget {
             count == 0
                 ? 'No reviews yet'
                 : 'Based on $count review${count == 1 ? '' : 's'}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: _caption,
+              color: g.captionGrey,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -271,15 +262,15 @@ class SosHitsRatingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _satisfactionBlock(double satisfaction01, int count) {
+  Widget _satisfactionBlock(GuardianTheme g, double satisfaction01, int count) {
     final pct = count == 0 ? 0 : (satisfaction01 * 100).round();
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: g.panelBg,
         borderRadius: BorderRadius.circular(28),
-        boxShadow: GuardianUi.cardShadow,
-        border: Border.all(color: _chipBorder),
+        boxShadow: g.cardShadow,
+        border: Border.all(color: g.chipBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,12 +278,12 @@ class SosHitsRatingsScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Satisfaction Rate',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: GuardianUi.textPrimary,
+                  color: g.textPrimary,
                 ),
               ),
               Row(
@@ -321,7 +312,7 @@ class SosHitsRatingsScreen extends StatelessWidget {
             child: LinearProgressIndicator(
               value: count == 0 ? 0 : satisfaction01,
               minHeight: 10,
-              backgroundColor: _chipBg,
+              backgroundColor: g.chipBgSoft,
               valueColor: const AlwaysStoppedAnimation<Color>(GuardianUi.redPrimary),
             ),
           ),
@@ -330,14 +321,14 @@ class SosHitsRatingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _emptyReviewsPlaceholder() {
+  Widget _emptyReviewsPlaceholder(GuardianTheme g) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: g.panelBg,
         borderRadius: BorderRadius.circular(26),
-        boxShadow: GuardianUi.cardShadow,
-        border: Border.all(color: _chipBorder),
+        boxShadow: g.cardShadow,
+        border: Border.all(color: g.chipBorder),
       ),
       child: Row(
         children: [
@@ -361,7 +352,7 @@ class SosHitsRatingsScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 height: 1.4,
-                color: Colors.grey.shade800,
+                color: g.bodyTextMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -371,7 +362,7 @@ class SosHitsRatingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _metricsGrid() {
+  Widget _metricsGrid(GuardianTheme g) {
     const metrics = [
       (
         icon: Icons.schedule_rounded,
@@ -406,10 +397,10 @@ class SosHitsRatingsScreen extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: _chipBg,
+            color: g.chipBgSoft,
             borderRadius: BorderRadius.circular(18),
-            boxShadow: GuardianUi.cardShadow,
-            border: Border.all(color: _chipBorder),
+            boxShadow: g.cardShadow,
+            border: Border.all(color: g.chipBorder),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -427,10 +418,10 @@ class SosHitsRatingsScreen extends StatelessWidget {
               Text(
                 m.label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: _caption,
+                  color: g.captionGrey,
                 ),
               ),
             ],
@@ -478,16 +469,16 @@ class SosHitsRatingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _topReviewsHeader(BuildContext context) {
+  Widget _topReviewsHeader(BuildContext context, GuardianTheme g) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
+        Text(
           'Top Reviews',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w900,
-            color: GuardianUi.textPrimary,
+            color: g.textPrimary,
           ),
         ),
         TextButton(
@@ -679,6 +670,7 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
 
   @override
   Widget build(BuildContext context) {
+    final g = GuardianTheme.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final radius = const Radius.circular(22);
 
@@ -686,11 +678,11 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: g.panelBg,
           borderRadius: BorderRadius.only(topLeft: radius, topRight: radius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
+              color: Colors.black.withValues(alpha: g.isDark ? 0.45 : 0.12),
               blurRadius: 24,
               offset: const Offset(0, -4),
             ),
@@ -708,18 +700,18 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: g.divider,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
               ),
-              const Text(
+              Text(
                 'Share Your Experience',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  color: GuardianUi.textPrimary,
+                  color: g.textPrimary,
                 ),
               ),
               const SizedBox(height: 6),
@@ -728,7 +720,7 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade600,
+                  color: g.textSecondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -746,7 +738,9 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
                       filled ? Icons.star_rounded : Icons.star_border_rounded,
                       color: filled
                           ? _accent
-                          : (_ratingError ? _accent.withValues(alpha: 0.45) : Colors.grey.shade400),
+                          : (_ratingError
+                              ? _accent.withValues(alpha: 0.45)
+                              : g.starEmpty),
                       size: 44,
                     ),
                   );
@@ -774,7 +768,7 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade700,
+                      color: g.textSecondary,
                     ),
                   ),
                 ),
@@ -796,25 +790,27 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
                 maxLines: 5,
                 maxLength: 800,
                 textCapitalization: TextCapitalization.sentences,
+                style: TextStyle(color: g.textPrimary),
                 decoration: InputDecoration(
                   hintText:
                       'Tell others about response time, professionalism, or anything that helped…',
+                  hintStyle: TextStyle(color: g.textSecondary),
                   filled: true,
-                  fillColor: GuardianUi.surface,
-                  counterStyle: TextStyle(color: Colors.grey.shade600),
+                  fillColor: g.figmaFieldFill,
+                  counterStyle: TextStyle(color: g.textSecondary),
                   errorText: _textError
                       ? 'Enter at least $_minReviewChars characters.'
                       : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide(
-                      color: GuardianUi.divider.withValues(alpha: 0.8),
+                      color: g.divider.withValues(alpha: 0.8),
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide(
-                      color: _textError ? _accent : GuardianUi.divider.withValues(alpha: 0.8),
+                      color: _textError ? _accent : g.divider.withValues(alpha: 0.8),
                       width: _textError ? 1.5 : 1,
                     ),
                   ),
@@ -858,7 +854,11 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
                     child: Ink(
                       decoration: BoxDecoration(
                         gradient: _submitting ? null : GuardianUi.ctaGradient,
-                        color: _submitting ? Colors.grey.shade400 : null,
+                        color: _submitting
+                            ? (g.isDark
+                                ? const Color(0xFF4A4A55)
+                                : Colors.grey.shade400)
+                            : null,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Center(
@@ -890,7 +890,7 @@ class _ShareExperienceReviewSheetState extends State<ShareExperienceReviewSheet>
                   'Cancel',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: Colors.grey.shade700,
+                    color: g.textSecondary,
                   ),
                 ),
               ),

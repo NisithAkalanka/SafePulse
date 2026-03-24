@@ -10,7 +10,6 @@ import '../theme/guardian_ui.dart';
 
 /// Outgoing bubble — coral red (matches Help chat reference UI).
 const Color _kOutgoingBubble = Color(0xFFFF5252);
-const Color _kChatScreenBg = Color(0xFFEEEEF2);
 
 class HelpPrivateChatScreen extends StatefulWidget {
   final String title;
@@ -281,58 +280,83 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     if (_isResolved || _isRecording) return;
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Send attachment',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: Colors.grey.shade900,
-                    fontSize: 14,
+        final sheetG = GuardianTheme.of(ctx);
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetG.panelBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Send attachment',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: sheetG.textPrimary,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                ListTile(
-                  leading: const Icon(
-                    Icons.photo_camera_rounded,
-                    color: _kOutgoingBubble,
+                  const SizedBox(height: 14),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.photo_camera_rounded,
+                      color: _kOutgoingBubble,
+                    ),
+                    title: Text(
+                      'Camera',
+                      style: TextStyle(
+                        color: sheetG.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _pickImage(ImageSource.camera);
+                    },
                   ),
-                  title: const Text('Camera'),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _pickImage(ImageSource.camera);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.photo_library_rounded,
-                    color: _kOutgoingBubble,
+                  ListTile(
+                    leading: const Icon(
+                      Icons.photo_library_rounded,
+                      color: _kOutgoingBubble,
+                    ),
+                    title: Text(
+                      'Gallery',
+                      style: TextStyle(
+                        color: sheetG.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _pickImage(ImageSource.gallery);
+                    },
                   ),
-                  title: const Text('Gallery'),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _pickImage(ImageSource.gallery);
-                  },
-                ),
-                // PDF/doc support needs `file_picker` + backend storage. We keep it as a placeholder for now.
-                ListTile(
-                  leading: const Icon(
-                    Icons.insert_drive_file_rounded,
-                    color: Colors.grey,
+                  // PDF/doc support needs `file_picker` + backend storage. We keep it as a placeholder for now.
+                  ListTile(
+                    leading: Icon(
+                      Icons.insert_drive_file_rounded,
+                      color: sheetG.captionGrey,
+                    ),
+                    title: Text(
+                      'Document (PDF) - coming soon',
+                      style: TextStyle(
+                        color: sheetG.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () => Navigator.of(ctx).pop(),
                   ),
-                  title: const Text('Document (PDF) - coming soon'),
-                  onTap: () => Navigator.of(ctx).pop(),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -457,22 +481,26 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final g = GuardianTheme.of(context);
+    final chatBg = g.isDark ? g.scaffoldBg : const Color(0xFFEEEEF2);
+
     return Scaffold(
-      backgroundColor: _kChatScreenBg,
+      backgroundColor: chatBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: g.panelBg,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.black12,
-        foregroundColor: GuardianUi.textPrimary,
+        foregroundColor: g.textPrimary,
+        iconTheme: IconThemeData(color: g.textPrimary),
         titleSpacing: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded, color: g.textPrimary),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: const Color(0xFFE8E8EC)),
+          child: Container(height: 1, color: g.chipBorder),
         ),
         title: Row(
           children: [
@@ -493,18 +521,18 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                 children: [
                   Text(
                     widget.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: GuardianUi.textPrimary,
+                      color: g.textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     widget.subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF9E9E9E),
+                      color: g.captionGrey,
                       fontWeight: FontWeight.w500,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -513,17 +541,17 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.timer_outlined,
                           size: 13,
-                          color: Color(0xFF9E9E9E),
+                          color: g.captionGrey,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           _formatElapsed(_elapsed),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF9E9E9E),
+                            color: g.captionGrey,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -552,9 +580,9 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                     const SizedBox(width: 5),
                     Text(
                       _helperTyping ? 'Typing…' : 'Online',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF757575),
+                        color: g.captionGrey,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -568,7 +596,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
           if (_chatMode == 'study')
             IconButton(
               tooltip: 'Whiteboard (coming soon)',
-              icon: const Icon(Icons.border_all_rounded),
+              icon: Icon(Icons.border_all_rounded, color: g.textPrimary),
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Whiteboard coming soon.')),
@@ -595,16 +623,24 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                 context: context,
                 barrierDismissible: false,
                 builder: (ctx) {
+                  final dg = GuardianTheme.of(ctx);
                   return StatefulBuilder(
                     builder: (ctx, setStateDialog) {
                       return AlertDialog(
-                        title: const Text('Rate the helper'),
+                        backgroundColor: dg.panelBg,
+                        title: Text(
+                          'Rate the helper',
+                          style: TextStyle(
+                            color: dg.textPrimary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               'How was the study support?',
-                              style: TextStyle(color: Colors.grey.shade700),
+                              style: TextStyle(color: dg.textSecondary),
                             ),
                             const SizedBox(height: 12),
                             Row(
@@ -624,7 +660,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                                         : Icons.star_border_rounded,
                                     color: selected
                                         ? Colors.amber
-                                        : Colors.grey,
+                                        : dg.starEmpty,
                                     size: 28,
                                   ),
                                   onPressed: () {
@@ -638,7 +674,10 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('Cancel'),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(color: dg.textSecondary),
+                            ),
                           ),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -676,9 +715,11 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                   child: Container(
                     width: 30,
                     height: 30,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF1B1B22),
+                      color: g.isDark
+                          ? GuardianUi.redPrimary
+                          : const Color(0xFF1B1B22),
                     ),
                     child: const Icon(
                       Icons.check_rounded,
@@ -692,8 +733,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
           ),
           IconButton(
             tooltip: 'Report / Info',
-            icon: const Icon(Icons.error_outline_rounded),
-            color: GuardianUi.textPrimary,
+            icon: Icon(Icons.error_outline_rounded, color: g.textPrimary),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -717,9 +757,10 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                 final alignment = m.fromMe
                     ? Alignment.centerRight
                     : Alignment.centerLeft;
-                final color = m.fromMe ? _kOutgoingBubble : Colors.white;
+                final color =
+                    m.fromMe ? _kOutgoingBubble : g.panelBg;
                 final textColor =
-                    m.fromMe ? Colors.white : GuardianUi.textPrimary;
+                    m.fromMe ? Colors.white : g.textPrimary;
 
                 return Align(
                   alignment: alignment,
@@ -734,7 +775,9 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                       borderRadius: _bubbleRadius(m.fromMe),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(
+                            alpha: g.isDark ? 0.35 : 0.06,
+                          ),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -829,7 +872,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                                 fontSize: 11,
                                 color: m.fromMe
                                     ? Colors.white.withOpacity(0.92)
-                                    : const Color(0xFF757575),
+                                    : g.captionGrey,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -863,22 +906,24 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: g.panelBg,
                     borderRadius: BorderRadius.circular(18),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x11000000),
+                        color: Colors.black.withValues(
+                          alpha: g.isDark ? 0.35 : 0.07,
+                        ),
                         blurRadius: 10,
-                        offset: Offset(0, 4),
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: const Text(
+                  child: Text(
                     'Helper is typing…',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey,
+                      color: g.textSecondary,
                     ),
                   ),
                 ),
@@ -886,13 +931,13 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
             ),
           Container(
             padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: g.panelBg,
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x12000000),
+                  color: Colors.black.withValues(alpha: g.isDark ? 0.4 : 0.07),
                   blurRadius: 12,
-                  offset: Offset(0, -3),
+                  offset: const Offset(0, -3),
                 ),
               ],
             ),
@@ -908,11 +953,11 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                         spacing: 8,
                         runSpacing: 6,
                         children: [
-                          _quickChip('Can you explain more?', 'explain_more'),
-                          _quickChip("I’m stuck on this part.", 'stuck'),
-                          _quickChip('Understood, thank you!', 'thanks'),
-                          _quickChip('Send me the solution.', 'solution'),
-                          _quickChip('Insert code block', 'code_block'),
+                          _quickChip(g, 'Can you explain more?', 'explain_more'),
+                          _quickChip(g, "I’m stuck on this part.", 'stuck'),
+                          _quickChip(g, 'Understood, thank you!', 'thanks'),
+                          _quickChip(g, 'Send me the solution.', 'solution'),
+                          _quickChip(g, 'Insert code block', 'code_block'),
                         ],
                       ),
                     ),
@@ -935,7 +980,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                               : Icons.mic_none_rounded,
                           color: _isRecording
                               ? _kOutgoingBubble
-                              : const Color(0xFF9E9E9E),
+                              : g.captionGrey,
                         ),
                       ),
                       if (_isRecording)
@@ -957,18 +1002,19 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                           textInputAction: TextInputAction.send,
                           keyboardType: TextInputType.text,
                           textCapitalization: TextCapitalization.sentences,
+                          style: TextStyle(color: g.textPrimary),
                           onSubmitted: (_) {
                             if (!_isRecording) _send();
                           },
                           decoration: InputDecoration(
                             hintText: 'Type a message...',
                             hintStyle: TextStyle(
-                              color: Colors.grey.shade600,
+                              color: g.textSecondary,
                               fontWeight: FontWeight.w500,
                               fontSize: 15,
                             ),
                             filled: true,
-                            fillColor: const Color(0xFFEFEFEF),
+                            fillColor: g.figmaFieldFill,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 18,
                               vertical: 12,
@@ -983,8 +1029,12 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                       const SizedBox(width: 8),
                       Material(
                         color: (_canSend && !_isRecording)
-                            ? const Color(0xFF9E9E9E)
-                            : const Color(0xFFE0E0E0),
+                            ? (g.isDark
+                                ? GuardianUi.redPrimary
+                                : const Color(0xFF9E9E9E))
+                            : (g.isDark
+                                ? const Color(0xFF3A3A45)
+                                : const Color(0xFFE0E0E0)),
                         shape: const CircleBorder(),
                         child: InkWell(
                           customBorder: const CircleBorder(),
@@ -997,7 +1047,9 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                               size: 20,
                               color: (_canSend && !_isRecording)
                                   ? Colors.white
-                                  : const Color(0xFFBDBDBD),
+                                  : (g.isDark
+                                      ? const Color(0xFF6A6A75)
+                                      : const Color(0xFFBDBDBD)),
                             ),
                           ),
                         ),
@@ -1013,7 +1065,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     );
   }
 
-  Widget _quickChip(String label, String id) {
+  Widget _quickChip(GuardianTheme g, String label, String id) {
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () {
@@ -1028,18 +1080,12 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: g.listItemBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: _kOutgoingBubble.withOpacity(0.28),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: _kOutgoingBubble.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: g.cardShadow,
         ),
         child: Text(
           label,
