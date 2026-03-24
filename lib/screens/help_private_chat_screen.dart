@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../theme/guardian_ui.dart';
 
@@ -12,11 +14,13 @@ import '../theme/guardian_ui.dart';
 const Color _kOutgoingBubble = Color(0xFFFF5252);
 
 class HelpPrivateChatScreen extends StatefulWidget {
+  final String requestId;
   final String title;
   final String subtitle;
 
   const HelpPrivateChatScreen({
     super.key,
+    required this.requestId,
     required this.title,
     required this.subtitle,
   });
@@ -55,22 +59,14 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   bool get _showStudyTools => _chatMode == 'study';
 
-  final List<_ChatMessage> _messages = [
-    _ChatMessage(
-      fromMe: false,
-      text: 'Hi, can you help?',
-      time: DateTime.now().subtract(const Duration(minutes: 3)),
-    ),
-    _ChatMessage(
-      fromMe: true,
-      text: "Yes, I accepted. I'm on my way.",
-      time: DateTime.now().subtract(const Duration(minutes: 2)),
-    ),
-  ];
+  final List<_ChatMessage> _messages = [];
+
+  StreamSubscription<QuerySnapshot>? _chatSub;
 
   @override
   void initState() {
     super.initState();
+    _subscribeToChat();
     _controller.addListener(() {
       final next = _controller.text.trim().isNotEmpty;
       if (next != _canSend) {
@@ -103,6 +99,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   @override
   void dispose() {
+    _chatSub?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
@@ -113,6 +110,54 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     _audioPlayer.dispose();
     _elapsedTimer?.cancel();
     super.dispose();
+  }
+
+  void _subscribeToChat() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    _chatSub = FirebaseFirestore.instance
+        .collection('help_requests')
+        .doc(widget.requestId)
+        .collection('messages')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen((snap) {
+      if (!mounted) return;
+      final List<_ChatMessage> updated = snap.docs.map((doc) {
+        final data = doc.data();
+        final senderUid = data['senderUid'] as String?;
+        final createdAt = data['createdAt'];
+        DateTime time;
+        if (createdAt is Timestamp) {
+          time = createdAt.toDate();
+        } else if (createdAt is int) {
+          time = DateTime.fromMillisecondsSinceEpoch(createdAt);
+        } else {
+          time = DateTime.now();
+        }
+
+        return _ChatMessage(
+          fromMe: senderUid == uid,
+          text: data['text'] as String?,
+          imagePath: data['imagePath'] as String?,
+          audioPath: data['audioPath'] as String?,
+          audioDuration: data['audioDuration'] != null
+              ? Duration(milliseconds: data['audioDuration'] as int)
+              : null,
+          time: time,
+          status: senderUid == uid ? MessageStatus.read : MessageStatus.delivered,
+        );
+      }).toList();
+
+      setState(() {
+        _messages.clear();
+        _messages.addAll(updated.reversed);
+        // Checking for typing status from the other part (helper/requester)
+        // This would require a separate 'typing' field in the help_requests doc
+      });
+      _scrollToBottom();
+    });
   }
 
   void _scrollToBottom({bool jump = false}) {
@@ -168,58 +213,28 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
 
   Future<void> _sendText(String text) async {
     if (_isResolved || _isRecording) return;
-    if (text.trim().isEmpty) return;
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
 
-    setState(() {
-      _messages.add(
-        _ChatMessage(
-          fromMe: true,
-          text: text.trim(),
-          time: DateTime.now(),
-          status: MessageStatus.sent,
-        ),
-      );
-      _helperTyping = true;
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final msg = {
+      'senderUid': user.uid,
+      'senderName': user.displayName ?? 'User',
+      'text': trimmed,
+      'createdAt': FieldValue.serverTimestamp(),
+    };
 
     _controller.clear();
     _scrollToBottom();
     _inputFocus.requestFocus();
 
-    _typingTimer?.cancel();
-    _typingTimer = Timer(const Duration(seconds: 1), () {
-      // Local "typing -> reply" simulation (since this chat UI is currently dummy/local).
-      final reply = _chatMode == 'study'
-          ? const [
-              'Sure. Can you share what you tried so far?',
-              'I can explain that step-by-step.',
-              'Let’s break it down together.',
-            ]
-          : const [
-              'Thanks! I will respond shortly.',
-              'Sure — tell me what you need.',
-              'Okay, I can help.',
-            ];
-      final replyText =
-          reply[DateTime.now().millisecondsSinceEpoch % reply.length];
-
-      if (!mounted) return;
-      setState(() {
-        _helperTyping = false;
-        // Mark last user message as delivered/read when helper replies.
-        for (var i = _messages.length - 1; i >= 0; i--) {
-          final m = _messages[i];
-          if (m.fromMe) {
-            _messages[i] = m.copyWithStatus(MessageStatus.read);
-            break;
-          }
-        }
-        _messages.add(
-          _ChatMessage(fromMe: false, text: replyText, time: DateTime.now()),
-        );
-      });
-      _scrollToBottom();
-    });
+    await FirebaseFirestore.instance
+        .collection('help_requests')
+        .doc(widget.requestId)
+        .collection('messages')
+        .add(msg);
   }
 
   Future<void> _send() => _sendText(_controller.text);
@@ -230,52 +245,51 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     final picked = await picker.pickImage(source: source, imageQuality: 85);
     if (picked == null) return;
 
-    if (!mounted) return;
-    setState(() {
-      _messages.add(
-        _ChatMessage(
-          fromMe: true,
-          text: _controller.text.trim().isEmpty
-              ? null
-              : _controller.text.trim(),
-          imagePath: picked.path,
-          time: DateTime.now(),
-          status: MessageStatus.sent,
-        ),
-      );
-      _helperTyping = true;
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final msg = {
+      'senderUid': user.uid,
+      'senderName': user.displayName ?? 'User',
+      'imagePath': picked.path,
+      'text': _controller.text.trim().isEmpty ? null : _controller.text.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+    };
 
     _controller.clear();
     _scrollToBottom();
     _inputFocus.requestFocus();
 
-    _typingTimer?.cancel();
-    _typingTimer = Timer(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _helperTyping = false;
-        for (var i = _messages.length - 1; i >= 0; i--) {
-          final m = _messages[i];
-          if (m.fromMe) {
-            _messages[i] = m.copyWithStatus(MessageStatus.read);
-            break;
-          }
-        }
-        _messages.add(
-          _ChatMessage(
-            fromMe: false,
-            text: _chatMode == 'study'
-                ? 'Got it. I’ll check the image and explain the next steps.'
-                : 'Thanks for sharing.',
-            time: DateTime.now(),
-          ),
-        );
-      });
-      _scrollToBottom();
-    });
+    await FirebaseFirestore.instance
+        .collection('help_requests')
+        .doc(widget.requestId)
+        .collection('messages')
+        .add(msg);
   }
 
+  Future<void> _sendAudioMessage(String audioPath, Duration duration) async {
+    if (!mounted) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final msg = {
+      'senderUid': user.uid,
+      'senderName': user.displayName ?? 'User',
+      'audioPath': audioPath,
+      'audioDuration': duration.inMilliseconds,
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+
+    _scrollToBottom();
+    _inputFocus.requestFocus();
+
+    await FirebaseFirestore.instance
+        .collection('help_requests')
+        .doc(widget.requestId)
+        .collection('messages')
+        .add(msg);
+  }
   Future<void> _showAttachmentSheet() async {
     if (_isResolved || _isRecording) return;
     await showModalBottomSheet<void>(
@@ -340,7 +354,6 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                       _pickImage(ImageSource.gallery);
                     },
                   ),
-                  // PDF/doc support needs `file_picker` + backend storage. We keep it as a placeholder for now.
                   ListTile(
                     leading: Icon(
                       Icons.insert_drive_file_rounded,
@@ -362,54 +375,6 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
         );
       },
     );
-  }
-
-
-  Future<void> _sendAudioMessage(String audioPath, Duration duration) async {
-    if (!mounted) return;
-
-    setState(() {
-      _messages.add(
-        _ChatMessage(
-          fromMe: true,
-          text: null,
-          imagePath: null,
-          audioPath: audioPath,
-          audioDuration: duration,
-          time: DateTime.now(),
-          status: MessageStatus.sent,
-        ),
-      );
-      _helperTyping = true;
-    });
-
-    _scrollToBottom();
-    _inputFocus.requestFocus();
-
-    _typingTimer?.cancel();
-    _typingTimer = Timer(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _helperTyping = false;
-        for (var i = _messages.length - 1; i >= 0; i--) {
-          final m = _messages[i];
-          if (m.fromMe) {
-            _messages[i] = m.copyWithStatus(MessageStatus.read);
-            break;
-          }
-        }
-        _messages.add(
-          _ChatMessage(
-            fromMe: false,
-            text: _chatMode == 'study'
-                ? 'Got it. I’ll listen and explain the next steps.'
-                : 'Thanks for the voice message.',
-            time: DateTime.now(),
-          ),
-        );
-      });
-      _scrollToBottom();
-    });
   }
 
   Future<void> _toggleRecording() async {

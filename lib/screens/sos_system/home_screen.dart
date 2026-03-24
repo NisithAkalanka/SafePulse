@@ -566,8 +566,11 @@ class _HomeScreenState extends State<HomeScreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      HelpPrivateChatScreen(title: category, subtitle: requestTitle),
+                  builder: (_) => HelpPrivateChatScreen(
+                    requestId: requestId,
+                    title: category,
+                    subtitle: requestTitle,
+                  ),
                 ),
               );
             },
