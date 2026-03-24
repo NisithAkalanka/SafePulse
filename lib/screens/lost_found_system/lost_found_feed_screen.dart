@@ -5,7 +5,7 @@ import 'create_item_screen.dart';
 import 'lost_item_model.dart';
 import 'lost_found_service.dart';
 import 'mock_chat_screen.dart';
-import '../sos_system/profile_screen.dart';
+import '../sos_system/main_menu_screen.dart';
 
 const Color lfRed = Color(0xFFE53935);
 const Color lfDark = Color(0xFFB71C1C);
@@ -203,16 +203,31 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
     );
   }
 
-  void _openProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-    );
-  }
-
-  void _openNotifications() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Notifications feature coming soon.")),
+  void _openMainMenu() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.transparent,
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const MainMenuScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.12, 0),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -452,6 +467,8 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
 
   @override
   Widget build(BuildContext context) {
+    final currentType = _tabController.index == 0 ? "Lost" : "Found";
+
     return Scaffold(
       backgroundColor: lfBg,
       extendBodyBehindAppBar: true,
@@ -470,105 +487,91 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
         elevation: 0,
         actions: [
           IconButton(
-            tooltip: "Notifications",
-            onPressed: _openNotifications,
-            icon: const Icon(Icons.notifications_none_outlined),
-          ),
-          IconButton(
-            tooltip: "Profile",
-            onPressed: _openProfile,
+            tooltip: "Main Menu",
+            onPressed: _openMainMenu,
             icon: const Icon(Icons.more_vert),
           ),
           const SizedBox(width: 4),
         ],
       ),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 108, 18, 20),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF4B4B),
-                  Color(0xFFB31217),
-                  Color(0xFF1B1B1B),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(18, 108, 18, 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFF4B4B),
+                    Color(0xFFB31217),
+                    Color(0xFF1B1B1B),
+                  ],
+                  stops: [0.0, 0.62, 1.0],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(34),
+                  bottomRight: Radius.circular(34),
+                ),
+              ),
+              child: Column(
+                children: [
+                  _headerCard(),
+                  const SizedBox(height: 12),
+                  _topInfoStrip(),
                 ],
-                stops: [0.0, 0.62, 1.0],
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(34),
-                bottomRight: Radius.circular(34),
               ),
             ),
-            child: Column(
-              children: [
-                _headerCard(),
-                const SizedBox(height: 12),
-                _topInfoStrip(),
-              ],
+            const SizedBox(height: 24),
+            _headerSearchBar(),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _quickAction(
+                    icon: Icons.add_circle_outline,
+                    title: "Add Post",
+                    onTap: _openPostForCurrentTab,
+                  ),
+                  const SizedBox(width: 10),
+                  _quickAction(
+                    icon: Icons.bookmark_border,
+                    title: "My Posts",
+                    onTap: _openMyPostsPage,
+                  ),
+                  const SizedBox(width: 10),
+                  _quickAction(
+                    icon: Icons.filter_alt_outlined,
+                    title: "Category",
+                    active: _selectedCategory != "All",
+                    onTap: _openCategoryPicker,
+                  ),
+                  const SizedBox(width: 10),
+                  _quickAction(
+                    icon: Icons.place_outlined,
+                    title: "Location",
+                    active: _locationFilter.isNotEmpty,
+                    onTap: _openLocationFilterDialog,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          _headerSearchBar(),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                _quickAction(
-                  icon: Icons.add_circle_outline,
-                  title: "Add Post",
-                  onTap: _openPostForCurrentTab,
-                ),
-                const SizedBox(width: 10),
-                _quickAction(
-                  icon: Icons.bookmark_border,
-                  title: "My Posts",
-                  onTap: _openMyPostsPage,
-                ),
-                const SizedBox(width: 10),
-                _quickAction(
-                  icon: Icons.filter_alt_outlined,
-                  title: "Category",
-                  active: _selectedCategory != "All",
-                  onTap: _openCategoryPicker,
-                ),
-                const SizedBox(width: 10),
-                _quickAction(
-                  icon: Icons.place_outlined,
-                  title: "Location",
-                  active: _locationFilter.isNotEmpty,
-                  onTap: _openLocationFilterDialog,
-                ),
-              ],
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _ItemsSection(
+                type: currentType,
+                query: _searchQuery,
+                category: _selectedCategory,
+                locationFilter: _locationFilter,
+                showOnlyMyPosts: false,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _ItemsSection(
-                  type: "Lost",
-                  query: _searchQuery,
-                  category: _selectedCategory,
-                  locationFilter: _locationFilter,
-                  showOnlyMyPosts: false,
-                ),
-                _ItemsSection(
-                  type: "Found",
-                  query: _searchQuery,
-                  category: _selectedCategory,
-                  locationFilter: _locationFilter,
-                  showOnlyMyPosts: false,
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -811,43 +814,46 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 100, 18, 18),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF4B4B),
-                  Color(0xFFB31217),
-                  Color(0xFF1B1B1B),
-                ],
-                stops: [0.0, 0.62, 1.0],
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(18, 100, 18, 18),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFF4B4B),
+                    Color(0xFFB31217),
+                    Color(0xFF1B1B1B),
+                  ],
+                  stops: [0.0, 0.62, 1.0],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(34),
+                  bottomRight: Radius.circular(34),
+                ),
               ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(34),
-                bottomRight: Radius.circular(34),
+              child: _myPostsHeaderCard(),
+            ),
+            const SizedBox(height: 18),
+            _searchBar(),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _ItemsSection(
+                type: widget.type,
+                query: _searchQuery,
+                category: _selectedCategory,
+                locationFilter: _locationFilter,
+                showOnlyMyPosts: true,
+                categoryChipOnTap: _openCategoryPicker,
               ),
             ),
-            child: _myPostsHeaderCard(),
-          ),
-          const SizedBox(height: 18),
-          _searchBar(),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _ItemsSection(
-              type: widget.type,
-              query: _searchQuery,
-              category: _selectedCategory,
-              locationFilter: _locationFilter,
-              showOnlyMyPosts: true,
-              categoryChipOnTap: _openCategoryPicker,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -903,18 +909,24 @@ class _ItemsSection extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(
-            child: Text(
-              "Loading error. Please reopen Lost & Found.",
-              style: TextStyle(
-                color: lfTextPrimary,
-                fontWeight: FontWeight.w600,
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Text(
+                "Loading error. Please reopen Lost & Found.",
+                style: TextStyle(
+                  color: lfTextPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           );
         }
 
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const Padding(
+            padding: EdgeInsets.all(30),
+            child: Center(child: CircularProgressIndicator()),
+          );
         }
 
         final filtered = snapshot.data!
@@ -925,8 +937,8 @@ class _ItemsSection extends StatelessWidget {
             .where((i) => _isToday(i.timestamp))
             .toList();
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1405,6 +1417,18 @@ class _DetailScreenState extends State<_DetailScreen> {
   String get currentName =>
       FirebaseAuth.instance.currentUser?.email?.split('@')[0] ?? 'Student';
 
+  bool get isActiveStatus => widget.item.status == 'Active';
+
+  static const List<String> _editCategories = [
+    'Electronics',
+    'ID/Documents',
+    'Student ID Card',
+    'Watch',
+    'Keys',
+    'Books',
+    'Others',
+  ];
+
   Widget _panel({required Widget child}) {
     return Container(
       width: double.infinity,
@@ -1412,6 +1436,7 @@ class _DetailScreenState extends State<_DetailScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: lfRed.withOpacity(0.18), width: 1.4),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -1448,6 +1473,172 @@ class _DetailScreenState extends State<_DetailScreen> {
     if (v.length < 3) return 'Proof must be at least 3 characters';
     if (v.length > 150) return 'Proof must be 150 characters or less';
     return null;
+  }
+
+  String? _requiredField(String? value, String label) {
+    if ((value ?? '').trim().isEmpty) {
+      return '$label is required';
+    }
+    return null;
+  }
+
+  Future<void> _showEditDialog() async {
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController(text: widget.item.title);
+    final locationController = TextEditingController(
+      text: widget.item.location,
+    );
+    final descriptionController = TextEditingController(
+      text: widget.item.description,
+    );
+    String selectedCategory = widget.item.category.isNotEmpty
+        ? widget.item.category
+        : _editCategories.first;
+
+    await showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          title: const Text(
+            'Edit item',
+            style: TextStyle(color: lfTextPrimary, fontWeight: FontWeight.w700),
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: titleController,
+                    validator: (v) => _requiredField(v, 'Title'),
+                    decoration: const InputDecoration(
+                      labelText: 'Title',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _editCategories.contains(selectedCategory)
+                        ? selectedCategory
+                        : _editCategories.first,
+                    items: _editCategories
+                        .map(
+                          (c) => DropdownMenuItem<String>(
+                            value: c,
+                            child: Text(c),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setLocalState(() => selectedCategory = value);
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: locationController,
+                    validator: (v) => _requiredField(v, 'Location'),
+                    decoration: const InputDecoration(
+                      labelText: 'Location',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: descriptionController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: lfTextSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: lfRed),
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                await LostFoundService().updatePostBasic(
+                  itemId: widget.item.id,
+                  title: titleController.text.trim(),
+                  category: selectedCategory,
+                  description: descriptionController.text.trim(),
+                  location: locationController.text.trim(),
+                );
+                if (!mounted) return;
+                Navigator.pop(context);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Item updated successfully.')),
+                );
+              },
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text(
+          'Delete item',
+          style: TextStyle(color: lfTextPrimary, fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          'Are u sure you want to delete?',
+          style: TextStyle(color: lfTextSecondary, fontWeight: FontWeight.w500),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: lfTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: lfRed),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    await LostFoundService().deletePost(widget.item.id);
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Item deleted successfully.')));
   }
 
   Future<void> _showFoundQuestionDialog() async {
@@ -1696,62 +1887,6 @@ class _DetailScreenState extends State<_DetailScreen> {
     return "Deletes in ${minutes}m";
   }
 
-  Widget _buildHeaderChip() {
-    final bool isLost = widget.item.type == 'Lost';
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: lfRed,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: lfRed.withOpacity(0.25),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(
-                isLost ? Icons.search_off_outlined : Icons.check_circle_outline,
-                color: Colors.white,
-                size: 20,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  isLost ? 'Lost Item Details' : 'Found Item Details',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildHeader() {
     final bool isLost = widget.item.type == 'Lost';
 
@@ -1770,23 +1905,16 @@ class _DetailScreenState extends State<_DetailScreen> {
           bottomRight: Radius.circular(34),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            isLost
-                ? 'Review the lost item details carefully.'
-                : 'Review the found item details carefully.',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _buildHeaderChip(),
-        ],
+      child: Text(
+        isLost
+            ? 'Review the lost item details carefully.'
+            : 'Review the found item details carefully.',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          height: 1.35,
+        ),
       ),
     );
   }
@@ -1825,6 +1953,46 @@ class _DetailScreenState extends State<_DetailScreen> {
         widget.item.status,
         style: TextStyle(color: fg, fontWeight: FontWeight.w800, fontSize: 12),
       ),
+    );
+  }
+
+  Widget _ownerActionButtons() {
+    if (!isOwner || !isActiveStatus) return const SizedBox.shrink();
+
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _showEditDialog,
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Edit'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: lfRed,
+              side: BorderSide(color: lfRed.withOpacity(0.55)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _confirmDelete,
+            icon: const Icon(Icons.delete_outline, color: Colors.white),
+            label: const Text('Delete', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: lfRed,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1978,6 +2146,10 @@ class _DetailScreenState extends State<_DetailScreen> {
               ),
             ),
           ],
+          if (isOwner && isActiveStatus) ...[
+            const SizedBox(height: 16),
+            _ownerActionButtons(),
+          ],
         ],
       ),
     );
@@ -2004,11 +2176,11 @@ class _DetailScreenState extends State<_DetailScreen> {
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
               child: Column(
                 children: [
@@ -2042,8 +2214,8 @@ class _DetailScreenState extends State<_DetailScreen> {
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

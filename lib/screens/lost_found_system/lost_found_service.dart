@@ -67,6 +67,47 @@ class LostFoundService {
     await _db.collection(_col).add(data);
   }
 
+  Future<void> updatePostBasic({
+    required String itemId,
+    required String title,
+    required String category,
+    required String description,
+    required String location,
+  }) async {
+    await _db.collection(_col).doc(itemId).update({
+      'title': title.trim(),
+      'category': category.trim(),
+      'description': description.trim(),
+      'location': location.trim(),
+    });
+  }
+
+  Future<void> deletePost(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    if (!doc.exists) return;
+
+    final data = doc.data();
+    final imageUrl = (data?['imageUrl'] as String?) ?? '';
+
+    if (imageUrl.isNotEmpty) {
+      try {
+        await _storage.refFromURL(imageUrl).delete();
+      } catch (_) {}
+    }
+
+    final messages = await _db
+        .collection(_col)
+        .doc(itemId)
+        .collection('messages')
+        .get();
+
+    for (final m in messages.docs) {
+      await m.reference.delete();
+    }
+
+    await _db.collection(_col).doc(itemId).delete();
+  }
+
   Future<void> submitFoundReport({
     required String itemId,
     required String requesterId,

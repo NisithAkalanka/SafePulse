@@ -343,7 +343,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 100, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 108, 18, 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -398,251 +398,240 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 110),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _sectionLabel(Icons.person_outline, 'Reporter details'),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _firstNameController,
+                        decoration: _fieldDecoration(
+                          hint: 'First name',
+                          icon: Icons.badge_outlined,
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'First name is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _lastNameController,
+                        decoration: _fieldDecoration(
+                          hint: 'Last name',
+                          icon: Icons.person_outline,
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Last name is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      _sectionLabel(
+                        Icons.calendar_month_outlined,
+                        'Date you lost it',
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
-                          _sectionLabel(
-                            Icons.person_outline,
-                            'Reporter details',
+                          _dateTimeCard(
+                            icon: Icons.calendar_today_outlined,
+                            label: 'Date',
+                            value: _formatDate(_selectedDate),
+                            onTap: _pickDate,
                           ),
-                          const SizedBox(height: 14),
-                          TextFormField(
-                            controller: _firstNameController,
-                            decoration: _fieldDecoration(
-                              hint: 'First name',
-                              icon: Icons.badge_outlined,
-                            ),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return 'First name is required';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _lastNameController,
-                            decoration: _fieldDecoration(
-                              hint: 'Last name',
-                              icon: Icons.person_outline,
-                            ),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return 'Last name is required';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 18),
-                          _sectionLabel(
-                            Icons.calendar_month_outlined,
-                            'Date you lost it',
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              _dateTimeCard(
-                                icon: Icons.calendar_today_outlined,
-                                label: 'Date',
-                                value: _formatDate(_selectedDate),
-                                onTap: _pickDate,
-                              ),
-                              const SizedBox(width: 12),
-                              _dateTimeCard(
-                                icon: Icons.access_time,
-                                label: 'Time',
-                                value: _formatTime(_selectedTime),
-                                onTap: _pickTime,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-                          _sectionLabel(
-                            Icons.inventory_2_outlined,
-                            'Item details',
-                          ),
-                          const SizedBox(height: 14),
-                          GestureDetector(
-                            onTap: _pickImage,
-                            child: Container(
-                              height: 180,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: formBg,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: borderSoft),
-                              ),
-                              child: _selectedImage != null
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(18),
-                                      child: Image.file(
-                                        _selectedImage!,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                      ),
-                                    )
-                                  : Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.add_a_photo_outlined,
-                                          size: 44,
-                                          color: spRed.withOpacity(0.85),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const Text(
-                                          'Tap to upload photo',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            color: textDark,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Recommended for faster verification',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          TextFormField(
-                            controller: _titleController,
-                            decoration: _fieldDecoration(
-                              hint: 'What is it?',
-                              icon: Icons.shopping_bag_outlined,
-                            ),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return 'Item name is required';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            value: _selectedCategory,
-                            decoration: _fieldDecoration(
-                              hint: 'Category',
-                              icon: Icons.category_outlined,
-                            ),
-                            items: categories.map((c) {
-                              return DropdownMenuItem<String>(
-                                value: c,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _iconForCategory(c),
-                                      color: spRed,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(c),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedCategory = val);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _locationController,
-                            decoration: _fieldDecoration(
-                              hint: 'Where? (Location)',
-                              icon: Icons.location_on_outlined,
-                            ),
-                            validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
-                                return 'Location is required';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _descController,
-                            maxLines: 4,
-                            decoration: _fieldDecoration(
-                              hint: 'Description (marks, color...)',
-                              icon: Icons.description_outlined,
-                            ),
+                          const SizedBox(width: 12),
+                          _dateTimeCard(
+                            icon: Icons.access_time,
+                            label: 'Time',
+                            value: _formatTime(_selectedTime),
+                            onTap: _pickTime,
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _submit,
-                  icon: _isLoading
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Colors.white,
+                      const SizedBox(height: 18),
+                      _sectionLabel(Icons.inventory_2_outlined, 'Item details'),
+                      const SizedBox(height: 14),
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          height: 180,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: formBg,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: borderSoft),
                           ),
-                        )
-                      : const Icon(Icons.check_circle_outline),
-                  label: Text(
-                    _isLoading ? 'Submitting...' : 'SUBMIT REPORT',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: spRed,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: spRed.withOpacity(0.6),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                          child: _selectedImage != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: Image.file(
+                                    _selectedImage!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  ),
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add_a_photo_outlined,
+                                      size: 44,
+                                      color: spRed.withOpacity(0.85),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Text(
+                                      'Tap to upload photo',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: textDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Recommended for faster verification',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: _fieldDecoration(
+                          hint: 'What is it?',
+                          icon: Icons.shopping_bag_outlined,
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Item name is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _selectedCategory,
+                        decoration: _fieldDecoration(
+                          hint: 'Category',
+                          icon: Icons.category_outlined,
+                        ),
+                        items: categories.map((c) {
+                          return DropdownMenuItem<String>(
+                            value: c,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _iconForCategory(c),
+                                  color: spRed,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(c),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedCategory = val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _locationController,
+                        decoration: _fieldDecoration(
+                          hint: 'Where? (Location)',
+                          icon: Icons.location_on_outlined,
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Location is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _descController,
+                        maxLines: 4,
+                        decoration: _fieldDecoration(
+                          hint: 'Description (marks, color...)',
+                          icon: Icons.description_outlined,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : _submit,
+              icon: _isLoading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check_circle_outline),
+              label: Text(
+                _isLoading ? 'Submitting...' : 'SUBMIT REPORT',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: spRed,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: spRed.withOpacity(0.6),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
