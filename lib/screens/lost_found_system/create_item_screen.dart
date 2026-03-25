@@ -792,9 +792,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                 colors: [
                   Color(0xFFFF3B3B),
                   Color(0xFFE10613),
+                  Color(0xFFB30012),
                   Color(0xFF140910),
                 ],
-                stops: [0.0, 0.62, 1.0],
+                stops: [0.0, 0.35, 0.72, 1.0],
               )
             : const LinearGradient(
                 begin: Alignment.topCenter,
