@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -188,6 +189,32 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     if (full.isNotEmpty) return full;
     if (item.userName.trim().isNotEmpty) return item.userName.trim();
     return 'Anonymous';
+  }
+
+  Widget _buildImage(String? base64String) {
+    if (base64String == null || base64String.isEmpty) {
+      return const Center(
+        child: Icon(Icons.image_not_supported_outlined, size: 40, color: lfRed),
+      );
+    }
+
+    try {
+      return Image.memory(
+        base64Decode(base64String),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          return const Center(
+            child: Icon(Icons.broken_image_outlined, size: 40, color: lfRed),
+          );
+        },
+      );
+    } catch (_) {
+      return const Center(
+        child: Icon(Icons.broken_image_outlined, size: 40, color: lfRed),
+      );
+    }
   }
 
   Future<void> _showEditDialog() async {
@@ -1118,7 +1145,12 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
               color: softBg,
               borderRadius: BorderRadius.circular(22),
             ),
-            child: item.imageUrl.isNotEmpty
+            child: item.imageData != null && item.imageData!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: _buildImage(item.imageData),
+                  )
+                : item.imageUrl.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(22),
                     child: Image.network(
