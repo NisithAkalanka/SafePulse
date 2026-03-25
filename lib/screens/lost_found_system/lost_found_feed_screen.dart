@@ -869,6 +869,7 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
   @override
   Widget build(BuildContext context) {
     final currentType = _tabController.index == 0 ? "Lost" : "Found";
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: _pageBg,
@@ -895,95 +896,100 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
           const SizedBox(width: 4),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(18, 108, 18, 20),
-              decoration: BoxDecoration(
-                gradient: _isDark
-                    ? const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFFFF3B3B),
-                          Color(0xFFE10613),
-                          Color(0xFFB30012),
-                          Color(0xFF140910),
-                        ],
-                        stops: [0.0, 0.35, 0.72, 1.0],
-                      )
-                    : const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFFFF4B4B),
-                          Color(0xFFB31217),
-                          Color(0xFF1B1B1B),
-                        ],
-                        stops: [0.0, 0.62, 1.0],
-                      ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(34),
-                  bottomRight: Radius.circular(34),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset + 24),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 108, 18, 20),
+                decoration: BoxDecoration(
+                  gradient: _isDark
+                      ? const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFFF3B3B),
+                            Color(0xFFE10613),
+                            Color(0xFFB30012),
+                            Color(0xFF140910),
+                          ],
+                          stops: [0.0, 0.35, 0.72, 1.0],
+                        )
+                      : const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFFF4B4B),
+                            Color(0xFFB31217),
+                            Color(0xFF1B1B1B),
+                          ],
+                          stops: [0.0, 0.62, 1.0],
+                        ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(34),
+                    bottomRight: Radius.circular(34),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _headerCard(),
+                    const SizedBox(height: 12),
+                    _topInfoStrip(),
+                  ],
                 ),
               ),
-              child: Column(
-                children: [
-                  _headerCard(),
-                  const SizedBox(height: 12),
-                  _topInfoStrip(),
-                ],
+              const SizedBox(height: 24),
+              _headerSearchBar(),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    _quickAction(
+                      icon: Icons.add_circle_outline,
+                      title: "Add Post",
+                      onTap: _openPostForCurrentTab,
+                    ),
+                    const SizedBox(width: 10),
+                    _quickAction(
+                      icon: Icons.bookmark_border,
+                      title: "My Posts",
+                      onTap: _openMyPostsPage,
+                    ),
+                    const SizedBox(width: 10),
+                    _quickAction(
+                      icon: Icons.filter_alt_outlined,
+                      title: "Category",
+                      active: _selectedCategory != "All",
+                      onTap: _openCategoryPicker,
+                    ),
+                    const SizedBox(width: 10),
+                    _quickAction(
+                      icon: Icons.place_outlined,
+                      title: "Location",
+                      active: _locationFilter.isNotEmpty,
+                      onTap: _openLocationFilterDialog,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            _headerSearchBar(),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _quickAction(
-                    icon: Icons.add_circle_outline,
-                    title: "Add Post",
-                    onTap: _openPostForCurrentTab,
-                  ),
-                  const SizedBox(width: 10),
-                  _quickAction(
-                    icon: Icons.bookmark_border,
-                    title: "My Posts",
-                    onTap: _openMyPostsPage,
-                  ),
-                  const SizedBox(width: 10),
-                  _quickAction(
-                    icon: Icons.filter_alt_outlined,
-                    title: "Category",
-                    active: _selectedCategory != "All",
-                    onTap: _openCategoryPicker,
-                  ),
-                  const SizedBox(width: 10),
-                  _quickAction(
-                    icon: Icons.place_outlined,
-                    title: "Location",
-                    active: _locationFilter.isNotEmpty,
-                    onTap: _openLocationFilterDialog,
-                  ),
-                ],
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: LostFoundItemsSection(
+                  type: currentType,
+                  query: _searchQuery,
+                  category: _selectedCategory,
+                  locationFilter: _locationFilter,
+                  showOnlyMyPosts: false,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: LostFoundItemsSection(
-                type: currentType,
-                query: _searchQuery,
-                category: _selectedCategory,
-                locationFilter: _locationFilter,
-                showOnlyMyPosts: false,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1386,6 +1392,8 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: _pageBg,
       extendBodyBehindAppBar: true,
@@ -1403,57 +1411,62 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(18, 100, 18, 18),
-              decoration: BoxDecoration(
-                gradient: _isDark
-                    ? const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFFFF3B3B),
-                          Color(0xFFE10613),
-                          Color(0xFFB30012),
-                          Color(0xFF140910),
-                        ],
-                        stops: [0.0, 0.35, 0.72, 1.0],
-                      )
-                    : const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFFFF4B4B),
-                          Color(0xFFB31217),
-                          Color(0xFF1B1B1B),
-                        ],
-                        stops: [0.0, 0.62, 1.0],
-                      ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(34),
-                  bottomRight: Radius.circular(34),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset + 24),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 100, 18, 18),
+                decoration: BoxDecoration(
+                  gradient: _isDark
+                      ? const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFFF3B3B),
+                            Color(0xFFE10613),
+                            Color(0xFFB30012),
+                            Color(0xFF140910),
+                          ],
+                          stops: [0.0, 0.35, 0.72, 1.0],
+                        )
+                      : const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFFF4B4B),
+                            Color(0xFFB31217),
+                            Color(0xFF1B1B1B),
+                          ],
+                          stops: [0.0, 0.62, 1.0],
+                        ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(34),
+                    bottomRight: Radius.circular(34),
+                  ),
+                ),
+                child: _myPostsHeaderCard(),
+              ),
+              const SizedBox(height: 18),
+              _searchBar(),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: LostFoundItemsSection(
+                  type: widget.type,
+                  query: _searchQuery,
+                  category: _selectedCategory,
+                  locationFilter: _locationFilter,
+                  showOnlyMyPosts: true,
+                  categoryChipOnTap: _openCategoryPicker,
                 ),
               ),
-              child: _myPostsHeaderCard(),
-            ),
-            const SizedBox(height: 18),
-            _searchBar(),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: LostFoundItemsSection(
-                type: widget.type,
-                query: _searchQuery,
-                category: _selectedCategory,
-                locationFilter: _locationFilter,
-                showOnlyMyPosts: true,
-                categoryChipOnTap: _openCategoryPicker,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
