@@ -166,54 +166,131 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
     );
   }
 
-  // කැමති වෙලාවක් තෝරන්න එන Scroll Wheel එක
+  // කැමති වෙලාවක් තෝරන්න එන Scroll Wheel එක (improved UI & logic)
   void _showTimePicker() {
+    int tempMinutes = _selectedMinutes;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (BuildContext context) {
-        return Container(
-          height: 300,
-          color: Colors.white,
-          child: Column(
-            children: [
-              Container(
-                color: Colors.grey[200],
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Cancel"),
-                    ),
-                    const Text(
-                      "Set Custom Duration",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        "Done",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+        return SafeArea(
+          top: false,
+          child: Container(
+            height: 360,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1B1B22) : Colors.white,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 18,
+                  offset: Offset(0, -6),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.18)
+                        : const Color(0xFFD9DCE3),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(
+                            color: Color(0xFFFF6B6B),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        "Set Custom Duration",
+                        style: TextStyle(
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF1B1B22),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedMinutes = tempMinutes;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text(
+                          "Done",
+                          style: TextStyle(
+                            color: Color(0xFFFF6B6B),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(
+                  height: 1,
+                  color: isDark
+                      ? Colors.white.withOpacity(0.08)
+                      : const Color(0xFFE8EAF0),
+                ),
+                Expanded(
+                  child: CupertinoTheme(
+                    data: CupertinoThemeData(
+                      brightness: isDark ? Brightness.dark : Brightness.light,
+                      textTheme: CupertinoTextThemeData(
+                        pickerTextStyle: TextStyle(
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF1B1B22),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ],
+                    child: CupertinoPicker(
+                      scrollController: FixedExtentScrollController(
+                        initialItem: _selectedMinutes - 1,
+                      ),
+                      itemExtent: 44,
+                      useMagnifier: true,
+                      magnification: 1.06,
+                      backgroundColor: isDark
+                          ? const Color(0xFF1B1B22)
+                          : Colors.white,
+                      onSelectedItemChanged: (index) {
+                        tempMinutes = index + 1;
+                      },
+                      children: List<Widget>.generate(60, (index) {
+                        return Center(child: Text("${index + 1} Minutes"));
+                      }),
+                    ),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: CupertinoPicker(
-                  itemExtent: 40,
-                  onSelectedItemChanged: (index) {
-                    setState(() {
-                      _selectedMinutes = index + 1; // 1 සිට 60 දක්වා
-                    });
-                  },
-                  children: List<Widget>.generate(60, (index) {
-                    return Center(child: Text("${index + 1} Minutes"));
-                  }),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -1090,3 +1167,4 @@ class _SafetyTimerScreenState extends State<SafetyTimerScreen>
     super.dispose();
   }
 }
+//orig
