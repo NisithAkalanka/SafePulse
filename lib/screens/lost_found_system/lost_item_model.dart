@@ -10,6 +10,7 @@ class LostItem {
   String description;
   String location;
   String imageUrl;
+  String? imageData;
   String status;
   DateTime timestamp;
 
@@ -47,6 +48,7 @@ class LostItem {
     this.verificationAnswer,
     this.chatEnabled = false,
     this.returnedAt,
+    this.imageData,
   });
 
   Map<String, dynamic> toMap() {
@@ -59,6 +61,7 @@ class LostItem {
       'description': description,
       'location': location,
       'imageUrl': imageUrl,
+      'image_data': imageData,
       'status': status,
       'timestamp': Timestamp.fromDate(timestamp),
       'firstName': firstName,
@@ -111,6 +114,7 @@ class LostItem {
       description: map['description'] ?? '',
       location: map['location'] ?? '',
       imageUrl: map['imageUrl'] ?? '',
+      imageData: map['image_data'],
       status: map['status'] ?? 'Active',
       timestamp: safeTime,
       firstName: map['firstName'],

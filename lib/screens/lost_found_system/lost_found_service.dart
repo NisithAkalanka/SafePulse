@@ -1,14 +1,13 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'lost_item_model.dart';
 
 class LostFoundService {
   static const String _col = 'lost_found_posts';
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   Stream<List<LostItem>> getItemsStream(String type) {
     _cleanupReturnedItems();
@@ -49,22 +48,36 @@ class LostFoundService {
   }
 
   Future<void> createPost(LostItem item, File? imageFile) async {
-    String imageUrl = '';
+    try {
+      String? base64Image;
 
-    if (imageFile != null) {
-      final fileName =
-          'lost_found/${DateTime.now().millisecondsSinceEpoch}_${item.userId}.jpg';
+      if (imageFile != null) {
+        final bytes = await imageFile.readAsBytes();
+        base64Image = base64Encode(bytes);
 
-      final ref = _storage.ref().child(fileName);
-      await ref.putFile(imageFile);
-      imageUrl = await ref.getDownloadURL();
+        print('Current String Length: ${base64Image.length}');
+
+        if (base64Image.length > 800000) {
+          print('❌ Image too big for Firestore!');
+          throw Exception(
+            'Image too big for Firestore. Please choose a smaller/compressed image.',
+          );
+        }
+      }
+
+      final data = item.toMap();
+
+      if (base64Image != null && base64Image.isNotEmpty) {
+        data['image_data'] = base64Image;
+      }
+
+      data['timestamp'] = FieldValue.serverTimestamp();
+
+      await _db.collection(_col).add(data);
+    } catch (e) {
+      print('ERROR uploading post: $e');
+      rethrow;
     }
-
-    final data = item.toMap();
-    data['imageUrl'] = imageUrl;
-    data['timestamp'] = FieldValue.serverTimestamp();
-
-    await _db.collection(_col).add(data);
   }
 
   Future<void> updatePostBasic({
@@ -87,13 +100,6 @@ class LostFoundService {
     if (!doc.exists) return;
 
     final data = doc.data();
-    final imageUrl = (data?['imageUrl'] as String?) ?? '';
-
-    if (imageUrl.isNotEmpty) {
-      try {
-        await _storage.refFromURL(imageUrl).delete();
-      } catch (_) {}
-    }
 
     final messages = await _db
         .collection(_col)

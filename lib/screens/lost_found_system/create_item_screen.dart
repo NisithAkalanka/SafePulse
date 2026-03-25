@@ -32,6 +32,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
 
   File? _selectedImage;
   bool _isLoading = false;
+  final ImagePicker _picker = ImagePicker();
 
   static const Color spRed = Color(0xFFE53935);
   static const Color spRedDark = Color(0xFFB71C1C);
@@ -117,9 +118,15 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _selectedImage = File(picked.path));
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 10,
+      maxWidth: 500,
+      maxHeight: 500,
+    );
+
+    if (image != null) {
+      setState(() => _selectedImage = File(image.path));
     }
   }
 

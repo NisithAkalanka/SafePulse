@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -341,6 +342,43 @@ class _ItemCardState extends State<_ItemCard> {
     return '${months[date.month]} ${date.day}, ${date.year}';
   }
 
+  Widget _buildImage(String? base64String, double imageHeight) {
+    if (base64String == null || base64String.isEmpty) {
+      return Container(
+        height: imageHeight,
+        width: double.infinity,
+        color: Colors.grey[200],
+        child: const Icon(
+          Icons.image_not_supported,
+          color: Colors.grey,
+          size: 50,
+        ),
+      );
+    }
+
+    try {
+      return Image.memory(
+        base64Decode(base64String),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: imageHeight,
+        errorBuilder: (context, error, stackTrace) => Container(
+          height: imageHeight,
+          width: double.infinity,
+          color: Colors.grey[200],
+          child: const Icon(Icons.broken_image),
+        ),
+      );
+    } catch (e) {
+      return Container(
+        height: imageHeight,
+        width: double.infinity,
+        color: Colors.grey[200],
+        child: const Icon(Icons.broken_image),
+      );
+    }
+  }
+
   Widget _buildStatusOverlay() {
     final colors = _statusColors(widget.item.status);
 
@@ -463,7 +501,15 @@ class _ItemCardState extends State<_ItemCard> {
                           top: Radius.circular(19),
                         ),
                       ),
-                      child: item.imageUrl.isNotEmpty
+                      child:
+                          item.imageData != null && item.imageData!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(19),
+                              ),
+                              child: _buildImage(item.imageData, imageHeight),
+                            )
+                          : item.imageUrl.isNotEmpty
                           ? ClipRRect(
                               borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(19),
