@@ -43,8 +43,6 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
   Color get _pageBg => _isDark ? const Color(0xFF121217) : lfBg;
   Color get _cardBg => _isDark ? const Color(0xFF171822) : Colors.white;
-  Color get _softBg =>
-      _isDark ? const Color(0xFF232533) : const Color(0xFFF7F7F8);
   Color get _textPrimary => _isDark ? Colors.white : lfTextPrimary;
   Color get _textSecondary =>
       _isDark ? const Color(0xFFE1E4EC) : lfTextSecondary;
