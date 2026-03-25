@@ -9,15 +9,14 @@ import 'sos_reviews_shared.dart';
 class SosAllReviewsScreen extends StatelessWidget {
   const SosAllReviewsScreen({super.key});
 
-  static const Color _caption = Color(0xFF747A86);
-
   @override
   Widget build(BuildContext context) {
+    final g = GuardianTheme.of(context);
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final topPad = MediaQuery.paddingOf(context).top + kToolbarHeight + 12;
 
     return Scaffold(
-      backgroundColor: GuardianUi.surface,
+      backgroundColor: g.scaffoldBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -39,18 +38,9 @@ class SosAllReviewsScreen extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(18, topPad, 18, 20),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF4B4B),
-                  Color(0xFFB31217),
-                  Color(0xFF1B1B1B),
-                ],
-                stops: [0.0, 0.62, 1.0],
-              ),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              gradient: g.headerGradient,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(34),
                 bottomRight: Radius.circular(34),
               ),
@@ -120,6 +110,7 @@ class SosAllReviewsScreen extends StatelessWidget {
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
+                final gt = GuardianTheme.of(context);
                 if (snapshot.hasError) {
                   return Center(
                     child: Padding(
@@ -127,8 +118,8 @@ class SosAllReviewsScreen extends StatelessWidget {
                       child: Text(
                         'Could not load reviews.\n${snapshot.error}',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: _caption,
+                        style: TextStyle(
+                          color: gt.captionGrey,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -153,7 +144,7 @@ class SosAllReviewsScreen extends StatelessWidget {
                           Icon(
                             Icons.rate_review_outlined,
                             size: 64,
-                            color: Colors.grey.shade400,
+                            color: gt.captionGrey,
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -161,7 +152,7 @@ class SosAllReviewsScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: Colors.grey.shade800,
+                              color: gt.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -170,7 +161,7 @@ class SosAllReviewsScreen extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade600,
+                              color: gt.textSecondary,
                             ),
                           ),
                         ],

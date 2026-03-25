@@ -15,8 +15,10 @@ class HelpRequest {
   final DateTime createdAt;
   /// When the requester needs help (date + time from the form).
   final DateTime neededAt;
-  final String? creatorUid;
+  final String creatorUid;
   final Map<String, dynamic>? helperPreferences;
+  final String? helperUid;
+  final String? helperName;
 
   const HelpRequest({
     required this.id,
@@ -31,8 +33,10 @@ class HelpRequest {
     required this.isMine,
     required this.createdAt,
     required this.neededAt,
-    this.creatorUid,
+    required this.creatorUid,
     this.helperPreferences,
+    this.helperUid,
+    this.helperName,
   });
 
   Map<String, dynamic> toMap() {
@@ -52,12 +56,14 @@ class HelpRequest {
     if (helperPreferences != null && helperPreferences!.isNotEmpty) {
       m['helperPreferences'] = helperPreferences;
     }
+    if (helperUid != null) m['helperUid'] = helperUid;
+    if (helperName != null) m['helperName'] = helperName;
     return m;
   }
 
   static HelpRequest fromMap(String id, Map<String, dynamic> data, String? currentUid) {
     final createdAt = _parseDateTime(data['createdAt']) ?? DateTime.now();
-    final creatorUid = data['creatorUid'] as String?;
+    final creatorUid = (data['creatorUid'] as String?) ?? 'unknown_user';
     Map<String, dynamic>? prefs;
     final raw = data['helperPreferences'];
     if (raw is Map) {
@@ -91,6 +97,8 @@ class HelpRequest {
       neededAt: neededAt,
       creatorUid: creatorUid,
       helperPreferences: prefs,
+      helperUid: data['helperUid'] as String?,
+      helperName: data['helperName'] as String?,
     );
   }
 

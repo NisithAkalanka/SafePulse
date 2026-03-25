@@ -24,7 +24,6 @@ class _MockChatScreenState extends State<MockChatScreen> {
   final ScrollController _scrollController = ScrollController();
 
   static const Color spRed = Color(0xFFE53935);
-  static const Color spDark = Color(0xFFB71C1C);
   static const Color spBg = Color(0xFFF6F6F7);
 
   String get _myUid => FirebaseAuth.instance.currentUser?.uid ?? 'unknown';

@@ -59,10 +59,10 @@ class SosReviewCard extends StatelessWidget {
   final bool highlightMine;
 
   static const Color _amber = Color(0xFFFFC107);
-  static const Color _chipBorder = Color(0xFFE8EAF0);
 
   @override
   Widget build(BuildContext context) {
+    final g = GuardianTheme.of(context);
     final name = (data['displayName'] as String?)?.trim().isNotEmpty == true
         ? data['displayName'] as String
         : 'Member';
@@ -73,13 +73,13 @@ class SosReviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: g.panelBg,
         borderRadius: BorderRadius.circular(26),
-        boxShadow: GuardianUi.cardShadow,
+        boxShadow: g.cardShadow,
         border: Border.all(
           color: highlightMine
               ? GuardianUi.redPrimary.withValues(alpha: 0.42)
-              : _chipBorder,
+              : g.chipBorder,
           width: highlightMine ? 1.5 : 1,
         ),
       ),
@@ -104,10 +104,10 @@ class SosReviewCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
-                          color: GuardianUi.textPrimary,
+                          color: g.textPrimary,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -150,15 +150,15 @@ class SosReviewCard extends StatelessWidget {
                 (i) => Icon(
                   Icons.star_rounded,
                   size: 16,
-                  color: i < rating ? _amber : Colors.grey.shade300,
+                  color: i < rating ? _amber : g.starEmpty,
                 ),
               ),
               const SizedBox(width: 10),
               Text(
                 dateStr.isEmpty ? '—' : dateStr,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF747A86),
+                  color: g.captionGrey,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -171,7 +171,7 @@ class SosReviewCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 height: 1.45,
-                color: Colors.grey.shade800,
+                color: g.bodyTextMuted,
                 fontWeight: FontWeight.w500,
               ),
             ),

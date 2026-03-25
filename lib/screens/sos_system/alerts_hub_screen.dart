@@ -1,9 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/notification_service.dart'; // Import NotificationService
 import 'sos_tracking_map.dart'; // කලින් අපි හදපු map පේජ් එක
+import '../help_private_chat_screen.dart';
 
-class AlertsHubScreen extends StatelessWidget {
+class AlertsHubScreen extends StatefulWidget {
   const AlertsHubScreen({super.key});
+
+  @override
+  State<AlertsHubScreen> createState() => _AlertsHubScreenState();
+}
+
+class _AlertsHubScreenState extends State<AlertsHubScreen> {
+  final Set<String> _processedAlertIds = {};
+  final DateTime _screenStartTime = DateTime.now();
+
+  void _showAcceptedDialog(String requestId, String category, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.green[50],
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.green),
+            SizedBox(width: 10),
+            Text("Help Accepted"),
+          ],
+        ),
+        content: Text("Your help offer for $category has been accepted!"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("CLOSE"),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HelpPrivateChatScreen(
+                    requestId: requestId,
+                    title: category,
+                    subtitle: title,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+            label: const Text("CONTACT"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,114 +160,295 @@ class AlertsHubScreen extends StatelessWidget {
                     );
                   }
 
-                  var alerts = snapshot.data!.docs;
+                  final alerts = snapshot.data!.docs;
+                  final uid = FirebaseAuth.instance.currentUser?.uid;
 
-                  if (alerts.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                      child: Center(
-                        child: Text(
-                          "No emergency alerts at the moment.",
-                          style: TextStyle(
-                            color: textSecondary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    );
+                  // Trigger local notifications for new emergency alerts
+                  for (final doc in alerts) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final alertId = doc.id;
+                    if (_processedAlertIds.contains(alertId)) continue;
+
+                    final time = data['time'];
+                    if (time is Timestamp) {
+                      final dt = time.toDate();
+                      if (dt.isAfter(_screenStartTime)) {
+                        final type = (data['type'] ?? 'N/A').toString();
+                        final address = (data['address'] ?? 'No location').toString();
+                        NotificationService.showSOSNotification(type, address);
+                      }
+                    }
+                    _processedAlertIds.add(alertId);
                   }
 
-                  return ListView.builder(
-                    itemCount: alerts.length,
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      var data = alerts[index].data() as Map<String, dynamic>;
-                      String docId = alerts[index].id;
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: uid == null
+                        ? null
+                        : FirebaseFirestore.instance
+                            .collection('help_offer_notifications')
+                            .where(Filter.or(
+                              Filter('recipientUid', isEqualTo: uid),
+                              Filter('helperUid', isEqualTo: uid),
+                            ))
+                            .snapshots(),
+                    builder: (context, offerSnap) {
+                      final rows = <Map<String, dynamic>>[];
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 14),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x12000000),
-                              blurRadius: 14,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFFFFE3E3),
-                            ),
-                            child: const Icon(
-                              Icons.warning_amber_rounded,
-                              color: Color(0xFFB31217),
-                              size: 26,
+                      for (final d in alerts) {
+                        final data = d.data() as Map<String, dynamic>;
+                        rows.add({
+                          'id': d.id,
+                          'isOffer': false,
+                          'title': (data['user_email'] ?? "Unknown User").toString(),
+                          'type': (data['type'] ?? 'N/A').toString(),
+                          'address': (data['address'] ?? 'No location').toString(),
+                          'time': data['time'],
+                        });
+                      }
+
+                      if (offerSnap.hasData) {
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        for (final d in offerSnap.data!.docs) {
+                          final data = d.data() as Map<String, dynamic>;
+                          final String docId = d.id;
+
+                          // Trigger notification if my offer was accepted
+                          if (data['helperUid'] == uid &&
+                              data['accepted'] == true &&
+                              !_processedAlertIds.contains('accepted_$docId')) {
+                            
+                            // Using a post-frame callback to show the dialog
+                            // to avoid "setState() or markNeedsBuild() called during build" errors
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              
+                              NotificationService.showHelpAcceptedNotification(
+                                id: docId.hashCode,
+                                category: (data['requestCategory'] ?? 'Help request').toString(),
+                                title: (data['requestTitle'] ?? '').toString(),
+                              );
+                              
+                              _showAcceptedDialog(
+                                data['requestId'] ?? '',
+                                (data['requestCategory'] ?? 'Help').toString(),
+                                (data['requestTitle'] ?? '').toString(),
+                              );
+                            });
+                            
+                            _processedAlertIds.add('accepted_$docId');
+                          }
+
+                          // Show as notification if I'm the recipient (normal behavior)
+                          // OR if I am the helper (so I can see my sent offer here)
+                          final bool isRecipient = data['recipientUid'] == uid;
+                          final bool isHelper = data['helperUid'] == uid;
+
+                          if (isRecipient || isHelper) {
+                            rows.add({
+                              'id': d.id,
+                              'isOffer': true,
+                              'isSentOffer': isHelper,
+                              'requestId': data['requestId'],
+                              'requestTitle': (data['requestTitle'] ?? '').toString(),
+                              'title': isHelper
+                                  ? "You offered help to ${data['requestCategory'] ?? 'someone'}"
+                                  : (data['helperName'] ?? "A helper").toString(),
+                              'type': (data['requestCategory'] ?? 'Help offer').toString(),
+                              'address': (data['requestLocationName'] ?? 'Nearby').toString(),
+                              'time': data['createdAt'],
+                            });
+                          }
+                        }
+                      }
+
+                      DateTime toDt(Object? raw) {
+                        if (raw is Timestamp) return raw.toDate();
+                        if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw);
+                        return DateTime.fromMillisecondsSinceEpoch(0);
+                      }
+
+                      rows.sort((a, b) => toDt(b['time']).compareTo(toDt(a['time'])));
+
+                      if (rows.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                          child: Center(
+                            child: Text(
+                              "No emergency alerts at the moment.",
+                              style: TextStyle(
+                                color: textSecondary,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                          title: Text(
-                            data['user_email'] ?? "Unknown User",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: textPrimary,
-                            ),
-                          ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Type: ${data['type'] ?? 'N/A'}",
-                                  style: TextStyle(
-                                    color: textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "📍 ${data['address'] ?? 'No location'}",
-                                  style: TextStyle(
-                                    color: textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: rows.length,
+                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          final row = rows[index];
+                          final isOffer = row['isOffer'] == true;
+                          final String docId = row['id'] as String;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x12000000),
+                                  blurRadius: 14,
+                                  offset: Offset(0, 6),
                                 ),
                               ],
                             ),
-                          ),
-                          trailing: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: softBg,
-                            ),
-                            child: const Icon(
-                              Icons.map_outlined,
-                              color: Color(0xFFB31217),
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SOSTrackingMap(
-                                  victimEmail: data['user_email'] ?? "Victim",
-                                  alertId: docId,
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFFFFE3E3),
+                                ),
+                                child: Icon(
+                                  isOffer
+                                      ? Icons.check_circle_outline_rounded
+                                      : Icons.warning_amber_rounded,
+                                  color: isOffer
+                                      ? const Color(0xFF1E9E5A)
+                                      : const Color(0xFFB31217),
+                                  size: 26,
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                              title: Text(
+                                row['title'] as String,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: textPrimary,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Type: ${row['type']}",
+                                      style: TextStyle(
+                                        color: textSecondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "📍 ${row['address']}",
+                                      style: TextStyle(
+                                        color: textSecondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              trailing: Container(
+                                child: isOffer
+                                    ? FilledButton.icon(
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: const Color(0xFF1E9E5A),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(999),
+                                          ),
+                                        ),
+                                        onPressed: () {
+                                          final requestId =
+                                              (row['requestId'] ?? '').toString();
+                                          if (requestId.isEmpty) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Request reference is missing.'),
+                                              ),
+                                            );
+                                            return;
+                                          }
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => HelpPrivateChatScreen(
+                                                requestId: requestId,
+                                                title: row['type'] as String,
+                                                subtitle: (row['requestTitle']?.toString().isNotEmpty == true)
+                                                    ? row['requestTitle'] as String
+                                                    : row['address'] as String,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.chat_bubble_outline_rounded,
+                                          size: 16,
+                                        ),
+                                        label: const Text(
+                                          'Contact',
+                                          style: TextStyle(fontWeight: FontWeight.w800),
+                                        ),
+                                      )
+                                    : Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: softBg,
+                                        ),
+                                        child: const Icon(
+                                          Icons.map_outlined,
+                                          color: Color(0xFFB31217),
+                                        ),
+                                      ),
+                              ),
+                              onTap: () {
+                                if (isOffer) {
+                                  final requestId =
+                                      (row['requestId'] ?? '').toString();
+                                  if (requestId.isEmpty) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => HelpPrivateChatScreen(
+                                        requestId: requestId,
+                                        title: row['type'] as String,
+                                        subtitle:
+                                            (row['requestTitle']?.toString().isNotEmpty == true)
+                                                ? row['requestTitle'] as String
+                                                : row['address'] as String,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SOSTrackingMap(
+                                        victimEmail: row['title'] as String,
+                                        alertId: docId,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          );
+                        },
                       );
                     },
                   );

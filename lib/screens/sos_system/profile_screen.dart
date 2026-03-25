@@ -120,17 +120,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final Color pageBg = isDark
         ? const Color(0xFF121217)
         : const Color(0xFFF6F7FB);
-    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color cardBg = isDark
+        ? const Color(0xFF1B1B22)
+        : Colors.white;
     final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
     final Color textSecondary = isDark
         ? const Color(0xFFB7BBC6)
         : const Color(0xFF747A86);
-    final Color softBg = isDark
-        ? const Color(0xFF23232B)
-        : const Color(0xFFF9FAFC);
-    final Color borderColor = isDark
-        ? const Color(0xFF34343F)
-        : const Color(0xFFE8EAF0);
     final Color appBarFg = isDark ? Colors.white : Colors.white;
     return Scaffold(
       backgroundColor: pageBg,

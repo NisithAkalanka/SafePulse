@@ -157,9 +157,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ? const Color(0xFF1B1B22)
         : const Color(0xFFF6F7FB);
     final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
-    final Color textSecondary = isDark
-        ? const Color(0xFFB7BBC6)
-        : const Color(0xFF747A86);
     final Color fieldFill = isDark ? const Color(0xFF23232B) : Colors.white;
     final Color disabledFill = isDark
         ? const Color(0xFF2A2A33)

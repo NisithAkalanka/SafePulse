@@ -15,6 +15,7 @@ import 'guardian_mode_screen.dart';
 import 'alerts_hub_screen.dart';
 import 'admin_full_dashboard.dart';
 import 'fake_call_screen.dart';
+import '../help_private_chat_screen.dart';
 import '../../services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -34,6 +35,8 @@ class _HomeScreenState extends State<HomeScreen>
   StreamSubscription<User?>? _authSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _myAlertSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _helpOfferSub;
+  final Set<String> _seenHelpOfferNotifications = <String>{};
 
   late final AnimationController _sosFlashController;
   late final Animation<double> _sosFlashOpacity;
@@ -63,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     _getCurrentLocation();
     _listenForGlobalAlerts();
+    _listenForHelpOfferNotifications();
     _loadUserStatus();
     _listenToUserSettings();
     _startLiveLocationSync();
@@ -74,6 +78,9 @@ class _HomeScreenState extends State<HomeScreen>
       if (!mounted) return;
       if (u == null) {
         _userDocSub?.cancel();
+        _helpOfferSub?.cancel();
+        _helpOfferSub = null;
+        _seenHelpOfferNotifications.clear();
         setState(() {
           _userRole = 'student';
           _shakeEnabled = true;
@@ -84,6 +91,7 @@ class _HomeScreenState extends State<HomeScreen>
           };
         });
       } else {
+        _listenForHelpOfferNotifications();
         _loadUserStatus();
         _listenToUserSettings();
       }
@@ -467,7 +475,10 @@ class _HomeScreenState extends State<HomeScreen>
           for (final change in snapshot.docChanges) {
             if (change.type == DocumentChangeType.added) {
               final alertData = change.doc.data();
-              if (alertData?['uid'] != FirebaseAuth.instance.currentUser?.uid) {
+              final isMine =
+                  alertData?['uid'] == FirebaseAuth.instance.currentUser?.uid;
+              final isNew = (alertData?['status'] ?? 'New') == 'New';
+              if (!isMine && isNew) {
                 _showEmergencyAlert(
                   alertData?['type'] ?? 'Emergency',
                   alertData?['address'] ?? 'Nearby',
@@ -476,6 +487,99 @@ class _HomeScreenState extends State<HomeScreen>
             }
           }
         });
+  }
+
+  void _listenForHelpOfferNotifications() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    _helpOfferSub?.cancel();
+    _helpOfferSub = FirebaseFirestore.instance
+        .collection('help_offer_notifications')
+        .where('recipientUid', isEqualTo: uid)
+        .snapshots()
+        .listen((snapshot) {
+      for (final change in snapshot.docChanges) {
+        if (change.type != DocumentChangeType.added) continue;
+        final data = change.doc.data();
+        if (data == null) continue;
+        if (data['accepted'] == true) continue;
+        if (_seenHelpOfferNotifications.contains(change.doc.id)) continue;
+        _seenHelpOfferNotifications.add(change.doc.id);
+        _showHelperOfferDialog(change.doc.id, data);
+      }
+    });
+  }
+
+  void _showHelperOfferDialog(String notificationId, Map<String, dynamic> data) {
+    if (!mounted) return;
+    final helperName = (data['helperName'] ?? 'A helper').toString();
+    final category = (data['requestCategory'] ?? 'Help request').toString();
+    final requestTitle = (data['requestTitle'] ?? '').toString();
+    final location = (data['requestLocationName'] ?? 'Nearby').toString();
+    final requestId = (data['requestId'] ?? '').toString();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.green[50],
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.green),
+            SizedBox(width: 10),
+            Text("Helper Ready"),
+          ],
+        ),
+        content: Text(
+          "$helperName is ready to help.\n\n$category\n$requestTitle\n📍 $location",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Later"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              if (requestId.isNotEmpty) {
+                await FirebaseFirestore.instance
+                    .collection('alerts')
+                    .doc(requestId)
+                    .set({
+                  'status': 'Accepted',
+                  'acceptedBy': helperName,
+                  'helper_uid': data['helperUid'],
+                  'helper_name': helperName,
+                  'accepted_at': FieldValue.serverTimestamp(),
+                }, SetOptions(merge: true));
+              }
+              await FirebaseFirestore.instance
+                  .collection('help_offer_notifications')
+                  .doc(notificationId)
+                  .set({
+                'accepted': true,
+                'acceptedAt': FieldValue.serverTimestamp(),
+                'read': true,
+                'readAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+              if (!mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HelpPrivateChatScreen(
+                    requestId: requestId,
+                    title: category,
+                    subtitle: requestTitle,
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text("Accept"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showEmergencyAlert(String type, String location) {
@@ -1347,6 +1451,7 @@ class _HomeScreenState extends State<HomeScreen>
     _userDocSub?.cancel();
     _shakeDetector?.stopListening(); // ✅ stop shake
     _globalAlertsSub?.cancel();
+    _helpOfferSub?.cancel();
     _locationSyncTimer?.cancel();
     _authSub?.cancel();
     _myAlertSub?.cancel();

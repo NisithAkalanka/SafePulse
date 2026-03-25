@@ -3,6 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../theme/guardian_ui.dart';
+
 class _SlitLocation {
   final String key;
   final String label;
@@ -159,8 +161,10 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setStateDialog) {
+            final g = GuardianTheme.of(ctx);
             return AlertDialog(
-              title: const Text('Call'),
+              backgroundColor: g.panelBg,
+              title: Text('Call', style: TextStyle(color: g.textPrimary)),
               content: SizedBox(
                 width: 320,
                 child: Column(
@@ -170,14 +174,17 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: g.figmaFieldFill,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(color: g.figmaFieldBorder),
                       ),
                       child: Text(
                         current.isEmpty ? 'Enter number' : current,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: g.textPrimary,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -188,18 +195,18 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
                       mainAxisSpacing: 10,
                       crossAxisSpacing: 10,
                       children: [
-                        _padBtn('*', setStateDialog, () => current += '*'),
-                        _padBtn('0', setStateDialog, () => current += '0'),
-                        _padBtn('#', setStateDialog, () => current += '#'),
-                        _padBtn('1', setStateDialog, () => current += '1'),
-                        _padBtn('2', setStateDialog, () => current += '2'),
-                        _padBtn('3', setStateDialog, () => current += '3'),
-                        _padBtn('4', setStateDialog, () => current += '4'),
-                        _padBtn('5', setStateDialog, () => current += '5'),
-                        _padBtn('6', setStateDialog, () => current += '6'),
-                        _padBtn('7', setStateDialog, () => current += '7'),
-                        _padBtn('8', setStateDialog, () => current += '8'),
-                        _padBtn('9', setStateDialog, () => current += '9'),
+                        _padBtn(ctx, '*', setStateDialog, () => current += '*'),
+                        _padBtn(ctx, '0', setStateDialog, () => current += '0'),
+                        _padBtn(ctx, '#', setStateDialog, () => current += '#'),
+                        _padBtn(ctx, '1', setStateDialog, () => current += '1'),
+                        _padBtn(ctx, '2', setStateDialog, () => current += '2'),
+                        _padBtn(ctx, '3', setStateDialog, () => current += '3'),
+                        _padBtn(ctx, '4', setStateDialog, () => current += '4'),
+                        _padBtn(ctx, '5', setStateDialog, () => current += '5'),
+                        _padBtn(ctx, '6', setStateDialog, () => current += '6'),
+                        _padBtn(ctx, '7', setStateDialog, () => current += '7'),
+                        _padBtn(ctx, '8', setStateDialog, () => current += '8'),
+                        _padBtn(ctx, '9', setStateDialog, () => current += '9'),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -251,7 +258,13 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
     );
   }
 
-  Widget _padBtn(String label, void Function(VoidCallback fn) setStateDialog, VoidCallback addFn) {
+  Widget _padBtn(
+    BuildContext context,
+    String label,
+    void Function(VoidCallback fn) setStateDialog,
+    VoidCallback addFn,
+  ) {
+    final g = GuardianTheme.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: () {
@@ -260,13 +273,17 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          color: g.figmaFieldFill,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: g.figmaFieldBorder),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 18,
+            color: g.textPrimary,
+          ),
         ),
       ),
     );
@@ -361,15 +378,22 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final g = GuardianTheme.of(context);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: g.scaffoldBg,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        title: const Text('Track Live Location'),
+        backgroundColor: g.panelBg,
+        foregroundColor: g.textPrimary,
+        title: Text(
+          'Track Live Location',
+          style: TextStyle(
+            color: g.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded, color: g.textPrimary),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
@@ -381,10 +405,10 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
             child: Text(
               widget.title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
-                color: Colors.black87,
+                color: g.textPrimary,
               ),
             ),
           ),
@@ -399,18 +423,32 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
                       runSpacing: 8,
                       children: [
                         ActionChip(
-                          label: const Text('Use my GPS'),
+                          label: Text(
+                            'Use my GPS',
+                            style: TextStyle(color: g.textPrimary),
+                          ),
+                          backgroundColor: g.listItemBg,
+                          side: BorderSide(color: g.chipBorder),
                           onPressed: _useCurrentGps,
                         ),
                         ..._locations.map((l) {
                           final selected = _selectedLabel == l.label;
                           return ActionChip(
-                            label: Text(l.label),
+                            label: Text(
+                              l.label,
+                              style: TextStyle(
+                                color: selected
+                                    ? GuardianUi.redPrimary
+                                    : g.textPrimary,
+                              ),
+                            ),
                             backgroundColor: selected
-                                ? Colors.redAccent.withOpacity(0.15)
-                                : Colors.white,
+                                ? GuardianUi.redPrimary.withValues(alpha: 0.2)
+                                : g.listItemBg,
                             side: BorderSide(
-                              color: selected ? Colors.redAccent : Colors.grey.shade300,
+                              color: selected
+                                  ? GuardianUi.redPrimary
+                                  : g.chipBorder,
                             ),
                             onPressed: () {
                               setState(() {
@@ -463,17 +501,17 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: g.panelBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black.withOpacity(0.04)),
+                      border: Border.all(color: g.chipBorder),
                     ),
                     child: Text(
                       '$_selectedLabel\nLat: ${_selectedLat.toStringAsFixed(5)}  Lng: ${_selectedLng.toStringAsFixed(5)}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
-                        color: Colors.black87,
+                        color: g.textPrimary,
                       ),
                     ),
                   ),
@@ -485,13 +523,13 @@ class _HelpLiveLocationScreenState extends State<HelpLiveLocationScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: g.panelBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               boxShadow: [
                 BoxShadow(
                   blurRadius: 14,
                   offset: const Offset(0, -6),
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: g.isDark ? 0.35 : 0.04),
                 ),
               ],
             ),

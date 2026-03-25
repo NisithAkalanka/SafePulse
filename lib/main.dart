@@ -10,6 +10,7 @@ import 'screens/sos_system/login_screen.dart';
 import 'theme_provider.dart';
 import 'services/notification_service.dart';
 import 'services/help_request_service.dart';
+import 'services/help_offer_notification_service.dart';
 
 // Marketplace Screens
 import 'screens/marketPlace_system/market_home.dart';
@@ -27,6 +28,7 @@ void main() async {
 
     await NotificationService.initNotification();
     HelpRequestService.instance.startListening();
+    HelpOfferNotificationService.instance.start();
 
     debugPrint("SafePulse: All Core Services Online.");
   } catch (e) {

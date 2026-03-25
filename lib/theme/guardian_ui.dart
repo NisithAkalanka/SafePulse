@@ -72,3 +72,101 @@ abstract final class GuardianUi {
     ),
   ];
 }
+
+/// Surfaces that follow **App Settings → Dark Appearance** (`ThemeProvider` / `MaterialApp.themeMode`).
+/// Use `GuardianTheme.of(context)` on Help, reviews, and Guardian-style screens.
+class GuardianTheme {
+  GuardianTheme._(this.isDark);
+
+  final bool isDark;
+
+  factory GuardianTheme.of(BuildContext context) {
+    return GuardianTheme._(
+      Theme.of(context).brightness == Brightness.dark,
+    );
+  }
+
+  Color get scaffoldBg =>
+      isDark ? const Color(0xFF0F0F13) : GuardianUi.surface;
+
+  /// Main raised panel (was white in light mode).
+  Color get panelBg => isDark ? const Color(0xFF1B1B22) : Colors.white;
+
+  Color get listItemBg =>
+      isDark ? const Color(0xFF23232B) : GuardianUi.surfaceMuted;
+
+  /// Scroll/list area inside a rounded panel (below tab bar).
+  Color get panelListBg =>
+      isDark ? const Color(0xFF16161C) : GuardianUi.surface;
+
+  Color get textPrimary => isDark ? Colors.white : GuardianUi.textPrimary;
+
+  Color get textSecondary =>
+      isDark ? const Color(0xFFB7BBC6) : GuardianUi.textSecondary;
+
+  Color get divider => isDark ? const Color(0xFF34343F) : GuardianUi.divider;
+
+  Color get chipUnselectedFill =>
+      isDark ? const Color(0xFF2A2A33) : const Color(0xFFF1F3F7);
+
+  Color get figmaFieldFill =>
+      isDark ? const Color(0xFF23232B) : const Color(0xFFF5F5F5);
+
+  Color get figmaFieldBorder =>
+      isDark ? const Color(0xFF3A3A45) : const Color(0xFFE0E0E0);
+
+  Color get captionGrey =>
+      isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86);
+
+  Color get chipBorder =>
+      isDark ? const Color(0xFF3A3A45) : const Color(0xFFE8EAF0);
+
+  Color get chipBgSoft =>
+      isDark ? const Color(0xFF2A2A33) : const Color(0xFFF9FAFC);
+
+  Color get bodyTextMuted =>
+      isDark ? const Color(0xFFD0D0D8) : const Color(0xFF424242);
+
+  Color get ink =>
+      isDark ? const Color(0xFFF0F0F5) : const Color(0xFF212121);
+
+  Color get starEmpty =>
+      isDark ? const Color(0xFF4A4A55) : const Color(0xFFE0E0E0);
+
+  LinearGradient get headerGradient => isDark
+      ? const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFFF3B3B),
+            Color(0xFFE10613),
+            Color(0xFFB30012),
+            Color(0xFF140910),
+          ],
+          stops: [0.0, 0.35, 0.72, 1.0],
+        )
+      : GuardianUi.headerGradient;
+
+  LinearGradient get pageBackgroundWash => isDark
+      ? const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF2A1518),
+            Color(0xFF15151A),
+            Color(0xFF0F0F13),
+          ],
+          stops: [0.0, 0.45, 1.0],
+        )
+      : GuardianUi.pageBackgroundWash;
+
+  List<BoxShadow> get cardShadow => isDark
+      ? [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ]
+      : GuardianUi.cardShadow;
+}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../help/help_request.dart';
+import '../theme/guardian_ui.dart';
 
 /// Visual style aligned with **Help Nearby** feed cards (offer-help page) for the requester’s own list.
 class HelpRequestNearbyStyle {
@@ -10,29 +11,50 @@ class HelpRequestNearbyStyle {
   static const Color redPrimary = Color(0xFFD32F2F);
 
   static ({Color tagColor, Color markerColor, String? statusLabel}) styleFor(
-    HelpRequest r,
-  ) {
+    HelpRequest r, {
+    bool isDark = false,
+  }) {
     final lower = r.category.toLowerCase();
     final Color tagColor;
     final Color markerColor;
     String? statusLabel;
 
-    if (lower.contains('study')) {
-      tagColor = const Color(0xFFE3F2FD);
-      markerColor = Colors.redAccent;
-    } else if (lower.contains('transport')) {
-      tagColor = const Color(0xFFE8F5E9);
-      markerColor = Colors.green;
-      if (r.isUrgent) statusLabel = 'SOS';
-    } else if (lower.contains('tech')) {
-      tagColor = const Color(0xFFFFF3E0);
-      markerColor = Colors.green;
-    } else if (lower.contains('cash')) {
-      tagColor = const Color(0xFFFFF8E1);
-      markerColor = Colors.orangeAccent;
+    if (isDark) {
+      if (lower.contains('study')) {
+        tagColor = const Color(0xFF1E3A5F);
+        markerColor = Colors.redAccent;
+      } else if (lower.contains('transport')) {
+        tagColor = const Color(0xFF1A3D2E);
+        markerColor = Colors.green;
+        if (r.isUrgent) statusLabel = 'SOS';
+      } else if (lower.contains('tech')) {
+        tagColor = const Color(0xFF4A3728);
+        markerColor = Colors.green;
+      } else if (lower.contains('cash')) {
+        tagColor = const Color(0xFF4A3D1A);
+        markerColor = Colors.orangeAccent;
+      } else {
+        tagColor = const Color(0xFF3F3F46);
+        markerColor = Colors.redAccent;
+      }
     } else {
-      tagColor = const Color(0xFFF5F5F7);
-      markerColor = Colors.redAccent;
+      if (lower.contains('study')) {
+        tagColor = const Color(0xFFE3F2FD);
+        markerColor = Colors.redAccent;
+      } else if (lower.contains('transport')) {
+        tagColor = const Color(0xFFE8F5E9);
+        markerColor = Colors.green;
+        if (r.isUrgent) statusLabel = 'SOS';
+      } else if (lower.contains('tech')) {
+        tagColor = const Color(0xFFFFF3E0);
+        markerColor = Colors.green;
+      } else if (lower.contains('cash')) {
+        tagColor = const Color(0xFFFFF8E1);
+        markerColor = Colors.orangeAccent;
+      } else {
+        tagColor = const Color(0xFFF5F5F7);
+        markerColor = Colors.redAccent;
+      }
     }
 
     return (tagColor: tagColor, markerColor: markerColor, statusLabel: statusLabel);
@@ -63,21 +85,17 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const redPrimary = HelpRequestNearbyStyle.redPrimary;
-    final s = HelpRequestNearbyStyle.styleFor(request);
+    final g = GuardianTheme.of(context);
+    final s = HelpRequestNearbyStyle.styleFor(request, isDark: g.isDark);
     final desc = request.description.trim();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: g.panelBg,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: g.chipBorder),
+        boxShadow: g.cardShadow,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -98,7 +116,9 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                 ),
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: redPrimary.withValues(alpha: 0.12),
+                  backgroundColor: redPrimary.withValues(
+                    alpha: g.isDark ? 0.22 : 0.12,
+                  ),
                   child: Icon(
                     Icons.person_rounded,
                     color: redPrimary,
@@ -112,10 +132,10 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                     children: [
                       Text(
                         request.category,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF374151),
+                          color: g.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -126,7 +146,7 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
+                          color: g.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -135,10 +155,10 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               request.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF1A1D2E),
+                                color: g.textPrimary,
                               ),
                             ),
                           ),
@@ -149,15 +169,19 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.green.shade50,
+                                color: g.isDark
+                                    ? const Color(0xFF14532D)
+                                    : Colors.green.shade50,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 s.statusLabel!,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.green,
+                                  color: g.isDark
+                                      ? const Color(0xFF86EFAC)
+                                      : Colors.green.shade700,
                                 ),
                               ),
                             ),
@@ -169,10 +193,10 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                           desc,
                           maxLines: 6,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             height: 1.35,
-                            color: Color(0xFF4B5563),
+                            color: g.textSecondary,
                           ),
                         ),
                       ],
@@ -188,9 +212,9 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               request.locationName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Color(0xFF6B7280),
+                                color: g.captionGrey,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -200,7 +224,7 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                             'My request',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: g.captionGrey,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -212,7 +236,7 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                           Icon(
                             Icons.send_rounded,
                             size: 14,
-                            color: Colors.grey.shade500,
+                            color: g.captionGrey,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -221,7 +245,7 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                             ),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: g.captionGrey,
                             ),
                           ),
                         ],
@@ -240,7 +264,7 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                               'Needed ${DateFormat.yMMMd().add_jm().format(request.neededAt)}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade800,
+                                color: g.textPrimary,
                                 fontWeight: FontWeight.w600,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -283,8 +307,10 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                     onPressed: onEdit,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: redPrimary,
+                      backgroundColor:
+                          g.isDark ? Colors.transparent : null,
                       side: BorderSide(
-                        color: redPrimary.withValues(alpha: 0.5),
+                        color: redPrimary.withValues(alpha: g.isDark ? 0.75 : 0.5),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -300,8 +326,10 @@ class YourRequestNearbyFeaturedCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onDelete,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+                      foregroundColor: Colors.redAccent,
+                      backgroundColor:
+                          g.isDark ? Colors.transparent : null,
+                      side: const BorderSide(color: Colors.redAccent),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     icon: const Icon(Icons.delete_outline, size: 18),
