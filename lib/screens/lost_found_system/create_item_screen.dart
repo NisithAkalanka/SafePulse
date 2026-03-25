@@ -74,16 +74,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     return _selectedLocation;
   }
 
-  @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _titleController.dispose();
-    _descController.dispose();
-    _otherLocationController.dispose();
-    super.dispose();
-  }
-
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
   Color get pageBg =>
@@ -97,6 +87,61 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   Color get borderSoft =>
       _isDark ? const Color(0xFF34343F) : const Color(0xFFE4E4E7);
   Color get iconColor => _isDark ? Colors.white : Colors.black87;
+
+  bool get _isFormReady {
+    final first = _firstNameController.text.trim();
+    final last = _lastNameController.text.trim();
+    final title = _titleController.text.trim();
+    final desc = _descController.text.trim();
+    final otherLoc = _otherLocationController.text.trim();
+
+    final lettersOnly = RegExp(r'^[a-zA-Z\s]+$');
+    final titleReg = RegExp(r'^[a-zA-Z0-9\s]+$');
+    final otherLocReg = RegExp(r'^[a-zA-Z0-9\s]+$');
+
+    final firstOk = first.isNotEmpty && lettersOnly.hasMatch(first);
+    final lastOk = last.isNotEmpty && lettersOnly.hasMatch(last);
+    final titleOk = title.isNotEmpty && titleReg.hasMatch(title);
+    final descOk = desc.isNotEmpty;
+
+    final locationOk = _isOtherLocationSelected
+        ? otherLoc.isNotEmpty && otherLocReg.hasMatch(otherLoc)
+        : _selectedLocation.trim().isNotEmpty;
+
+    return firstOk && lastOk && titleOk && descOk && locationOk;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _firstNameController.addListener(_refreshFormState);
+    _lastNameController.addListener(_refreshFormState);
+    _titleController.addListener(_refreshFormState);
+    _descController.addListener(_refreshFormState);
+    _otherLocationController.addListener(_refreshFormState);
+  }
+
+  void _refreshFormState() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.removeListener(_refreshFormState);
+    _lastNameController.removeListener(_refreshFormState);
+    _titleController.removeListener(_refreshFormState);
+    _descController.removeListener(_refreshFormState);
+    _otherLocationController.removeListener(_refreshFormState);
+
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _titleController.dispose();
+    _descController.dispose();
+    _otherLocationController.dispose();
+    super.dispose();
+  }
 
   IconData _iconForCategory(String c) {
     switch (c) {
@@ -491,6 +536,12 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
     if (!reg.hasMatch(v)) {
       return 'Special characters are not allowed';
     }
+    return null;
+  }
+
+  String? _validateDescription(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return 'Description is required';
     return null;
   }
 
@@ -935,62 +986,70 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
   }
 
   Widget _buildSubmitButton() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: spRed.withOpacity(0.28),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 58,
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: spRed,
-            disabledBackgroundColor: spRed.withOpacity(0.6),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+    final enabled = !_isLoading && _isFormReady;
+
+    return Opacity(
+      opacity: enabled ? 1 : 0.72,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: spRed.withOpacity(0.28),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : [],
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          height: 58,
+          child: ElevatedButton(
+            onPressed: enabled ? _submit : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: spRed,
+              disabledBackgroundColor: spRed.withOpacity(0.45),
+              disabledForegroundColor: Colors.white70,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.14),
-                  shape: BoxShape.circle,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: _isLoading
+                      ? const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check, color: Colors.white, size: 17),
                 ),
-                child: _isLoading
-                    ? const Padding(
-                        padding: EdgeInsets.all(6),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.check, color: Colors.white, size: 17),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                _isLoading ? 'SUBMITTING...' : 'SUBMIT REPORT',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
+                const SizedBox(width: 12),
+                Text(
+                  _isLoading ? 'SUBMITTING...' : 'SUBMIT REPORT',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1023,7 +1082,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
           children: [
             _buildHeader(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 16, 14, 110),
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -1138,7 +1197,7 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Recommended for faster verification',
+                                      'Optional',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: textSecondary,
@@ -1183,7 +1242,10 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
                           hint: 'Description (marks, color...)',
                           icon: Icons.description_outlined,
                         ),
+                        validator: _validateDescription,
                       ),
+                      const SizedBox(height: 18),
+                      _buildSubmitButton(),
                     ],
                   ),
                 ),
@@ -1191,11 +1253,6 @@ class _CreateItemScreenState extends State<CreateItemScreen> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: Container(
-        color: cardBg,
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
-        child: SafeArea(top: false, child: _buildSubmitButton()),
       ),
     );
   }
