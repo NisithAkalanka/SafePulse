@@ -16,51 +16,6 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
   final Set<String> _processedAlertIds = {};
   final DateTime _screenStartTime = DateTime.now();
 
-  void _showAcceptedDialog(String requestId, String category, String title) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.green[50],
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.green),
-            SizedBox(width: 10),
-            Text("Help Accepted"),
-          ],
-        ),
-        content: Text("Your help offer for $category has been accepted!"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("CLOSE"),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => HelpPrivateChatScreen(
-                    requestId: requestId,
-                    title: category,
-                    subtitle: title,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-            label: const Text("CONTACT"),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -221,17 +176,11 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                             // to avoid "setState() or markNeedsBuild() called during build" errors
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               if (!mounted) return;
-                              
+
                               NotificationService.showHelpAcceptedNotification(
                                 id: docId.hashCode,
                                 category: (data['requestCategory'] ?? 'Help request').toString(),
                                 title: (data['requestTitle'] ?? '').toString(),
-                              );
-                              
-                              _showAcceptedDialog(
-                                data['requestId'] ?? '',
-                                (data['requestCategory'] ?? 'Help').toString(),
-                                (data['requestTitle'] ?? '').toString(),
                               );
                             });
                             

@@ -179,6 +179,13 @@ class _HelpScreenState extends State<HelpScreen>
             centerTitle: true,
             actions: [
               IconButton(
+                tooltip: 'Switch to Helper mode',
+                icon: const Icon(Icons.swap_horiz_rounded),
+                onPressed: () {
+                  HelpRoleModeService.instance.toggle();
+                },
+              ),
+              IconButton(
                 tooltip: 'More',
                 icon: const Icon(Icons.more_vert_rounded),
                 onPressed: () {
