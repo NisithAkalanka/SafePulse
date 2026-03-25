@@ -498,19 +498,22 @@ class _HomeScreenState extends State<HomeScreen>
         .where('recipientUid', isEqualTo: uid)
         .snapshots()
         .listen((snapshot) {
-      for (final change in snapshot.docChanges) {
-        if (change.type != DocumentChangeType.added) continue;
-        final data = change.doc.data();
-        if (data == null) continue;
-        if (data['accepted'] == true) continue;
-        if (_seenHelpOfferNotifications.contains(change.doc.id)) continue;
-        _seenHelpOfferNotifications.add(change.doc.id);
-        _showHelperOfferDialog(change.doc.id, data);
-      }
-    });
+          for (final change in snapshot.docChanges) {
+            if (change.type != DocumentChangeType.added) continue;
+            final data = change.doc.data();
+            if (data == null) continue;
+            if (data['accepted'] == true) continue;
+            if (_seenHelpOfferNotifications.contains(change.doc.id)) continue;
+            _seenHelpOfferNotifications.add(change.doc.id);
+            _showHelperOfferDialog(change.doc.id, data);
+          }
+        });
   }
 
-  void _showHelperOfferDialog(String notificationId, Map<String, dynamic> data) {
+  void _showHelperOfferDialog(
+    String notificationId,
+    Map<String, dynamic> data,
+  ) {
     if (!mounted) return;
     final helperName = (data['helperName'] ?? 'A helper').toString();
     final category = (data['requestCategory'] ?? 'Help request').toString();
@@ -546,22 +549,22 @@ class _HomeScreenState extends State<HomeScreen>
                     .collection('alerts')
                     .doc(requestId)
                     .set({
-                  'status': 'Accepted',
-                  'acceptedBy': helperName,
-                  'helper_uid': data['helperUid'],
-                  'helper_name': helperName,
-                  'accepted_at': FieldValue.serverTimestamp(),
-                }, SetOptions(merge: true));
+                      'status': 'Accepted',
+                      'acceptedBy': helperName,
+                      'helper_uid': data['helperUid'],
+                      'helper_name': helperName,
+                      'accepted_at': FieldValue.serverTimestamp(),
+                    }, SetOptions(merge: true));
               }
               await FirebaseFirestore.instance
                   .collection('help_offer_notifications')
                   .doc(notificationId)
                   .set({
-                'accepted': true,
-                'acceptedAt': FieldValue.serverTimestamp(),
-                'read': true,
-                'readAt': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
+                    'accepted': true,
+                    'acceptedAt': FieldValue.serverTimestamp(),
+                    'read': true,
+                    'readAt': FieldValue.serverTimestamp(),
+                  }, SetOptions(merge: true));
               if (!mounted) return;
               Navigator.push(
                 context,

@@ -1,15 +1,17 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ඔබේ ප්‍රොජෙක්ට් පෝල්ඩරයට අනුව මෙම Imports නිවැරදිද බලන්න
 import 'sos_system/home_screen.dart';
 import 'sos_system/guardian_map_screen.dart';
 import 'sos_system/admin_full_dashboard.dart';
 import 'lost_found_system/lost_found_feed_screen.dart';
 import 'marketPlace_system/market_home.dart';
 import 'help_screen.dart';
-import '../widgets/main_bottom_navigation_bar.dart';
 
+// Placeholder (අනිත් අයගේ වැඩ වෙනුවෙන්)
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   const PlaceholderScreen(this.title, {super.key});
@@ -19,11 +21,11 @@ class PlaceholderScreen extends StatelessWidget {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: isDark ? const Color(0xFF1B1B22) : Colors.white,
         foregroundColor: isDark ? Colors.white : Colors.black,
-        elevation: 1,
+        elevation: 0,
       ),
       body: Center(
         child: Column(
@@ -43,13 +45,10 @@ class PlaceholderScreen extends StatelessWidget {
                 color: isDark ? Colors.white : const Color(0xFF1B1B22),
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              "Member's implementation coming soon...",
+            const Text(
+              "SafePulse: Module arriving soon...",
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isDark ? const Color(0xFFB7BBC6) : Colors.grey,
-              ),
+              style: TextStyle(color: Colors.grey),
             ),
           ],
         ),
@@ -58,80 +57,10 @@ class PlaceholderScreen extends StatelessWidget {
   }
 }
 
-/// Unused legacy menu (Help tab uses [HelpScreen] from `help_screen.dart`).
-class LegacyHelpHubMenuScreen extends StatelessWidget {
-  const LegacyHelpHubMenuScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Help & Support"),
-        centerTitle: true,
-        backgroundColor: isDark ? const Color(0xFF1B1B22) : null,
-        foregroundColor: isDark ? Colors.white : null,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _helpTile(
-            context,
-            Icons.volunteer_activism,
-            "Request Help",
-            isDark: isDark,
-          ),
-          _helpTile(context, Icons.support_agent, "Offer Help", isDark: isDark),
-          _helpTile(
-            context,
-            Icons.info_outline,
-            "Help Guidelines",
-            isDark: isDark,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _helpTile(
-    BuildContext context,
-    IconData icon,
-    String title, {
-    bool isDark = false,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 15),
-      color: isDark ? const Color(0xFF1B1B22) : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.redAccent),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : const Color(0xFF1B1B22),
-          ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: isDark ? const Color(0xFFB7BBC6) : null,
-        ),
-        onTap: () {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("$title page coming soon...")));
-        },
-      ),
-    );
-  }
-}
-
 class MainNavigationScreen extends StatefulWidget {
-  /// Optional tab to select after role is loaded (e.g. from embedded nav).
   final int? initialTabIndex;
-
   const MainNavigationScreen({super.key, this.initialTabIndex});
+
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
@@ -161,97 +90,179 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<void> _checkUserRole() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
-      if (!mounted) return;
-      setState(() => _userRole = 'student');
+      if (mounted) setState(() => _userRole = 'student');
       _applyInitialTabIfNeeded();
       return;
     }
-
     try {
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
-
-      if (!mounted) return;
-      setState(() {
-        _userRole = (doc.data()?['role'] ?? 'student').toString();
-      });
-      _applyInitialTabIfNeeded();
+      if (mounted && doc.exists) {
+        setState(() {
+          _userRole = (doc.data()?['role'] ?? 'student').toString();
+        });
+        _applyInitialTabIfNeeded();
+      }
     } catch (e) {
-      debugPrint('Role check failed: $e');
-      if (!mounted) return;
-      setState(() => _userRole = 'student');
+      if (mounted) setState(() => _userRole = 'student');
       _applyInitialTabIfNeeded();
     }
   }
 
   void _applyInitialTabIfNeeded() {
-    if (_initialTabApplied || widget.initialTabIndex == null || !mounted) {
+    if (_initialTabApplied || widget.initialTabIndex == null || !mounted)
       return;
-    }
-    final screens = _getScreens();
-    if (screens.isEmpty) return;
     setState(() {
-      _selectedIndex = widget.initialTabIndex!.clamp(0, screens.length - 1);
+      _selectedIndex = widget.initialTabIndex!;
       _initialTabApplied = true;
     });
   }
 
+  // --- පෙන්වන පිටු ලැයිස්තුව (Role අනුව) ---
   List<Widget> _getScreens() {
     if (_userRole == 'admin') {
       return [
-        const HomeScreen(),
-        const AdminFullDashboard(),
-        const GuardianMapScreen(),
-        const HelpScreen(),
-        const LostFoundFeedScreen(),
-        MarketHome(),
+        const HomeScreen(), // 0. SOS
+        const AdminFullDashboard(), // 1. ADMIN
+        const GuardianMapScreen(), // 2. MAP
+        const HelpScreen(), // 3. HELP
+        const LostFoundFeedScreen(), // 4. LOST
+        MarketHome(), // 5. MARKET
       ];
     }
-
     return [
-      const HomeScreen(),
-      const GuardianMapScreen(),
-      const HelpScreen(),
-      const LostFoundFeedScreen(),
-      MarketHome(),
+      const HomeScreen(), // 0. SOS
+      const GuardianMapScreen(), // 1. MAP
+      const HelpScreen(), // 2. HELP
+      const LostFoundFeedScreen(), // 3. LOST
+      MarketHome(), // 4. MARKET
     ];
   }
 
-  Future<void> _onItemTapped(int index) async {
-    await handleMainNavBarTap(context, index, (resolved) async {
-      if (!mounted) return;
-      if (resolved != 0) {
-        await _checkUserRole();
+  void _onItemTapped(int index) async {
+    // SOS ටැබ් එක පරීක්ෂාව
+    if (index == 0) {
+      setState(() => _selectedIndex = index);
+      return;
+    }
+
+    // ලොග් වී නැතිනම් ලොගින් පේජ් එක පෙන්වමු
+    if (FirebaseAuth.instance.currentUser == null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              const PlaceholderScreen("Login Screen (Linked)"),
+        ),
+        // 💡 මෙහි 'LoginScreen()' යොදන්න
+      );
+      if (FirebaseAuth.instance.currentUser != null) {
+        _checkUserRole();
+        setState(() => _selectedIndex = index);
       }
-      if (!mounted) return;
-      setState(() => _selectedIndex = resolved);
-    });
+    } else {
+      setState(() => _selectedIndex = index);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final screens = _getScreens();
-    final navItems = buildMainNavBarItems(_userRole);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Index mismatch පාලනය
     if (_selectedIndex >= screens.length) {
       _selectedIndex = 0;
     }
 
     return Scaffold(
       backgroundColor: isDark
-          ? const Color(0xFF121217)
+          ? const Color(0xFF0F0F13)
           : const Color(0xFFF6F7FB),
-      extendBody: true,
+      // සජීවී ලෙස දත්ත පවත්වා ගැනීමට IndexedStack
       body: IndexedStack(index: _selectedIndex, children: screens),
-      bottomNavigationBar: MainBottomNavigationBarView(
-        currentIndex: _selectedIndex,
-        items: navItems,
-        onTap: _onItemTapped,
+
+      // --- යාවත්කාලීන කළ ලස්සන NAVIGATION BAR කොටස ---
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1B1B22) : Colors.white,
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 10,
+                  offset: Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              child: BottomNavigationBar(
+                currentIndex: _selectedIndex,
+                onTap: _onItemTapped,
+                type: BottomNavigationBarType.fixed,
+                backgroundColor:
+                    Colors.transparent, // Container එකෙන් පාට පාලනය කරයි
+                selectedItemColor: const Color(0xFFFF4B4B),
+                unselectedItemColor: isDark
+                    ? Colors.grey[500]
+                    : Colors.blueGrey[300],
+                elevation: 0,
+
+                // 💡 ඔබ ඉල්ලූ Labels පෙන්වීමේ කොටස
+                showSelectedLabels: true,
+                showUnselectedLabels: true,
+                selectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                ),
+
+                items: [
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.security_outlined),
+                    activeIcon: Icon(Icons.security),
+                    label: "SOS",
+                  ),
+                  if (_userRole == 'admin')
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.analytics_outlined),
+                      activeIcon: Icon(Icons.analytics),
+                      label: "ADMIN",
+                    ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.map_outlined),
+                    activeIcon: Icon(Icons.map_rounded),
+                    label: "MAP",
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.handshake_outlined),
+                    activeIcon: Icon(Icons.handshake),
+                    label: "HELP",
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.search_outlined),
+                    activeIcon: Icon(Icons.search_rounded),
+                    label: "LOST",
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.storefront_outlined),
+                    activeIcon: Icon(Icons.store),
+                    label: "MARKET",
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
