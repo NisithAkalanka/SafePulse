@@ -1,3 +1,4 @@
+import 'dart:convert'; // --- පියවර 1: Base64 decode කිරීමට මෙය අත්‍යවශ්‍යයි ---
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -65,9 +66,9 @@ class ManageListingsScreen extends StatelessWidget {
                   .where('sellerId', isEqualTo: currentUserId)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: Padding(padding: EdgeInsets.all(50), child: CircularProgressIndicator(color: gRedMid)));
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: gRedMid));
 
-                if (snapshot.data!.docs.isEmpty) {
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 100),
                     child: Column(
@@ -101,7 +102,7 @@ class ManageListingsScreen extends StatelessWidget {
     );
   }
 
-  
+  // --- පියවර 2: රූපය පෙන්වන කොටස (BASE64 Logic) සමඟ නිවැරදි කිරීම ---
   Widget _buildModernManageCard(BuildContext context, String docId, Map<String, dynamic> data, Color cb, Color tp, Color ts, Color bc) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -118,13 +119,20 @@ class ManageListingsScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image
+              // --- පියවර: මෙතනින් තමයි පින්තූරය පෙන්වන්නේ ---
               ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                child: Image.network(
-                  data['image'] ?? "", 
-                  width: 85, height: 85, fit: BoxFit.cover,
-                  errorBuilder: (c, e, s) => Container(width: 85, height: 85, color: Colors.grey[200], child: const Icon(Icons.image)),
+                child: Container(
+                  width: 85, height: 85,
+                  decoration: BoxDecoration(color: Colors.grey[100]),
+                  // මෙතනින් අකුරු වැලක් පින්තූරයකට හරවා පෙන්වයි
+                  child: (data['image'] != null && data['image'].toString().length > 100)
+                    ? Image.memory(
+                        base64Decode(data['image']), // Base64 Decoding
+                        width: 85, height: 85, fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => const Icon(Icons.broken_image),
+                      )
+                    : const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 30),
                 ),
               ),
               const SizedBox(width: 15),
@@ -135,7 +143,7 @@ class ManageListingsScreen extends StatelessWidget {
                   children: [
                     Text(data['name'] ?? "No Title", style: TextStyle(color: tp, fontWeight: FontWeight.w800, fontSize: 17), maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 4),
-                    Text("Rs. ${data['price']}", style: const TextStyle(color: gRedMid, fontWeight: FontWeight.w900, fontSize: 16)),
+                    Text(data['price'] ?? "0", style: const TextStyle(color: gRedMid, fontWeight: FontWeight.w900, fontSize: 16)),
                     const SizedBox(height: 6),
                     // Condition Label
                     Container(
@@ -149,55 +157,32 @@ class ManageListingsScreen extends StatelessWidget {
             ],
           ),
           
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(thickness: 0.5),
-          ),
+          const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(thickness: 0.5)),
 
-          // Description Section
-          Text("Description", style: TextStyle(color: tp, fontWeight: FontWeight.bold, fontSize: 13)),
+          Text("Brief Summary", style: TextStyle(color: tp, fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 5),
-          Text(
-            data['description'] ?? "No description provided for this item.",
-            style: TextStyle(color: ts, fontSize: 13, height: 1.4),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+          Text(data['description'] ?? "No details.", style: TextStyle(color: ts, fontSize: 13, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
 
           const SizedBox(height: 20),
 
           // Action Buttons
           Row(
             children: [
-              // UPDATE BUTTON
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (context) => EditListingScreen(docId: docId, data: data),
-                  )),
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (ctx) => EditListingScreen(docId: docId, data: data))),
                   icon: const Icon(Icons.edit_rounded, size: 18, color: Colors.white),
                   label: const Text("UPDATE", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 ),
               ),
               const SizedBox(width: 12),
-              // DELETE BUTTON
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _confirmDelete(context, docId, cb, tp, ts),
+                  onPressed: () => _confirmRemoval(context, docId, cb, tp, ts),
                   icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.white),
                   label: const Text("DELETE", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: gRedMid,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: gRedMid, padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 ),
               ),
             ],
@@ -207,22 +192,17 @@ class ManageListingsScreen extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, String id, Color cb, Color tp, Color ts) {
+  void _confirmRemoval(BuildContext context, String id, Color cb, Color tp, Color ts) {
     showDialog(context: context, builder: (ctx) => AlertDialog(
-      backgroundColor: cb, 
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-      title: Text("Delete this Ad?", style: TextStyle(color: tp, fontWeight: FontWeight.w900)),
-      content: Text("Are you sure? This item will be permanently removed from the market.", style: TextStyle(color: ts, fontSize: 14)),
+      backgroundColor: cb, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+      title: Text("Confirm Delete?", style: TextStyle(color: tp, fontWeight: FontWeight.w900)),
+      content: Text("Do you really want to remove this ad? It's permanent.", style: TextStyle(color: ts, fontSize: 14)),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: Text("Cancel", style: TextStyle(color: ts))),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: gDarkEnd, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-          onPressed: () async {
-            await FirebaseFirestore.instance.collection('listings').doc(id).delete();
-            Navigator.pop(ctx);
-          },
-          child: const Text("Yes, Delete", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        )
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text("Go Back", style: TextStyle(color: ts))),
+        ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: gDarkEnd), onPressed: () async {
+          await FirebaseFirestore.instance.collection('listings').doc(id).delete();
+          Navigator.pop(ctx);
+        }, child: const Text("Yes, Delete", style: TextStyle(color: Colors.white))),
       ],
     ));
   }
@@ -232,20 +212,15 @@ class ManageListingsScreen extends StatelessWidget {
 class EditListingScreen extends StatefulWidget {
   final String docId;
   final Map<String, dynamic> data;
-
   const EditListingScreen({super.key, required this.docId, required this.data});
-
   @override
   State<EditListingScreen> createState() => _EditListingScreenState();
 }
 
 class _EditListingScreenState extends State<EditListingScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameCtrl;
-  late TextEditingController _priceCtrl;
-  late TextEditingController _descCtrl;
-  String? _selectedCategory;
-  String? _selectedCondition;
+  late TextEditingController _nameCtrl, _priceCtrl, _descCtrl;
+  String? _cat, _cond;
   bool _isLoading = false;
 
   @override
@@ -254,124 +229,38 @@ class _EditListingScreenState extends State<EditListingScreen> {
     _nameCtrl = TextEditingController(text: widget.data['name']);
     _priceCtrl = TextEditingController(text: widget.data['price'].toString().replaceAll("Rs. ", ""));
     _descCtrl = TextEditingController(text: widget.data['description']);
-    _selectedCategory = widget.data['category'];
-    _selectedCondition = widget.data['condition'];
+    _cat = widget.data['category'];
+    _cond = widget.data['condition'];
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
-    final Color textPrimary = isDark ? Colors.white : Colors.black;
-    final Color borderColor = isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0);
-
+    final isD = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB),
-      appBar: AppBar(
-        title: const Text("Edit Listing", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [ManageListingsScreen.gRedStart, ManageListingsScreen.gRedMid])
-          )
-        ),
-        leading: IconButton(icon: const Icon(Icons.close_rounded, color: Colors.white), onPressed: () => Navigator.pop(context)),
-        elevation: 0,
-      ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator(color: ManageListingsScreen.gRedMid))
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(22),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  _inputField("Item Title", _nameCtrl, Icons.title_rounded, cardBg, textPrimary, borderColor),
-                  const SizedBox(height: 18),
-                  _inputField("Price (LKR)", _priceCtrl, Icons.payments_rounded, cardBg, textPrimary, borderColor, kType: TextInputType.number),
-                  const SizedBox(height: 18),
-                  _dropdown("Category", Icons.category_rounded, ["Tech", "Stationary", "Fashion", "Books", "Other"], _selectedCategory, (v) => setState(() => _selectedCategory = v), cardBg, borderColor),
-                  const SizedBox(height: 18),
-                  _dropdown("Condition", Icons.info_outline_rounded, ["New", "Used - Good", "Used - Fair"], _selectedCondition, (v) => setState(() => _selectedCondition = v), cardBg, borderColor),
-                  const SizedBox(height: 18),
-                  _inputField("Full Description", _descCtrl, Icons.description_rounded, cardBg, textPrimary, borderColor, lines: 5),
-                  const SizedBox(height: 40),
-                  
-                  SizedBox(
-                    width: double.infinity, height: 60,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: ManageListingsScreen.gRedMid, 
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 5,
-                      ),
-                      onPressed: _updateListing,
-                      child: const Text("SAVE CHANGES", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                ],
-              ),
-            ),
-          ),
+      backgroundColor: isD ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB),
+      appBar: AppBar(title: const Text("Edit Ad"), backgroundColor: ManageListingsScreen.gRedMid, foregroundColor: Colors.white),
+      body: _isLoading ? const Center(child: CircularProgressIndicator()) : SingleChildScrollView(padding: const EdgeInsets.all(22), child: Form(key: _formKey, child: Column(children: [
+          _field("Product Name", _nameCtrl, Icons.title, isD),
+          const SizedBox(height: 18),
+          _field("Price (LKR)", _priceCtrl, Icons.payments, isD, k: TextInputType.number),
+          const SizedBox(height: 18),
+          DropdownButtonFormField<String>(value: _cat, decoration: const InputDecoration(labelText: "Category"), items: ["Tech", "Books", "Fashion", "Other"].map((s)=>DropdownMenuItem(value:s, child: Text(s))).toList(), onChanged: (v)=>setState(()=>_cat=v)),
+          const SizedBox(height: 40),
+          SizedBox(width: double.infinity, height: 60, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: ManageListingsScreen.gRedMid), onPressed: _save, child: const Text("SAVE CHANGES", style: TextStyle(color: Colors.white))))
+      ]))),
     );
   }
 
-  void _updateListing() async {
+  void _save() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      try {
-        await FirebaseFirestore.instance.collection('listings').doc(widget.docId).update({
-          'name': _nameCtrl.text.trim(),
-          'price': _priceCtrl.text.trim(),
-          'category': _selectedCategory,
-          'condition': _selectedCondition,
-          'description': _descCtrl.text.trim(),
-        });
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Ad updated successfully!"), backgroundColor: Colors.green)
-          );
-        }
-      } catch (e) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error updating ad.")));
-      }
+      await FirebaseFirestore.instance.collection('listings').doc(widget.docId).update({
+        'name': _nameCtrl.text.trim(), 'price': "Rs. ${_priceCtrl.text.trim()}",
+        'category': _cat, 'condition': _cond, 'description': _descCtrl.text.trim(),
+      });
+      Navigator.pop(context);
     }
   }
 
-  Widget _inputField(String label, TextEditingController ctrl, IconData icon, Color cb, Color tp, Color bc, {int lines = 1, TextInputType kType = TextInputType.text}) {
-    return Container(
-      decoration: BoxDecoration(color: cb, borderRadius: BorderRadius.circular(16), border: Border.all(color: bc)),
-      child: TextFormField(
-        controller: ctrl, maxLines: lines, keyboardType: kType, style: TextStyle(color: tp),
-        validator: (v) => (v == null || v.isEmpty) ? "This field is required" : null,
-        decoration: InputDecoration(
-          labelText: label, 
-          labelStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-          prefixIcon: Icon(icon, color: ManageListingsScreen.gRedMid), 
-          border: InputBorder.none, 
-          contentPadding: const EdgeInsets.all(18)
-        ),
-      ),
-    );
-  }
-
-  Widget _dropdown(String h, IconData i, List<String> opt, String? val, Function(String?) ch, Color cb, Color bc) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(color: cb, borderRadius: BorderRadius.circular(16), border: Border.all(color: bc)),
-      child: DropdownButtonFormField<String>(
-        value: val, 
-        hint: Text(h, style: const TextStyle(fontSize: 14)), 
-        validator: (v) => v == null ? "Select one" : null,
-        decoration: InputDecoration(border: InputBorder.none, prefixIcon: Icon(i, color: ManageListingsScreen.gRedMid)),
-        items: opt.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14)))).toList(),
-        onChanged: ch, 
-        dropdownColor: cb,
-        borderRadius: BorderRadius.circular(16),
-      ),
-    );
-  }
+  Widget _field(String l, TextEditingController c, IconData i, bool d, {TextInputType k = TextInputType.text}) => TextFormField(controller: c, keyboardType: k, style: TextStyle(color: d ? Colors.white : Colors.black), decoration: InputDecoration(labelText: l, prefixIcon: Icon(i, color: ManageListingsScreen.gRedMid)));
 }

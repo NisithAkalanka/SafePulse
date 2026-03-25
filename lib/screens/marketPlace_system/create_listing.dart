@@ -1,8 +1,8 @@
 import 'dart:io';
+import 'dart:convert'; // Base64 සඳහා අත්‍යවශ්‍යයි
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CreateListing extends StatefulWidget {
@@ -20,6 +20,7 @@ class _CreateListingState extends State<CreateListing> {
 
   String? _selectedCategory;
   String? _selectedCondition;
+<<<<<<< Updated upstream
   
   final List<File> _selectedImages = [];
   bool _isLoading = false;
@@ -33,22 +34,41 @@ class _CreateListingState extends State<CreateListing> {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (pickedFile != null) setState(() => _selectedImage = File(pickedFile.path));
 =======
+=======
+
+  // තෝරාගන්නා පින්තූර තබා ගැනීමට ලැයිස්තුවක්
+  final List<File> _selectedImages = [];
+  bool _isLoading = false;
+
+  // Teammate & Brand Branding Colors
+>>>>>>> Stashed changes
   static const Color gRedStart = Color(0xFFFF4B4B);
   static const Color gRedMid = Color(0xFFB31217);
   static const Color gDarkEnd = Color(0xFF1B1B1B);
 
+  // --- පින්තූරය තෝරා ගැනීම (Max 3) සහ ගුණාත්මක බව අඩු කිරීම (Base64 සඳහා වැදගත්) ---
   Future<void> _pickImage(ImageSource source) async {
     if (_selectedImages.length >= 3) {
+<<<<<<< Updated upstream
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Maximum 3 photos allowed")),
       );
+=======
+      _showSnack("Maximum 3 photos allowed");
+>>>>>>> Stashed changes
       return;
     }
-    final res = await ImagePicker().pickImage(source: source, imageQuality: 70);
+    final res = await ImagePicker().pickImage(
+      source: source, 
+      imageQuality: 10, // 💡 තත්ත්වය අඩු කිරීම නිසා පද්ධතිය වේගවත් වේ
+      maxWidth: 500, 
+      maxHeight: 500
+    );
     if (res != null) setState(() => _selectedImages.add(File(res.path)));
 >>>>>>> Stashed changes
   }
 
+  // --- පෝස්ට් කිරීමේ ලොජික් එක (පින්තූර Base64 වලට හරවා Firestore වෙත යවයි) ---
   Future<void> _handlePublish() async {
 <<<<<<< Updated upstream
     // Form එක Validate කිරීම
@@ -66,8 +86,11 @@ class _CreateListingState extends State<CreateListing> {
 
 >>>>>>> Stashed changes
       try {
-        List<String> uploadedUrls = [];
+        List<String> base64Images = [];
+
+        // පින්තූර සියල්ල Base64 Strings බවට පත් කිරීම
         if (_selectedImages.isNotEmpty) {
+<<<<<<< Updated upstream
           for (int i = 0; i < _selectedImages.length; i++) {
             String path = 'listings/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
             await FirebaseStorage.instance.ref(path).putFile(_selectedImages[i]);
@@ -76,8 +99,18 @@ class _CreateListingState extends State<CreateListing> {
           }
         } else {
           uploadedUrls.add("https://firebasestorage.googleapis.com/v0/b/safeplus-77610.appspot.com/o/no_image.png?alt=media");
+=======
+          for (var imgFile in _selectedImages) {
+            List<int> imageBytes = await imgFile.readAsBytes();
+            base64Images.add(base64Encode(imageBytes));
+          }
+        } else {
+          // පින්තූර නැතිනම් default අගයක් ලබා දීම
+          base64Images.add(""); 
+>>>>>>> Stashed changes
         }
 
+        // Database Save - No Firebase Storage needed anymore!
         await FirebaseFirestore.instance.collection('listings').add({
           'sellerId': FirebaseAuth.instance.currentUser?.uid,
           'name': _titleCtrl.text.trim(),
@@ -85,10 +118,10 @@ class _CreateListingState extends State<CreateListing> {
           'category': _selectedCategory,
           'condition': _selectedCondition,
           'description': _descCtrl.text.trim(),
-          'image': uploadedUrls.first,
-          'images': uploadedUrls,
+          'image': base64Images.first, // මුල් පින්තූරය ප්‍රධාන රූපය ලෙස
+          'images': base64Images, // සියලු පින්තූර ලිස්ට් එකක් ලෙස
           'status': 'Available',
-          'timestamp': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
         });
 
 <<<<<<< Updated upstream
@@ -97,28 +130,41 @@ class _CreateListingState extends State<CreateListing> {
 =======
         if (mounted) {
           Navigator.pop(context);
+<<<<<<< Updated upstream
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Ad published successfully!"), backgroundColor: Colors.green),
           );
+=======
+          _showSnack("Listing Published Successfully!");
+>>>>>>> Stashed changes
         }
 >>>>>>> Stashed changes
       } catch (e) {
         debugPrint(e.toString());
+        _showSnack("Something went wrong!");
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
     }
   }
 
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+<<<<<<< Updated upstream
     final Color pageBg = isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB);
+=======
+>>>>>>> Stashed changes
     final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
     final Color inputBoxColor = isDark ? const Color(0xFF25252D) : const Color(0xFFF2F3F7);
     final Color textPrimary = isDark ? Colors.white : Colors.black;
 
     return Scaffold(
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -200,15 +246,20 @@ class _CreateListingState extends State<CreateListing> {
 =======
       backgroundColor: pageBg,
       body: _isLoading 
+=======
+      backgroundColor: isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB),
+      body: _isLoading
+>>>>>>> Stashed changes
           ? const Center(child: CircularProgressIndicator(color: gRedMid))
           : SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               child: Column(
                 children: [
-                  // --- 1. Custom Header (දැන් මෙය සියල්ල සමඟ Scroll වේ) ---
+                  // --- 1. CURVED SCROLLABLE HEADER ---
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.only(
+<<<<<<< Updated upstream
                       top: MediaQuery.of(context).padding.top + 10, 
                       bottom: 35, 
                       left: 20, 
@@ -224,8 +275,19 @@ class _CreateListingState extends State<CreateListing> {
                       borderRadius: BorderRadius.only(
                         bottomLeft: Radius.circular(40), 
                         bottomRight: Radius.circular(40)
-                      ),
+=======
+                      top: MediaQuery.of(context).padding.top + 10,
+                      bottom: 35, left: 20, right: 20,
                     ),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [gRedStart, gRedMid, gDarkEnd],
+                        begin: Alignment.topCenter, end: Alignment.bottomCenter, stops: [0.0, 0.62, 1.0],
+>>>>>>> Stashed changes
+                      ),
+                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
+                    ),
+<<<<<<< Updated upstream
                     child: Column(
                       children: [
                         // --- Custom App Bar Row (Scrollable) ---
@@ -246,20 +308,28 @@ class _CreateListingState extends State<CreateListing> {
                             const SizedBox(width: 40), 
                           ],
                         ),
+=======
+                    child: Column(children: [
+                        Row(children: [
+                            IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22), onPressed: () => Navigator.pop(context)),
+                            const Expanded(child: Center(child: Text("New Listing", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)))),
+                            const SizedBox(width: 40),
+                        ]),
+>>>>>>> Stashed changes
                         const SizedBox(height: 30),
-                        // Photo Area
-                        _buildPhotoAreaCentered(cardBg, textPrimary),
-                      ],
-                    ),
+                        // Photo Area Centered
+                        _buildPhotoSlider(cardBg, textPrimary),
+                    ]),
                   ),
 
-                  // --- 2. Form Card ---
+                  // --- 2. VALIDATED FORM CONTENT ---
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 15, 20, 40),
                     child: Form(
                       key: _formKey,
                       child: Container(
                         padding: const EdgeInsets.all(22),
+<<<<<<< Updated upstream
                         decoration: BoxDecoration(
                           color: cardBg,
                           borderRadius: BorderRadius.circular(30),
@@ -269,10 +339,16 @@ class _CreateListingState extends State<CreateListing> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text("Item Details", style: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.w900)),
+=======
+                        decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15)]),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text("Product Specifications", style: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.w900)),
+>>>>>>> Stashed changes
                             const SizedBox(height: 20),
 
-                            // Item Title
+                            // Item Title Input
                             _buildInputBox(
+<<<<<<< Updated upstream
                               label: "Item Title", ctrl: _titleCtrl, icon: Icons.title_rounded, cb: inputBoxColor, tp: textPrimary,
                               validator: (v) {
                                 if (v == null || v.isEmpty) return "Title is required";
@@ -280,39 +356,64 @@ class _CreateListingState extends State<CreateListing> {
                                 if (!RegExp(r'^[a-zA-Z0-9\s.,!?\-\(\)]+$').hasMatch(v)) return "Symbols not allowed";
                                 return null;
                               },
+=======
+                              label: "Item Name", ctrl: _titleCtrl, icon: Icons.title_rounded, cb: inputBoxColor, tp: textPrimary,
+                              validator: (v) => (v == null || v.length < 5) ? "Minimum 5 letters required" : null,
+>>>>>>> Stashed changes
                             ),
                             const SizedBox(height: 16),
 
-                            // Price
+                            // Price Input (Numeric)
                             _buildInputBox(
+<<<<<<< Updated upstream
                               label: "Price (LKR)", ctrl: _priceCtrl, icon: Icons.payments_rounded, cb: inputBoxColor, tp: textPrimary, k: TextInputType.number,
                               validator: (v) {
                                 if (v == null || v.isEmpty) return "Price is required";
                                 final p = double.tryParse(v);
                                 if (p == null || p <= 0) return "Enter a valid positive price";
+=======
+                              label: "LKR Price", ctrl: _priceCtrl, icon: Icons.payments_rounded, cb: inputBoxColor, tp: textPrimary, k: TextInputType.number,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return "Price required";
+                                final p = double.tryParse(v);
+                                if (p == null || p <= 0) return "Invalid price";
+>>>>>>> Stashed changes
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
 
-                            // Category
+                            // Category Dropdown
                             _buildDrop(
+<<<<<<< Updated upstream
                               "Select Category", Icons.grid_view_rounded, ["Tech", "Stationary" ,"Fashion","Books", "Other"], 
                               _selectedCategory, (val) => setState(() => _selectedCategory = val), inputBoxColor,
                               validator: (v) => v == null ? "Please select a category" : null,
+=======
+                              "Pick Category", Icons.grid_view_rounded, ["Tech", "Fashion", "Education", "Other"],
+                              _selectedCategory, (v) => setState(() => _selectedCategory = v), inputBoxColor,
+                              v: (v) => v == null ? "Selection required" : null,
+>>>>>>> Stashed changes
                             ),
                             const SizedBox(height: 16),
 
-                            // Condition
+                            // Condition Dropdown
                             _buildDrop(
+<<<<<<< Updated upstream
                               "Select Condition", Icons.info_outline, ["New", "Used - Good", "Used - Fair"], 
                               _selectedCondition, (val) => setState(() => _selectedCondition = val), inputBoxColor,
                               validator: (v) => v == null ? "Please select condition" : null,
+=======
+                              "Item Condition", Icons.info_outline, ["Brand New", "Used - Like New", "Used - Good"],
+                              _selectedCondition, (v) => setState(() => _selectedCondition = v), inputBoxColor,
+                              v: (v) => v == null ? "Condition required" : null,
+>>>>>>> Stashed changes
                             ),
                             const SizedBox(height: 16),
 
-                            // Description
+                            // Multi-line Description
                             _buildInputBox(
+<<<<<<< Updated upstream
                               label: "Brief Description", ctrl: _descCtrl, icon: Icons.description_outlined, cb: inputBoxColor, tp: textPrimary, maxL: 3,
                               validator: (v) {
                                 if (v == null || v.isEmpty) return "Description is required";
@@ -322,8 +423,17 @@ class _CreateListingState extends State<CreateListing> {
                             ),
                             
                             const SizedBox(height: 35),
+=======
+                              label: "Details & Description", ctrl: _descCtrl, icon: Icons.description_outlined, cb: inputBoxColor, tp: textPrimary, maxL: 3,
+                              validator: (v) => (v == null || v.isEmpty) ? "Description required" : null,
+                            ),
 
+                            const SizedBox(height: 40),
+>>>>>>> Stashed changes
+
+                            // SUBMIT BUTTON
                             SizedBox(
+<<<<<<< Updated upstream
                               width: double.infinity, height: 58,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
@@ -332,10 +442,16 @@ class _CreateListingState extends State<CreateListing> {
                                 ),
                                 onPressed: _handlePublish, 
                                 child: const Text("PUBLISH TO MARKET", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+=======
+                              width: double.infinity, height: 60,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: gRedMid, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 5),
+                                onPressed: _handlePublish,
+                                child: const Text("PUBLISH NOW", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+>>>>>>> Stashed changes
                               ),
                             ),
-                          ],
-                        ),
+                        ]),
                       ),
                     ),
                   ),
@@ -346,12 +462,12 @@ class _CreateListingState extends State<CreateListing> {
     );
   }
 
-  // --- Photo Slider Widget ---
-  Widget _buildPhotoAreaCentered(Color cardBg, Color textPrimary) {
-    return Column(
-      children: [
+  // --- Photo Picker/Slider UI ---
+  Widget _buildPhotoSlider(Color cb, Color tp) {
+    return Column(children: [
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+<<<<<<< Updated upstream
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -375,10 +491,21 @@ class _CreateListingState extends State<CreateListing> {
                     decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white24, style: BorderStyle.solid)),
                     child: const Icon(Icons.add_a_photo_outlined, color: Colors.white, size: 30),
                   ),
+=======
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              ...List.generate(_selectedImages.length, (i) => Stack(children: [
+                Container(width: 100, height: 100, margin: const EdgeInsets.symmetric(horizontal: 6), decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), image: DecorationImage(image: FileImage(_selectedImages[i]), fit: BoxFit.cover), border: Border.all(color: Colors.white24))),
+                Positioned(top: 0, right: 0, child: GestureDetector(onTap: () => setState(() => _selectedImages.removeAt(i)), child: const CircleAvatar(radius: 12, backgroundColor: Colors.black54, child: Icon(Icons.close, size: 14, color: Colors.white))))
+              ])),
+              if (_selectedImages.length < 3)
+                GestureDetector(
+                  onTap: () => _showPickerMenu(context, cb, tp),
+                  child: Container(width: 100, height: 100, margin: const EdgeInsets.symmetric(horizontal: 6), decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white24)), child: const Icon(Icons.add_a_photo_outlined, color: Colors.white, size: 28)),
+>>>>>>> Stashed changes
                 ),
-            ],
-          ),
+          ]),
         ),
+<<<<<<< Updated upstream
         const SizedBox(height: 12),
         const Text("Add photos (Max 3)", style: TextStyle(color: Colors.white70, fontSize: 11)),
       ],
@@ -481,6 +608,28 @@ class _CreateListingState extends State<CreateListing> {
               ListTile(leading: const Icon(Icons.photo_library, color: gRedMid), title: const Text("Pick from Gallery"), onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.gallery); }),
               ListTile(leading: const Icon(Icons.photo_camera, color: gRedMid), title: const Text("Take a Photo"), onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.camera); }),
             ]));
+  }
+>>>>>>> Stashed changes
+=======
+        const SizedBox(height: 10),
+        const Text("Product Photos (Max 3)", style: TextStyle(color: Colors.white70, fontSize: 11)),
+    ]);
+  }
+
+  // Reusable Component Helpers
+  Widget _buildInputBox({required String label, required TextEditingController ctrl, required IconData icon, required Color cb, required Color tp, int maxL = 1, TextInputType k = TextInputType.text, String? Function(String?)? validator}) {
+    return Container(decoration: BoxDecoration(color: cb, borderRadius: BorderRadius.circular(15)), child: TextFormField(controller: ctrl, maxLines: maxL, keyboardType: k, validator: validator, style: TextStyle(color: tp, fontSize: 14), decoration: InputDecoration(labelText: label, labelStyle: const TextStyle(fontSize: 12, color: Colors.grey), prefixIcon: Icon(icon, color: gRedMid, size: 20), border: InputBorder.none, contentPadding: const EdgeInsets.all(15))));
+  }
+
+  Widget _buildDrop(String label, IconData i, List<String> items, String? val, Function(String?) onChanged, Color cb, {String? Function(String?)? v}) {
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2), decoration: BoxDecoration(color: cb, borderRadius: BorderRadius.circular(15)), child: DropdownButtonFormField<String>(value: val, validator: v, decoration: InputDecoration(labelText: label, labelStyle: const TextStyle(fontSize: 11, color: Colors.grey), prefixIcon: Icon(i, color: gRedMid, size: 20), border: InputBorder.none), items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))).toList(), onChanged: onChanged, dropdownColor: cb, iconEnabledColor: gRedMid));
+  }
+
+  void _showPickerMenu(BuildContext context, Color cb, Color tp) {
+    showModalBottomSheet(context: context, backgroundColor: cb, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))), builder: (ctx) => Wrap(children: [
+          ListTile(leading: const Icon(Icons.photo_library), title: const Text("Gallery"), onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.gallery); }),
+          ListTile(leading: const Icon(Icons.photo_camera), title: const Text("Camera"), onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.camera); }),
+    ]));
   }
 >>>>>>> Stashed changes
 }
