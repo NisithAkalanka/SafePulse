@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui';
 
-
 import 'create_listing.dart';
 import 'item_details.dart';
 import 'all_listings.dart'; 
@@ -26,8 +25,6 @@ class _MarketHomeState extends State<MarketHome> {
   final List<String> _categories = ["All", "Tech", "Stationary", "Fashion", "Books"];
 
   static const Color gRedMid = Color(0xFFB31217);
-  static const Color gRedStart = Color(0xFFFF4B4B);
-  static const Color gDarkEnd = Color(0xFF1B1B1B);
 
   @override
   void initState() {
@@ -72,25 +69,41 @@ class _MarketHomeState extends State<MarketHome> {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            // --- 1. HEADER AREA ---
+            // --- 1. HEADER AREA (ඉහළට ගෙන යාම සඳහා යාවත්කාලීන කරන ලදී) ---
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(18, 60, 18, 30),
-              decoration: const BoxDecoration(
+              // Top padding එක 60 ලෙස අඩු කළා (Marketplace වචනය උඩට ගැනීමට)
+              padding: const EdgeInsets.fromLTRB(18, 60, 18, 22), 
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [gRedStart, gRedMid, gDarkEnd], stops: [0.0, 0.62, 1.0],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: isDark
+                      ? const [
+                          Color(0xFFFF3B3B),
+                          Color(0xFFE10613),
+                          Color(0xFFB30012),
+                          Color(0xFF140910),
+                        ]
+                      : const [
+                          Color(0xFFFF4B4B),
+                          Color(0xFFB31217),
+                          Color(0xFF1B1B1B),
+                        ],
+                  stops: isDark
+                      ? const [0.0, 0.35, 0.72, 1.0]
+                      : const [0.0, 0.62, 1.0],
                 ),
-                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(34), bottomRight: Radius.circular(34)),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(34),
+                  bottomRight: Radius.circular(34),
+                ),
               ),
               child: Column(children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween, 
                     children: [
-                      
                       const SizedBox(width: 50), 
-                      
-                      
                       const Expanded(
                         child: Center(
                           child: Text(
@@ -99,8 +112,6 @@ class _MarketHomeState extends State<MarketHome> {
                           ),
                         ),
                       ),
-
-                      
                       Row(
                         children: [
                           _buildHeaderIcon(
@@ -112,7 +123,8 @@ class _MarketHomeState extends State<MarketHome> {
                         ],
                       ),
                   ]),
-                  const SizedBox(height: 25),
+                  // Card එක මාතෘකාවට ළං කිරීම සඳහා පරතරය (SizedBox) 12 දක්වා අඩු කළා
+                  const SizedBox(height: 15), 
                   _buildCampusMarketCard(),
               ]),
             ),
@@ -224,17 +236,16 @@ class _MarketHomeState extends State<MarketHome> {
     );
   }
 
-  
   Widget _buildCampusMarketCard() => Container(
     width: double.infinity, 
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18), // Padding මඳක් අඩු කළා
     decoration: BoxDecoration(
       color: Colors.white.withOpacity(0.10), 
       borderRadius: BorderRadius.circular(22), 
       border: Border.all(color: Colors.white.withOpacity(0.18))
     ),
     child: Row(children: [
-      Icon(Icons.storefront_rounded, color: Colors.white, size: 28),
+      const Icon(Icons.storefront_rounded, color: Colors.white, size: 28),
       const SizedBox(width: 14),
       Expanded(
         child: Column(
@@ -244,8 +255,7 @@ class _MarketHomeState extends State<MarketHome> {
               "Campus MarketPlace", 
               style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)
             ),
-            
-            const SizedBox(height: 10), 
+            const SizedBox(height: 6), // මඳක් අඩු කළා (වෙනස හඳුනා ගැනීමට)
             const Text(
               "The student network for trading.", 
               style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)
