@@ -176,12 +176,20 @@ class _HelpScreenState extends State<HelpScreen>
               ),
             ),
             centerTitle: true,
+            automaticallyImplyLeading: false,
             actions: [
               IconButton(
+<<<<<<< Updated upstream
                 tooltip: 'Switch to Helper mode',
                 icon: const Icon(Icons.swap_horiz_rounded),
                 onPressed: () {
                   HelpRoleModeService.instance.toggle();
+=======
+                tooltip: 'Switch to Helper Mode',
+                icon: const Icon(Icons.published_with_changes_rounded),
+                onPressed: () {
+                  HelpRoleModeService.instance.setHelperMode(true);
+>>>>>>> Stashed changes
                 },
               ),
               IconButton(

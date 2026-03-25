@@ -1,4 +1,9 @@
 import 'dart:io';
+<<<<<<< Updated upstream
+=======
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+>>>>>>> Stashed changes
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -55,9 +60,64 @@ class LostFoundService {
       final fileName =
           'lost_found/${DateTime.now().millisecondsSinceEpoch}_${item.userId}.jpg';
 
+<<<<<<< Updated upstream
       final ref = _storage.ref().child(fileName);
       await ref.putFile(imageFile);
       imageUrl = await ref.getDownloadURL();
+=======
+        debugPrint('Current String Length: ${base64Image.length}');
+
+        if (base64Image.length > 800000) {
+          debugPrint('❌ Image too big for Firestore!');
+          throw Exception(
+            'Image too big for Firestore. Please choose a smaller/compressed image.',
+          );
+        }
+      }
+
+      final data = item.toMap();
+
+      if (base64Image != null && base64Image.isNotEmpty) {
+        data['image_data'] = base64Image;
+      }
+
+      data['timestamp'] = FieldValue.serverTimestamp();
+
+      await _db.collection(_col).add(data);
+    } catch (e) {
+      debugPrint('ERROR uploading post: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updatePostBasic({
+    required String itemId,
+    required String title,
+    required String category,
+    required String description,
+    required String location,
+  }) async {
+    await _db.collection(_col).doc(itemId).update({
+      'title': title.trim(),
+      'category': category.trim(),
+      'description': description.trim(),
+      'location': location.trim(),
+    });
+  }
+
+  Future<void> deletePost(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    if (!doc.exists) return;
+
+    final messages = await _db
+        .collection(_col)
+        .doc(itemId)
+        .collection('messages')
+        .get();
+
+    for (final m in messages.docs) {
+      await m.reference.delete();
+>>>>>>> Stashed changes
     }
 
     final data = item.toMap();

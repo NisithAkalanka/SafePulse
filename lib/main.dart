@@ -114,10 +114,10 @@ class SafePulseApp extends StatelessWidget {
           final tab = args is int ? args : null;
           return MainNavigationScreen(initialTabIndex: tab);
         },
-        '/market-home': (context) => MarketHome(),
-        '/create-listing': (context) => CreateListing(),
-        '/item-details': (context) => ItemDetails(),
-        '/chat': (context) => NegotiationChat(),
+        '/market-home': (context) => const MarketHome(),
+        '/create-listing': (context) => const CreateListing(),
+        '/item-details': (context) => const ItemDetails(),
+        '/chat': (context) => const NegotiationChat(),
       },
     );
   }

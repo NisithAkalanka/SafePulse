@@ -80,11 +80,14 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     );
   }
 
+<<<<<<< Updated upstream
   String _distanceLabel(HelpRequest request) {
     // Distance display disabled in UI.
     return '';
   }
 
+=======
+>>>>>>> Stashed changes
   String _timeAgoLabel(DateTime time) {
     final diff = DateTime.now().difference(time);
     if (diff.inMinutes < 1) return 'Just now';
@@ -296,10 +299,17 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
             elevation: 0,
             actions: [
               IconButton(
+<<<<<<< Updated upstream
                 tooltip: 'Switch to Requester mode',
                 icon: const Icon(Icons.swap_horiz_rounded),
                 onPressed: () {
                   HelpRoleModeService.instance.toggle();
+=======
+                tooltip: 'Switch to Requester Mode',
+                icon: const Icon(Icons.published_with_changes_rounded),
+                onPressed: () {
+                  HelpRoleModeService.instance.setHelperMode(false);
+>>>>>>> Stashed changes
                 },
               ),
               IconButton(
@@ -501,7 +511,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+<<<<<<< Updated upstream
                           const SizedBox(width: 8),
+=======
+>>>>>>> Stashed changes
                         ],
                       ),
                       const SizedBox(height: 6),

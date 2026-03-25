@@ -208,7 +208,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         const GuardianMapScreen(),
         const HelpScreen(),
         const LostFoundFeedScreen(),
-        MarketHome(),
+        const MarketHome(),
       ];
     }
 
@@ -217,7 +217,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const GuardianMapScreen(),
       const HelpScreen(),
       const LostFoundFeedScreen(),
-      MarketHome(),
+      const MarketHome(),
     ];
   }
 
