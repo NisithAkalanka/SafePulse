@@ -171,7 +171,6 @@ class _HelpScreenState extends State<HelpScreen>
               'Request help',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 20,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.2,
               ),
