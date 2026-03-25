@@ -42,7 +42,8 @@ class _NegotiationChatState extends State<NegotiationChat> {
 
   void _sendMessage() {
     String text = _msgController.text.trim();
-    if (text.isEmpty) text = "Is this still available?";
+    if (text.isEmpty && _chatHistory.isEmpty) text = "Is this still available?";
+    if (text.isEmpty) return;
 
     setState(() {
       _chatHistory.add({
@@ -53,7 +54,6 @@ class _NegotiationChatState extends State<NegotiationChat> {
     });
   }
 
-  
   Future<void> _deleteItemAndProceed() async {
     if (widget.docId != null) {
       try {
@@ -72,15 +72,16 @@ class _NegotiationChatState extends State<NegotiationChat> {
     }
   }
 
-  
-  void _showMarkAsSoldDialog() {
+  void _showMarkAsSoldDialog(Color dialogBg, Color txtPrimary) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: const Text("Success Trade?"),
-        content: const Text(
-          "Once you click confirm, this item will be permanently deleted from the database and removed from the Home page."
+        title: Text("Success Trade?", style: TextStyle(color: txtPrimary)),
+        content: Text(
+          "Once you click confirm, this item will be permanently deleted from the database.",
+          style: TextStyle(color: txtPrimary.withOpacity(0.7)),
         ),
         actions: [
           TextButton(
@@ -102,11 +103,19 @@ class _NegotiationChatState extends State<NegotiationChat> {
 
   @override
   Widget build(BuildContext context) {
+    // --- Dark Mode Awareness ---
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : Colors.black87;
+    final Color inputBg = isDark ? const Color(0xFF25252D) : const Color(0xFFF3F5F7);
+    final Color bottomNavBg = isDark ? const Color(0xFF14141A) : Colors.white;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: pageBg,
       body: Column(
         children: [
-          // 1. Curved Gradient Header with Compact Info Box
+          // 1. Curved Gradient Header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(18, 65, 18, 25),
@@ -132,7 +141,6 @@ class _NegotiationChatState extends State<NegotiationChat> {
                     const Text("Negotiation Chat", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   ],
                 ),
-                // Premium Glass Context Box
                 Container(
                   margin: const EdgeInsets.only(top: 15),
                   padding: const EdgeInsets.all(12),
@@ -180,7 +188,7 @@ class _NegotiationChatState extends State<NegotiationChat> {
                           shape: const StadiumBorder(),
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                         ),
-                        onPressed: _showMarkAsSoldDialog,
+                        onPressed: () => _showMarkAsSoldDialog(cardBg, textPrimary),
                         child: const Text("MARK SOLD", style: TextStyle(fontSize: 10, color: primaryRed, fontWeight: FontWeight.w900)),
                       ),
                     ],
@@ -203,16 +211,24 @@ class _NegotiationChatState extends State<NegotiationChat> {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardBg,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(20),
                         topRight: Radius.circular(20),
                         bottomLeft: Radius.circular(20),
                         bottomRight: Radius.circular(4),
                       ),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)],
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark ? Colors.black26 : Colors.black.withOpacity(0.04), 
+                          blurRadius: 4
+                        )
+                      ],
                     ),
-                    child: Text(chat['msg'], style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                    child: Text(
+                      chat['msg'], 
+                      style: TextStyle(fontWeight: FontWeight.w600, color: textPrimary)
+                    ),
                   ),
                 );
               },
@@ -222,15 +238,21 @@ class _NegotiationChatState extends State<NegotiationChat> {
           // 3. Persistent Input Field
           Container(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 35),
-            color: Colors.white,
+            color: bottomNavBg,
             child: Row(
               children: [
                 Expanded(
                   child: Container(
-                    decoration: BoxDecoration(color: const Color(0xFFF3F5F7), borderRadius: BorderRadius.circular(25)),
+                    decoration: BoxDecoration(color: inputBg, borderRadius: BorderRadius.circular(25)),
                     child: TextField(
                       controller: _msgController,
-                      decoration: const InputDecoration(hintText: "Enter a message...", border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 18)),
+                      style: TextStyle(color: textPrimary),
+                      decoration: InputDecoration(
+                        hintText: "Enter a message...", 
+                        hintStyle: TextStyle(color: textPrimary.withOpacity(0.4)),
+                        border: InputBorder.none, 
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 18)
+                      ),
                     ),
                   ),
                 ),
