@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:ui';
 
-// පද්ධතියේ අනෙක් ගොනු
+
 import 'create_listing.dart';
 import 'item_details.dart';
 import 'all_listings.dart'; 
 import 'favourite_saved_list.dart'; 
 import 'manage_listings.dart';
-import 'notifications_screen.dart';
+import 'notifications_screen.dart'; 
 import '../sos_system/main_menu_screen.dart';
 
 class MarketHome extends StatefulWidget {
@@ -20,190 +21,198 @@ class MarketHome extends StatefulWidget {
 class _MarketHomeState extends State<MarketHome> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = "";
+  String _selectedCategory = "All"; 
 
-  // SafePulse Brand Colors
-  static const Color primaryRed = Color(0xFFD32F2F);
-  static const Color intenseRed = Color(0xFFFF1744); 
-  static const Color darkBg = Color(0xFF101010); 
+  final List<String> _categories = ["All", "Tech", "Stationary", "Fashion", "Books"];
+
+  static const Color gRedMid = Color(0xFFB31217);
+  static const Color gRedStart = Color(0xFFFF4B4B);
+  static const Color gDarkEnd = Color(0xFF1B1B1B);
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(() {
-      setState(() {
-        _searchText = _searchController.text.toLowerCase();
-      });
+      setState(() => _searchText = _searchController.text.toLowerCase());
     });
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void _openProfileMenu() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withOpacity(0.1), 
+        pageBuilder: (context, animation, secondaryAnimation) => const MainMenuScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(begin: const Offset(0.12, 0), end: Offset.zero).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
+    final Color borderColor = isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC), // පිරිසිදු සුදු පසුබිම
+      backgroundColor: pageBg,
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            // --- 1. COMPACT PREMIUM HEADER (උස අඩු කළ හෙඩර් කොටස) ---
+            // --- 1. HEADER AREA ---
             Container(
-              padding: const EdgeInsets.only(top: 55, left: 20, right: 20, bottom: 25), // bottom padding adu kala
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(18, 60, 18, 30),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [intenseRed, darkBg], 
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [gRedStart, gRedMid, gDarkEnd], stops: [0.0, 0.62, 1.0],
                 ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(50), 
-                  bottomRight: Radius.circular(50),
-                ),
+                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(34), bottomRight: Radius.circular(34)),
               ),
-              child: Column(
-                children: [
-                  // App Bar Row
+              child: Column(children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, 
                     children: [
-                      const Text(
-                        "Marketplace",
-                        style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
-                      ),
-                      Row(
-                        children: [
-                          _buildHeaderIcon(Icons.notifications_none_rounded, const MarketNotificationsScreen()),
-                          const SizedBox(width: 12),
-                          _buildHeaderIcon(Icons.more_vert_rounded, const MainMenuScreen()),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20), // Spacing adu kala
-
-                  // Campus Market Small Info Box
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), // internal padding adu kala
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12), 
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.storefront_rounded, color: Colors.white, size: 28),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                "Campus Market", 
-                                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                "The trusted student network for campus trading.",
-                                style: TextStyle(color: Colors.white70, fontSize: 13),
-                              ),
-                            ],
+                      
+                      const SizedBox(width: 50), 
+                      
+                      
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            "Marketplace", 
+                            style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w800)
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                      ),
+
+                      
+                      Row(
+                        children: [
+                          _buildHeaderIcon(
+                            icon: Icons.notifications_none_rounded, 
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const MarketNotificationsScreen()))
+                          ),
+                          const SizedBox(width: 10),
+                          _buildHeaderIcon(icon: Icons.more_vert_rounded, onTap: _openProfileMenu),
+                        ],
+                      ),
+                  ]),
+                  const SizedBox(height: 25),
+                  _buildCampusMarketCard(),
+              ]),
             ),
 
             const SizedBox(height: 15),
 
             // --- 2. SEARCH BAR ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Container(
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: primaryRed.withOpacity(0.1)),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))
-                  ],
-                ),
+                height: 52, 
+                decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: gRedMid.withOpacity(0.4))),
                 child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: "What are you searching for?",
-                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search, color: primaryRed, size: 22),
-                    suffixIcon: _searchText.isNotEmpty 
-                        ? IconButton(icon: const Icon(Icons.clear, size: 18, color: Colors.grey), onPressed: () => _searchController.clear())
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
+                  controller: _searchController, style: TextStyle(color: textPrimary),
+                  decoration: const InputDecoration(hintText: "Search items...", prefixIcon: Icon(Icons.search, color: gRedMid), border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 14)),
                 ),
+              ),
+            ),
+            
+            const SizedBox(height: 15),
+
+            // --- 3. CATEGORY LIST ---
+            SizedBox(
+              height: 40,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 18),
+                itemCount: _categories.length,
+                itemBuilder: (context, index) {
+                  bool selected = _selectedCategory == _categories[index];
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedCategory = _categories[index]),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 10), padding: const EdgeInsets.symmetric(horizontal: 22),
+                      decoration: BoxDecoration(color: selected ? gRedMid : cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: selected ? gRedMid : borderColor)),
+                      alignment: Alignment.center,
+                      child: Text(_categories[index], style: TextStyle(color: selected ? Colors.white : textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  );
+                },
               ),
             ),
 
             const SizedBox(height: 25),
 
-            // --- 3. CLEAN QUICK ACTIONS (ඔබ එවූ රූපය අනුව සකස් කළා) ---
+            // --- 4. ACTION BUTTONS ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildMarketAction(Icons.add_circle_outline_rounded, "Sell"),
-                  _buildMarketAction(Icons.favorite_border_rounded, "Favourites"),
-                  _buildMarketAction(Icons.bookmark_outline_rounded, "Saved"),
-                  _buildMarketAction(Icons.assignment_ind_outlined, "My Ads"), 
-                ],
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  _act(context, Icons.add_circle_outline, "Sell", cardBg, borderColor),
+                  _act(context, Icons.favorite_border, "Favs", cardBg, borderColor),
+                  _act(context, Icons.bookmark_border, "Saved", cardBg, borderColor),
+                  _act(context, Icons.assignment_ind_outlined, "My Ads", cardBg, borderColor),
+              ]),
             ),
 
             const SizedBox(height: 35),
 
-            // --- 4. ITEM GRID HEADER ---
+            // --- 5. GRID HEADER ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("For You", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const AllListingsScreen())),
-                    child: const Text("See all", style: TextStyle(color: primaryRed, fontWeight: FontWeight.bold, fontSize: 14)),
-                  ),
-                ],
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text(_searchText.isEmpty && _selectedCategory == "All" ? "Recently Posted" : "Search Results", style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: textPrimary)),
+                  GestureDetector(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const AllListingsScreen())), child: const Text("See all", style: TextStyle(color: gRedMid, fontWeight: FontWeight.bold, fontSize: 13))),
+              ]),
             ),
-            const SizedBox(height: 15),
 
+            // --- 6. DATA STREAM & GRID ---
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('listings').snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: primaryRed));
-                
-                final docs = snapshot.data!.docs.where((doc) {
-                  final name = (doc['name'] as String).toLowerCase();
-                  return name.contains(_searchText);
+                if (!snapshot.hasData) return const Center(child: Padding(padding: EdgeInsets.all(50), child: CircularProgressIndicator(color: gRedMid)));
+
+                var docs = snapshot.data!.docs.where((doc) {
+                  var data = doc.data() as Map<String, dynamic>;
+                  String name = (data['name'] ?? "").toString().toLowerCase();
+                  String cat = (data['category'] ?? "").toString();
+                  return name.contains(_searchText) && (_selectedCategory == "All" || cat == _selectedCategory);
                 }).toList();
 
+                docs.sort((a, b) {
+                  var dataA = a.data() as Map<String, dynamic>;
+                  var dataB = b.data() as Map<String, dynamic>;
+                  Timestamp? tA = dataA['timestamp'];
+                  Timestamp? tB = dataB['timestamp'];
+                  if (tA == null && tB == null) return 0;
+                  if (tA == null) return 1;
+                  if (tB == null) return -1;
+                  return tB.compareTo(tA);
+                });
+
+                if (docs.isEmpty) return const Padding(padding: EdgeInsets.symmetric(vertical: 60), child: Text("No items found!"));
+
                 return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, crossAxisSpacing: 15, mainAxisSpacing: 15, childAspectRatio: 0.8),
+                  shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(18),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 0.82),
                   itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    var data = docs[index].data() as Map<String, dynamic>;
-                    return _buildSafePulseCard(docs[index].id, data);
+                  itemBuilder: (ctx, i) {
+                    var data = docs[i].data() as Map<String, dynamic>;
+                    return _itemTile(context, docs[i].id, data);
                   },
                 );
               },
@@ -215,67 +224,86 @@ class _MarketHomeState extends State<MarketHome> {
     );
   }
 
-  // --- UI Widget Helpers ---
-
-  Widget _buildHeaderIcon(IconData icon, Widget target) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => target)),
-      child: Container(
-        padding: const EdgeInsets.all(10), 
-        decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(12)), 
-        child: Icon(icon, color: Colors.white, size: 22)
-      ),
-    );
-  }
-
-  // පින්තූරයේ ආකාරයට නිර්මාණය කළ පිරිසිදු බොත්තම් UI එක
-  Widget _buildMarketAction(IconData icon, String label) {
-    return GestureDetector(
-      onTap: () {
-        if (label == "Sell") Navigator.push(context, MaterialPageRoute(builder: (c) => const CreateListing()));
-        if (label == "Favourites") Navigator.push(context, MaterialPageRoute(builder: (c) => const FavoriteSavedScreen(title: "Favourites", collectionName: "user_favourites")));
-        if (label == "Saved") Navigator.push(context, MaterialPageRoute(builder: (c) => const FavoriteSavedScreen(title: "Saved Items", collectionName: "user_saved")));
-        if (label == "My Ads") Navigator.push(context, MaterialPageRoute(builder: (c) => const ManageListingsScreen()));
-      },
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16), 
-            decoration: BoxDecoration(
-              color: Colors.white, // No color background (Pure White)
-              borderRadius: BorderRadius.circular(18), // Rounded corner boxes
-              boxShadow: [
-                BoxShadow(color: Colors.red.withOpacity(0.04), blurRadius: 15, spreadRadius: 1)
-              ],
-              border: Border.all(color: Colors.grey.shade50), // Subtle light border
-            ), 
-            child: Icon(icon, color: primaryRed, size: 30), 
-          ),
-          const SizedBox(height: 10), 
-          Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.black87)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSafePulseCard(String docId, Map data) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => ItemDetails(docId: docId, itemName: data['name'], itemPrice: data['price'], itemImage: data['image']))),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          gradient: const LinearGradient(colors: [primaryRed, darkBg], begin: Alignment.topLeft, end: Alignment.bottomRight),
-          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: const Offset(0, 4))],
+  
+  Widget _buildCampusMarketCard() => Container(
+    width: double.infinity, 
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.10), 
+      borderRadius: BorderRadius.circular(22), 
+      border: Border.all(color: Colors.white.withOpacity(0.18))
+    ),
+    child: Row(children: [
+      Icon(Icons.storefront_rounded, color: Colors.white, size: 28),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, 
+          children: [
+            const Text(
+              "Campus MarketPlace", 
+              style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)
+            ),
+            
+            const SizedBox(height: 10), 
+            const Text(
+              "The student network for trading.", 
+              style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)
+            ),
+          ]
         ),
-        child: Column(children: [
-          Expanded(child: Padding(padding: const EdgeInsets.all(5), child: ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.network(data['image'] ?? "", fit: BoxFit.cover, width: double.infinity, errorBuilder: (c,e,s) => const Icon(Icons.image, color: Colors.white))))),
-          Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(data['name'] ?? "", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Text(data['price'] ?? "", style: const TextStyle(color: Colors.white70, fontSize: 11)),
-          ])),
-        ]),
+      ),
+    ]),
+  );
+
+  Widget _itemTile(BuildContext c, String id, Map data) => GestureDetector(
+    onTap: () => Navigator.push(c, MaterialPageRoute(builder: (ctx) => ItemDetails(
+      docId: id, itemName: data['name'], itemPrice: data['price'], itemImage: data['image'],
+      itemDescription: data['description'], itemCondition: data['condition'], sellerId: data['sellerId'],
+    ))),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22), 
+        gradient: const LinearGradient(colors: [gRedMid, Color(0xFF101010)])
+      ),
+      child: Column(children: [
+          Expanded(child: Padding(padding: const EdgeInsets.all(6), child: ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.network(data['image'] ?? "", fit: BoxFit.cover, width: double.infinity, errorBuilder: (ctx, e, s) => const Icon(Icons.image, color: Colors.white))))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12), 
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(data['name'] ?? "No Title", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text("Rs. ${data['price'] ?? "0"}", style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+              ],
+            )
+          ),
+      ]),
+    ),
+  );
+
+  Widget _buildHeaderIcon({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white.withOpacity(0.12))),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }
+
+  Widget _act(BuildContext context, IconData i, String l, Color cb, Color bc) => GestureDetector(
+    onTap: () {
+      if(l=="Sell") Navigator.push(context, MaterialPageRoute(builder: (c)=> const CreateListing()));
+      if(l=="Favs") Navigator.push(context, MaterialPageRoute(builder: (c)=> const FavoriteSavedScreen(title: "Favourites", collectionName: "user_favourites")));
+      if(l=="Saved") Navigator.push(context, MaterialPageRoute(builder: (c)=> const FavoriteSavedScreen(title: "Saved Items", collectionName: "user_saved")));
+      if(l=="My Ads") Navigator.push(context, MaterialPageRoute(builder: (c)=> const ManageListingsScreen()));
+    },
+    child: Column(children: [
+        Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: cb, borderRadius: BorderRadius.circular(18), border: Border.all(color: bc)), child: Icon(i, color: gRedMid, size: 28)),
+        const SizedBox(height: 8), Text(l, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))
+    ]),
+  );
 }
