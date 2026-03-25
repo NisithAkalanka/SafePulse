@@ -9,6 +9,7 @@ import '../theme/guardian_ui.dart';
 import '../help/help_requests_store.dart';
 import '../services/help_request_service.dart';
 import '../services/help_offer_notification_service.dart';
+import '../services/help_role_mode_service.dart';
 import 'sos_system/main_menu_screen.dart';
 
 class HelpFeedScreen extends StatefulWidget {
@@ -80,13 +81,8 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
   }
 
   String _distanceLabel(HelpRequest request) {
-    final meters = _distanceMeters(request);
-    if (meters <= 0) return 'Nearby';
-    if (meters < 1000) {
-      return '${meters.round()}m away';
-    }
-    final km = meters / 1000;
-    return '${km.toStringAsFixed(1)}km away';
+    // Distance display disabled in UI.
+    return '';
   }
 
   String _timeAgoLabel(DateTime time) {
@@ -298,17 +294,14 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
             backgroundColor: Colors.transparent,
             foregroundColor: Colors.white,
             elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ProfileScreen(),
-                  ),
-                );
-              },
-            ),
             actions: [
+              IconButton(
+                tooltip: 'Switch to Requester mode',
+                icon: const Icon(Icons.swap_horiz_rounded),
+                onPressed: () {
+                  HelpRoleModeService.instance.toggle();
+                },
+              ),
               IconButton(
                 tooltip: 'More',
                 icon: const Icon(Icons.more_vert_rounded),
@@ -509,14 +502,6 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            _distanceLabel(request),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: g.captionGrey,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 6),

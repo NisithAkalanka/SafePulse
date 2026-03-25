@@ -94,7 +94,6 @@ class _NegotiationChatState extends State<NegotiationChat> {
           ),
         ),
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white), onPressed: () => Navigator.pop(context)),
         title: const Text("Negotiate Chat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
       ),
