@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'negotiation_chat.dart';
 
-class MarketNotificationsScreen extends StatefulWidget {
+class MarketNotificationsScreen extends StatelessWidget {
   const MarketNotificationsScreen({super.key});
 
+<<<<<<< Updated upstream
   @override
   State<MarketNotificationsScreen> createState() => _MarketNotificationsScreenState();
 }
@@ -48,114 +52,99 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
       "category": "Buying"
     },
   ];
+=======
+  // Teammate Colors
+  static const Color gRedStart = Color(0xFFFF4B4B);
+  static const Color gRedMid = Color(0xFFB31217);
+  static const Color gDarkEnd = Color(0xFF1B1B1B);
+>>>>>>> Stashed changes
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color pageBg = isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textP = isDark ? Colors.white : Colors.black87;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [primaryRed, darkBg]),
-          ),
-        ),
-        title: const Text("Notifications", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.done_all_rounded))
-        ],
-      ),
-      body: Column(
-        children: [
-          // --- 1. FILTERING TABS (All, Buying, Selling) ---
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildCategoryTab("All", true),
-                _buildCategoryTab("Buying", false),
-                _buildCategoryTab("Selling", false),
-              ],
+      backgroundColor: pageBg,
+      body: CustomScrollView(
+        slivers: [
+          // 1. SCROLLABLE HEADER (Same Style as others)
+          SliverToBoxAdapter(
+            child: Container(
+              width: double.infinity, padding: const EdgeInsets.fromLTRB(15, 60, 20, 40),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [gRedStart, gRedMid, gDarkEnd], stops: [0.0, 0.62, 1.0]),
+                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(34), bottomRight: Radius.circular(34)),
+              ),
+              child: Row(children: [
+                IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white), onPressed: () => Navigator.pop(context)),
+                const Text("Activity Hub", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
+                const Spacer(),
+                const Icon(Icons.notifications_active_outlined, color: Colors.white24, size: 35),
+              ]),
             ),
           ),
+
           
-          const Divider(height: 1, thickness: 0.5),
+          StreamBuilder<QuerySnapshot>(
+            
+            stream: FirebaseFirestore.instance
+                .collection('market_notifications')
+                .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(50), child: CircularProgressIndicator())));
+              }
 
-          // --- 2. NOTIFICATIONS LIST ---
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(10),
-              itemCount: _notifications.length,
-              itemBuilder: (context, index) {
-                final item = _notifications[index];
-                return _buildNotificationTile(item);
-              },
-            ),
+              final docs = snapshot.data?.docs ?? [];
+              if (docs.isEmpty) {
+                return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(50), child: Text("No new notifications."))));
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    var data = docs[index].data() as Map<String, dynamic>;
+                    return _buildNotificationCard(context, data, cardBg, textP);
+                  }, childCount: docs.length),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  // Category තේරීම සඳහා වන බටන්
-  Widget _buildCategoryTab(String label, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? primaryRed : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: isSelected ? [BoxShadow(color: primaryRed.withOpacity(0.3), blurRadius: 8)] : [],
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.black54,
-          fontWeight: FontWeight.bold,
-          fontSize: 13,
-        ),
-      ),
-    );
-  }
+  
+  Widget _buildNotificationCard(BuildContext context, Map data, Color cb, Color tp) {
+    bool isChat = data['type'] == 'chat'; 
 
-  // එක් notification එකක පෙනුම
-  Widget _buildNotificationTile(Map<String, dynamic> item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: item['isRead'] ? Colors.white : primaryRed.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: item['isRead'] ? Colors.grey.shade100 : primaryRed.withOpacity(0.1)),
+        color: cb, borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: item['isRead'] ? Colors.grey.shade100 : primaryRed.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(item['icon'], color: item['isRead'] ? Colors.grey : primaryRed, size: 24),
+        contentPadding: const EdgeInsets.all(15),
+        leading: CircleAvatar(
+          backgroundColor: isChat ? Colors.blue.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+          child: Icon(isChat ? Icons.chat_bubble_outline : Icons.sell_outlined, color: isChat ? Colors.blue : Colors.red, size: 20),
         ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            if (!item['isRead']) 
-              const CircleAvatar(radius: 4, backgroundColor: primaryRed),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 5),
-            Text(item['desc'], style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
-            const SizedBox(height: 8),
-            Text(item['time'], style: const TextStyle(color: Colors.grey, fontSize: 11)),
-          ],
-        ),
+        title: Text(data['title'] ?? "Market Update", style: TextStyle(color: tp, fontWeight: FontWeight.bold, fontSize: 14)),
+        subtitle: Text(data['message'] ?? "", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        trailing: const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
         onTap: () {
-          // මෙතැනදී අදාළ Chat හෝ Item වෙත Navigate කළ හැක
+          
+          if (isChat) {
+            Navigator.push(context, MaterialPageRoute(builder: (c) => NegotiationChat(docId: data['itemId'])));
+          }
         },
       ),
     );

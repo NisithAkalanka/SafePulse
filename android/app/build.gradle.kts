@@ -6,11 +6,9 @@ plugins {
 }
 
 android {
-    // leader ගේ project එකේ namespace එක හරියටම චෙක් කරන්න (සාමාන්‍යයෙන් මෙය වේ)
+    // leader ගේ ප්‍රොජෙක්ට් එකට අනුව මෙය නිවැරදි දැයි බලන්න
     namespace = "com.example.safeplus"
-
-    // වැදගත්ම දේ: මෙය 35 සිට 36 දක්වා මම වැඩි කළා
-    compileSdk = 36
+    compileSdk = 36 // අලුත්ම plugins සඳහා මෙය 36 තිබිය යුතුයි
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -19,14 +17,14 @@ android {
     }
 
     kotlinOptions {
+        // Deprecation warning එක අයින් කිරීමට මෙසේ ලබා දෙන්න
         jvmTarget = "17"
     }
 
     defaultConfig {
         applicationId = "com.example.safeplus"
         minSdk = flutter.minSdkVersion
-        // targetSdk එකත් මම 36 දක්වා වැඩි කළා
-        targetSdk = 36
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
@@ -37,8 +35,9 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-}
+} // <--- Android block එක මෙතනින් අවසන් විය යුතුයි
 
+// සගල වරහනෙන් පිටත මෙලෙස dependencies දාන්න
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
