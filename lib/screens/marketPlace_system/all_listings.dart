@@ -1,3 +1,4 @@
+import 'dart:convert'; // --- පියවර 1: මෙය අනිවාර්යයෙන්ම එක් කරන්න ---
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'item_details.dart';
@@ -5,7 +6,6 @@ import 'item_details.dart';
 class AllListingsScreen extends StatelessWidget {
   const AllListingsScreen({super.key});
 
-  
   static const Color gRedStart = Color(0xFFFF4B4B);
   static const Color gRedMid = Color(0xFFB31217);
   static const Color gDarkEnd = Color(0xFF1B1B1B);
@@ -22,7 +22,6 @@ class AllListingsScreen extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-           
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(10, 60, 20, 40),
@@ -45,10 +44,10 @@ class AllListingsScreen extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           "Campus Explorer", 
                           style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)
@@ -67,7 +66,6 @@ class AllListingsScreen extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // --- 2. GRID OF LISTINGS ---
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('listings').snapshots(),
               builder: (context, snapshot) {
@@ -90,7 +88,6 @@ class AllListingsScreen extends StatelessWidget {
                   );
                 }
 
-                
                 final docs = snapshot.data!.docs.toList();
                 docs.sort((a, b) {
                   var dataA = a.data() as Map<String, dynamic>;
@@ -126,7 +123,6 @@ class AllListingsScreen extends StatelessWidget {
     );
   }
 
-  
   Widget _buildProductCard(BuildContext context, String docId, Map<String, dynamic> data) {
     return GestureDetector(
       onTap: () {
@@ -146,7 +142,7 @@ class AllListingsScreen extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFB31217), Color(0xFF101010)], // Dark Red & Black Gradient
+            colors: [Color(0xFFB31217), Color(0xFF101010)],
           ),
           boxShadow: [
             BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 4))
@@ -159,11 +155,17 @@ class AllListingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(6.0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18),
-                  child: Image.network(
-                    data['image'] ?? "", 
-                    fit: BoxFit.cover,
+                  // --- පියවර 2: රූපය පෙන්වන කොටස (BASE64 Logic) මාරු කර ඇත ---
+                  child: Container(
                     width: double.infinity,
-                    errorBuilder: (c,e,s) => const Icon(Icons.image, color: Colors.white24),
+                    decoration: BoxDecoration(color: Colors.black12),
+                    child: (data['image'] != null && data['image'].toString().length > 100)
+                      ? Image.memory(
+                          base64Decode(data['image']), // Base64 අකුරු රූපයකට හරවයි
+                          fit: BoxFit.cover,
+                          errorBuilder: (c, e, s) => const Icon(Icons.broken_image, color: Colors.white24),
+                        )
+                      : const Center(child: Icon(Icons.image, color: Colors.white24, size: 40)),
                   ),
                 ),
               ),

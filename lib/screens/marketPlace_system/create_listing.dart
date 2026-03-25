@@ -1,8 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CreateListing extends StatefulWidget {
@@ -30,72 +31,88 @@ class _CreateListingState extends State<CreateListing> {
 
   Future<void> _pickImage(ImageSource source) async {
     if (_selectedImages.length >= 3) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Maximum 3 photos allowed")));
+      _showSnack("Maximum 3 photos allowed");
       return;
     }
-    final res = await ImagePicker().pickImage(source: source, imageQuality: 70);
-    if (res != null) setState(() => _selectedImages.add(File(res.path)));
+
+    final XFile? res = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 10,
+      maxWidth: 500,
+      maxHeight: 500,
+    );
+
+    if (res != null) {
+      setState(() => _selectedImages.add(File(res.path)));
+    }
   }
 
   Future<void> _handlePublish() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    if (!_formKey.currentState!.validate()) return;
 
-      try {
-        List<String> uploadedUrls = [];
-        if (_selectedImages.isNotEmpty) {
-          for (int i = 0; i < _selectedImages.length; i++) {
-            String path =
-                'listings/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
-            await FirebaseStorage.instance
-                .ref(path)
-                .putFile(_selectedImages[i]);
-            String url = await FirebaseStorage.instance
-                .ref(path)
-                .getDownloadURL();
-            uploadedUrls.add(url);
+    setState(() => _isLoading = true);
+
+    try {
+      final List<String> base64Images = [];
+
+      if (_selectedImages.isNotEmpty) {
+        for (final imgFile in _selectedImages) {
+          final List<int> imageBytes = await imgFile.readAsBytes();
+          final String base64Image = base64Encode(imageBytes);
+
+          if (base64Image.length > 1000000) {
+            throw Exception(
+              'Selected image is too large. Please choose a smaller image.',
+            );
           }
-        } else {
-          uploadedUrls.add(
-            "https://firebasestorage.googleapis.com/v0/b/safeplus-77610.appspot.com/o/no_image.png?alt=media",
-          );
-        }
 
-        await FirebaseFirestore.instance.collection('listings').add({
-          'sellerId': FirebaseAuth.instance.currentUser?.uid,
-          'name': _titleCtrl.text.trim(),
-          'price': _priceCtrl.text.trim(),
-          'category': _selectedCategory,
-          'condition': _selectedCondition,
-          'description': _descCtrl.text.trim(),
-          'image': uploadedUrls.first,
-          'images': uploadedUrls,
-          'status': 'Available',
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Ad published successfully!"),
-              backgroundColor: Colors.green,
-            ),
-          );
+          base64Images.add(base64Image);
         }
-      } catch (e) {
-        debugPrint(e.toString());
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
+      } else {
+        base64Images.add('');
+      }
+
+      await FirebaseFirestore.instance.collection('listings').add({
+        'sellerId': FirebaseAuth.instance.currentUser?.uid,
+        'name': _titleCtrl.text.trim(),
+        'price': _priceCtrl.text.trim(),
+        'category': _selectedCategory,
+        'condition': _selectedCondition,
+        'description': _descCtrl.text.trim(),
+        'image': base64Images.first,
+        'images': base64Images,
+        'status': 'Available',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      _showSnack("Listing Published Successfully!");
+    } catch (e) {
+      debugPrint(e.toString());
+      _showSnack("Something went wrong!");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _priceCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color pageBg = isDark
         ? const Color(0xFF0F0F13)
         : const Color(0xFFF6F7FB);
@@ -113,7 +130,6 @@ class _CreateListingState extends State<CreateListing> {
               physics: const BouncingScrollPhysics(),
               child: Column(
                 children: [
-                  // --- 1. Custom Header (දැන් මෙය සියල්ල සමඟ Scroll වේ) ---
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.only(
@@ -136,7 +152,6 @@ class _CreateListingState extends State<CreateListing> {
                     ),
                     child: Column(
                       children: [
-                        // --- Custom App Bar Row (Scrollable) ---
                         Row(
                           children: [
                             IconButton(
@@ -163,13 +178,10 @@ class _CreateListingState extends State<CreateListing> {
                           ],
                         ),
                         const SizedBox(height: 30),
-                        // Photo Area
-                        _buildPhotoAreaCentered(cardBg, textPrimary),
+                        _buildPhotoSlider(cardBg, textPrimary),
                       ],
                     ),
                   ),
-
-                  // --- 2. Form Card ---
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 15, 20, 40),
                     child: Form(
@@ -198,8 +210,6 @@ class _CreateListingState extends State<CreateListing> {
                               ),
                             ),
                             const SizedBox(height: 20),
-
-                            // Item Title
                             _buildInputBox(
                               label: "Item Title",
                               ctrl: _titleCtrl,
@@ -207,20 +217,21 @@ class _CreateListingState extends State<CreateListing> {
                               cb: inputBoxColor,
                               tp: textPrimary,
                               validator: (v) {
-                                if (v == null || v.isEmpty)
+                                if (v == null || v.isEmpty) {
                                   return "Title is required";
-                                if (v.length < 5)
+                                }
+                                if (v.length < 5) {
                                   return "Minimum 5 characters required";
+                                }
                                 if (!RegExp(
                                   r'^[a-zA-Z0-9\s.,!?\-\(\)]+$',
-                                ).hasMatch(v))
+                                ).hasMatch(v)) {
                                   return "Symbols not allowed";
+                                }
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
-
-                            // Price
                             _buildInputBox(
                               label: "Price (LKR)",
                               ctrl: _priceCtrl,
@@ -229,21 +240,21 @@ class _CreateListingState extends State<CreateListing> {
                               tp: textPrimary,
                               k: TextInputType.number,
                               validator: (v) {
-                                if (v == null || v.isEmpty)
+                                if (v == null || v.isEmpty) {
                                   return "Price is required";
+                                }
                                 final p = double.tryParse(v);
-                                if (p == null || p <= 0)
+                                if (p == null || p <= 0) {
                                   return "Enter a valid positive price";
+                                }
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
-
-                            // Category
                             _buildDrop(
                               "Select Category",
                               Icons.grid_view_rounded,
-                              [
+                              const [
                                 "Tech",
                                 "Stationary",
                                 "Fashion",
@@ -257,12 +268,10 @@ class _CreateListingState extends State<CreateListing> {
                                   v == null ? "Please select a category" : null,
                             ),
                             const SizedBox(height: 16),
-
-                            // Condition
                             _buildDrop(
                               "Select Condition",
                               Icons.info_outline,
-                              ["New", "Used - Good", "Used - Fair"],
+                              const ["New", "Used - Good", "Used - Fair"],
                               _selectedCondition,
                               (val) => setState(() => _selectedCondition = val),
                               inputBoxColor,
@@ -270,8 +279,6 @@ class _CreateListingState extends State<CreateListing> {
                                   v == null ? "Please select condition" : null,
                             ),
                             const SizedBox(height: 16),
-
-                            // Description
                             _buildInputBox(
                               label: "Brief Description",
                               ctrl: _descCtrl,
@@ -280,16 +287,16 @@ class _CreateListingState extends State<CreateListing> {
                               tp: textPrimary,
                               maxL: 3,
                               validator: (v) {
-                                if (v == null || v.isEmpty)
+                                if (v == null || v.isEmpty) {
                                   return "Description is required";
-                                if (v.length < 5)
+                                }
+                                if (v.length < 5) {
                                   return "Please provide at least 5 characters";
+                                }
                                 return null;
                               },
                             ),
-
                             const SizedBox(height: 35),
-
                             SizedBox(
                               width: double.infinity,
                               height: 58,
@@ -323,8 +330,7 @@ class _CreateListingState extends State<CreateListing> {
     );
   }
 
-  // --- Photo Slider Widget ---
-  Widget _buildPhotoAreaCentered(Color cardBg, Color textPrimary) {
+  Widget _buildPhotoSlider(Color cb, Color tp) {
     return Column(
       children: [
         SingleChildScrollView(
@@ -334,29 +340,29 @@ class _CreateListingState extends State<CreateListing> {
             children: [
               ...List.generate(
                 _selectedImages.length,
-                (index) => Stack(
+                (i) => Stack(
                   children: [
                     Container(
                       width: 100,
                       height: 100,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         image: DecorationImage(
-                          image: FileImage(_selectedImages[index]),
+                          image: FileImage(_selectedImages[i]),
                           fit: BoxFit.cover,
                         ),
-                        border: Border.all(color: Colors.white30),
+                        border: Border.all(color: Colors.white24),
                       ),
                     ),
                     Positioned(
                       top: 0,
-                      right: 5,
+                      right: 0,
                       child: GestureDetector(
                         onTap: () =>
-                            setState(() => _selectedImages.removeAt(index)),
+                            setState(() => _selectedImages.removeAt(i)),
                         child: const CircleAvatar(
-                          radius: 11,
+                          radius: 12,
                           backgroundColor: Colors.black54,
                           child: Icon(
                             Icons.close,
@@ -371,32 +377,29 @@ class _CreateListingState extends State<CreateListing> {
               ),
               if (_selectedImages.length < 3)
                 GestureDetector(
-                  onTap: () => _showPickerMenu(context, cardBg, textPrimary),
+                  onTap: () => _showPickerMenu(context, cb, tp),
                   child: Container(
                     width: 100,
                     height: 100,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white12,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Colors.white24,
-                        style: BorderStyle.solid,
-                      ),
+                      border: Border.all(color: Colors.white24),
                     ),
                     child: const Icon(
                       Icons.add_a_photo_outlined,
                       color: Colors.white,
-                      size: 30,
+                      size: 28,
                     ),
                   ),
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         const Text(
-          "Add photos (Max 3)",
+          "Product Photos (Max 3)",
           style: TextStyle(color: Colors.white70, fontSize: 11),
         ),
       ],
@@ -422,8 +425,8 @@ class _CreateListingState extends State<CreateListing> {
         controller: ctrl,
         maxLines: maxL,
         keyboardType: k,
-        style: TextStyle(color: tp, fontSize: 14, fontWeight: FontWeight.w600),
         validator: validator,
+        style: TextStyle(color: tp, fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -438,9 +441,9 @@ class _CreateListingState extends State<CreateListing> {
   Widget _buildDrop(
     String label,
     IconData i,
-    List<String> opt,
+    List<String> items,
     String? val,
-    Function(String?) ch,
+    Function(String?) onChanged,
     Color cb, {
     String? Function(String?)? validator,
   }) {
@@ -452,7 +455,6 @@ class _CreateListingState extends State<CreateListing> {
       ),
       child: DropdownButtonFormField<String>(
         value: val,
-        isExpanded: true,
         validator: validator,
         decoration: InputDecoration(
           labelText: label,
@@ -460,41 +462,41 @@ class _CreateListingState extends State<CreateListing> {
           prefixIcon: Icon(i, color: gRedMid, size: 20),
           border: InputBorder.none,
         ),
-        items: opt
+        items: items
             .map(
-              (e) => DropdownMenuItem(
+              (e) => DropdownMenuItem<String>(
                 value: e,
                 child: Text(e, style: const TextStyle(fontSize: 13)),
               ),
             )
             .toList(),
-        onChanged: ch,
+        onChanged: onChanged,
         dropdownColor: cb,
         iconEnabledColor: gRedMid,
       ),
     );
   }
 
-  void _showPickerMenu(BuildContext context, Color cardBg, Color textPrimary) {
+  void _showPickerMenu(BuildContext context, Color cb, Color tp) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: cardBg,
+      backgroundColor: cb,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (ctx) => Wrap(
         children: [
           ListTile(
-            leading: const Icon(Icons.photo_library, color: gRedMid),
-            title: const Text("Pick from Gallery"),
+            leading: const Icon(Icons.photo_library),
+            title: const Text("Gallery"),
             onTap: () {
               Navigator.pop(ctx);
               _pickImage(ImageSource.gallery);
             },
           ),
           ListTile(
-            leading: const Icon(Icons.photo_camera, color: gRedMid),
-            title: const Text("Take a Photo"),
+            leading: const Icon(Icons.photo_camera),
+            title: const Text("Camera"),
             onTap: () {
               Navigator.pop(ctx);
               _pickImage(ImageSource.camera);
