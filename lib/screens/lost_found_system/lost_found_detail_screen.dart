@@ -942,9 +942,10 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                 colors: <Color>[
                   Color(0xFFFF3B3B),
                   Color(0xFFE10613),
+                  Color(0xFFB30012),
                   Color(0xFF140910),
                 ],
-                stops: <double>[0.0, 0.62, 1.0],
+                stops: <double>[0.0, 0.35, 0.72, 1.0],
               )
             : const LinearGradient(
                 begin: Alignment.topCenter,

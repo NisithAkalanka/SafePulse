@@ -101,13 +101,29 @@ class _MockChatScreenState extends State<MockChatScreen> {
 
   Widget _buildChatHeader(Color textPrimary) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFF4B4B), Color(0xFFB31217), Color(0xFF1B1B1B)],
-          stops: [0.0, 0.62, 1.0],
-        ),
+      decoration: BoxDecoration(
+        gradient: _isDark
+            ? const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFF3B3B),
+                  Color(0xFFE10613),
+                  Color(0xFFB30012),
+                  Color(0xFF140910),
+                ],
+                stops: [0.0, 0.35, 0.72, 1.0],
+              )
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFF4B4B),
+                  Color(0xFFB31217),
+                  Color(0xFF1B1B1B),
+                ],
+                stops: [0.0, 0.62, 1.0],
+              ),
       ),
       child: SafeArea(
         bottom: false,
