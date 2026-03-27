@@ -1,6 +1,13 @@
 import 'dart:ui';
+<<<<<<< Updated upstream
+=======
+import 'dart:io';
+import 'dart:convert';
+>>>>>>> Stashed changes
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'lost_item_model.dart';
 import 'lost_found_service.dart';
@@ -22,6 +29,8 @@ class LostFoundDetailScreen extends StatefulWidget {
 }
 
 class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
+  final ImagePicker _picker = ImagePicker();
+
   bool get isOwner {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return uid != null && uid == widget.item.userId;
@@ -72,6 +81,24 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     'Others',
   ];
 
+  static const List<String> _editLocations = <String>[
+    'Main Gate',
+    'Library',
+    'Auditorium',
+    'Canteen',
+    'Car Park',
+    'Main Building',
+    'New Building/Block',
+    'New Building/G Block',
+    'Engineering Building',
+    'Business School',
+    'Juice Bar',
+    'Playground',
+    'Bird Nest',
+    'William Angliss',
+    'Other',
+  ];
+
   Widget _panel({required Widget child}) {
     return Container(
       width: double.infinity,
@@ -118,6 +145,14 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: lfRed, width: 1.4),
       ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.redAccent),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.redAccent),
+      ),
     );
   }
 
@@ -150,6 +185,17 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
   String? _requiredField(String? value, String label) {
     if ((value ?? '').trim().isEmpty) {
       return '$label is required';
+    }
+    return null;
+  }
+
+  String? _validateAlphaNumericRequired(String? value, String label) {
+    final String v = value?.trim() ?? '';
+    if (v.isEmpty) return '$label is required';
+
+    final RegExp reg = RegExp(r'^[a-zA-Z0-9\s]+$');
+    if (!reg.hasMatch(v)) {
+      return '$label can contain only letters and numbers';
     }
     return null;
   }
@@ -190,21 +236,210 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     return 'Anonymous';
   }
 
+<<<<<<< Updated upstream
+=======
+  DateTime _combineDateAndTime(DateTime date, TimeOfDay time) {
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  Widget _buildImage(String? base64String) {
+    if (base64String == null || base64String.isEmpty) {
+      return const Center(
+        child: Icon(Icons.image_not_supported_outlined, size: 40, color: lfRed),
+      );
+    }
+
+    try {
+      return Image.memory(
+        base64Decode(base64String),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          return const Center(
+            child: Icon(Icons.broken_image_outlined, size: 40, color: lfRed),
+          );
+        },
+      );
+    } catch (_) {
+      return const Center(
+        child: Icon(Icons.broken_image_outlined, size: 40, color: lfRed),
+      );
+    }
+  }
+
+  Future<File?> _pickEditedImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 10,
+      maxWidth: 500,
+      maxHeight: 500,
+    );
+
+    if (image == null) return null;
+    return File(image.path);
+  }
+
+  Widget _buildEditLocationChip({
+    required String location,
+    required String selectedLocation,
+    required StateSetter setLocalState,
+    required TextEditingController otherLocationController,
+  }) {
+    final bool isSelected = selectedLocation == location;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: () {
+            setLocalState(() {
+              if (location != 'Other') {
+                otherLocationController.clear();
+              }
+            });
+          },
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: isSelected
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFFF4B4B), Color(0xFFD81B1B)],
+                    )
+                  : null,
+              color: isSelected
+                  ? null
+                  : (isDark
+                        ? const Color(0xFF24242C)
+                        : const Color(0xFFF7F7F8)),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFFFF5A5A)
+                    : (isDark
+                          ? const Color(0xFF34343F)
+                          : const Color(0xFFD4D4D8)),
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: lfRed.withOpacity(0.22),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              location,
+              style: TextStyle(
+                color: isSelected ? Colors.white : textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+>>>>>>> Stashed changes
   Future<void> _showEditDialog() async {
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
     final TextEditingController titleController = TextEditingController(
       text: widget.item.title,
-    );
-    final TextEditingController locationController = TextEditingController(
-      text: widget.item.location,
     );
     final TextEditingController descriptionController = TextEditingController(
       text: widget.item.description,
     );
+    final TextEditingController otherLocationController =
+        TextEditingController();
 
-    String selectedCategory = widget.item.category.isNotEmpty
+    String selectedCategory = _editCategories.contains(widget.item.category)
         ? widget.item.category
         : _editCategories.first;
+
+    String selectedLocation = _editLocations.contains(widget.item.location)
+        ? widget.item.location
+        : 'Other';
+
+    if (selectedLocation == 'Other') {
+      otherLocationController.text = widget.item.location;
+    }
+
+    DateTime selectedDate =
+        widget.item.reportedDateTime ?? widget.item.timestamp;
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(
+      widget.item.reportedDateTime ?? widget.item.timestamp,
+    );
+
+    File? selectedImageFile;
+    bool removePhoto = false;
+
+    Future<void> pickDate(StateSetter setLocalState) async {
+      final now = DateTime.now();
+
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: selectedDate.isAfter(now) ? now : selectedDate,
+        firstDate: DateTime(2024),
+        lastDate: now,
+      );
+
+      if (picked != null) {
+        setLocalState(() {
+          selectedDate = picked;
+          final pickedDateTime = DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            selectedTime.hour,
+            selectedTime.minute,
+          );
+          if (pickedDateTime.isAfter(now)) {
+            selectedTime = TimeOfDay.fromDateTime(now);
+          }
+        });
+      }
+    }
+
+    Future<void> pickTime(StateSetter setLocalState) async {
+      final now = DateTime.now();
+
+      final picked = await showTimePicker(
+        context: context,
+        initialTime: selectedTime,
+        initialEntryMode: TimePickerEntryMode.input,
+      );
+
+      if (picked != null) {
+        final selectedDateTime = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          picked.hour,
+          picked.minute,
+        );
+
+        if (selectedDateTime.isAfter(now)) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Future time cannot be selected')),
+          );
+          return;
+        }
+
+        setLocalState(() {
+          selectedTime = picked;
+        });
+      }
+    }
 
     await showGeneralDialog(
       context: context,
@@ -226,6 +461,96 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: StatefulBuilder(
                     builder: (context, setLocalState) {
+                      final bool isOtherLocationSelected =
+                          selectedLocation == 'Other';
+
+                      final String finalLocation = isOtherLocationSelected
+                          ? otherLocationController.text.trim()
+                          : selectedLocation;
+
+                      Widget imagePreview() {
+                        if (selectedImageFile != null) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.file(
+                              selectedImageFile!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
+                          );
+                        }
+
+                        if (removePhoto) {
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 42,
+                                color: lfRed,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'No photo selected',
+                                style: TextStyle(
+                                  color: textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        if (widget.item.imageData != null &&
+                            widget.item.imageData!.isNotEmpty) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: _buildImage(widget.item.imageData),
+                          );
+                        }
+
+                        if (widget.item.imageUrl.isNotEmpty) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.network(
+                              widget.item.imageUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (c, e, s) {
+                                return const Center(
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    size: 40,
+                                    color: lfRed,
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.add_a_photo_outlined,
+                              size: 42,
+                              color: lfRed,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap to upload photo',
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
                       return Container(
                         width: double.infinity,
                         constraints: const BoxConstraints(maxWidth: 430),
@@ -305,28 +630,116 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 18),
+
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final file = await _pickEditedImage();
+                                      if (file != null) {
+                                        setLocalState(() {
+                                          selectedImageFile = file;
+                                          removePhoto = false;
+                                        });
+                                      }
+                                    },
+                                    child: Container(
+                                      height: 180,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: softBg,
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(color: borderColor),
+                                      ),
+                                      child: imagePreview(),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () async {
+                                            final file =
+                                                await _pickEditedImage();
+                                            if (file != null) {
+                                              setLocalState(() {
+                                                selectedImageFile = file;
+                                                removePhoto = false;
+                                              });
+                                            }
+                                          },
+                                          icon: const Icon(
+                                            Icons.photo_library_outlined,
+                                          ),
+                                          label: const Text('Change Photo'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: lfRed,
+                                            side: BorderSide(
+                                              color: borderColor,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {
+                                            setLocalState(() {
+                                              selectedImageFile = null;
+                                              removePhoto = true;
+                                            });
+                                          },
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                          ),
+                                          label: const Text('Remove Photo'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.redAccent,
+                                            side: BorderSide(
+                                              color: borderColor,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
                                   TextFormField(
                                     controller: titleController,
                                     style: TextStyle(
                                       color: textPrimary,
                                       fontWeight: FontWeight.w600,
                                     ),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'[a-zA-Z0-9\s]'),
+                                      ),
+                                    ],
                                     validator: (v) =>
-                                        _requiredField(v, 'Title'),
+                                        _validateAlphaNumericRequired(
+                                          v,
+                                          'Title',
+                                        ),
                                     decoration: _dialogFieldDecoration(
                                       'Title',
                                       label: 'Title',
                                     ),
                                   ),
+
                                   const SizedBox(height: 14),
+
                                   DropdownButtonFormField<String>(
                                     dropdownColor: cardBg,
-                                    value:
-                                        _editCategories.contains(
-                                          selectedCategory,
-                                        )
-                                        ? selectedCategory
-                                        : _editCategories.first,
+                                    value: selectedCategory,
                                     style: TextStyle(
                                       color: textPrimary,
                                       fontWeight: FontWeight.w600,
@@ -356,21 +769,191 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                       }
                                     },
                                   ),
+
                                   const SizedBox(height: 14),
-                                  TextFormField(
-                                    controller: locationController,
+
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          onTap: () => pickDate(setLocalState),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 14,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? const Color(0xFF24242C)
+                                                  : const Color(0xFFF7F7F8),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: borderColor,
+                                              ),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Date',
+                                                  style: TextStyle(
+                                                    color: textMuted,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  _formatPostedDate(
+                                                    selectedDate,
+                                                  ),
+                                                  style: TextStyle(
+                                                    color: textPrimary,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          onTap: () => pickTime(setLocalState),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 14,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? const Color(0xFF24242C)
+                                                  : const Color(0xFFF7F7F8),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: borderColor,
+                                              ),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Time',
+                                                  style: TextStyle(
+                                                    color: textMuted,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  selectedTime.format(context),
+                                                  style: TextStyle(
+                                                    color: textPrimary,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 14),
+
+                                  Text(
+                                    'Location',
                                     style: TextStyle(
-                                      color: textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    validator: (v) =>
-                                        _requiredField(v, 'Location'),
-                                    decoration: _dialogFieldDecoration(
-                                      'Location',
-                                      label: 'Location',
+                                      color: textSecondary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
                                     ),
                                   ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF24242C)
+                                          : const Color(0xFFF7F7F8),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: borderColor),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: _editLocations
+                                              .map(
+                                                (
+                                                  location,
+                                                ) => _buildEditLocationChip(
+                                                  location: location,
+                                                  selectedLocation:
+                                                      selectedLocation,
+                                                  setLocalState: (innerSetState) {
+                                                    setLocalState(() {
+                                                      selectedLocation =
+                                                          location;
+                                                      if (location != 'Other') {
+                                                        otherLocationController
+                                                            .clear();
+                                                      }
+                                                    });
+                                                  },
+                                                  otherLocationController:
+                                                      otherLocationController,
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                        if (isOtherLocationSelected) ...[
+                                          const SizedBox(height: 12),
+                                          TextFormField(
+                                            controller: otherLocationController,
+                                            style: TextStyle(
+                                              color: textPrimary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter.allow(
+                                                RegExp(r'[a-zA-Z0-9\s]'),
+                                              ),
+                                            ],
+                                            validator: (v) =>
+                                                _validateAlphaNumericRequired(
+                                                  v,
+                                                  'Other location',
+                                                ),
+                                            decoration: _dialogFieldDecoration(
+                                              'Type other location',
+                                              label: 'Other location',
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+
                                   const SizedBox(height: 14),
+
                                   TextFormField(
                                     controller: descriptionController,
                                     style: TextStyle(
@@ -378,12 +961,25 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                       fontWeight: FontWeight.w600,
                                     ),
                                     maxLines: 4,
+                                    maxLength: 300,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'[a-zA-Z0-9\s]'),
+                                      ),
+                                    ],
+                                    validator: (v) =>
+                                        _validateAlphaNumericRequired(
+                                          v,
+                                          'Description',
+                                        ),
                                     decoration: _dialogFieldDecoration(
                                       'Description',
                                       label: 'Description',
                                     ),
                                   ),
+
                                   const SizedBox(height: 20),
+
                                   Row(
                                     children: <Widget>[
                                       Expanded(
@@ -437,8 +1033,42 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                                 return;
                                               }
 
+                                              final DateTime reportDateTime =
+                                                  _combineDateAndTime(
+                                                    selectedDate,
+                                                    selectedTime,
+                                                  );
+
+                                              if (reportDateTime.isAfter(
+                                                DateTime.now(),
+                                              )) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Future date and time cannot be selected',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
+                                              if (finalLocation.isEmpty) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Location is required',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
                                               await LostFoundService()
-                                                  .updatePostBasic(
+                                                  .updatePostFull(
                                                     itemId: widget.item.id,
                                                     title: titleController.text
                                                         .trim(),
@@ -447,9 +1077,12 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                                         descriptionController
                                                             .text
                                                             .trim(),
-                                                    location: locationController
-                                                        .text
-                                                        .trim(),
+                                                    location: finalLocation,
+                                                    reportedDateTime:
+                                                        reportDateTime,
+                                                    imageFile:
+                                                        selectedImageFile,
+                                                    removePhoto: removePhoto,
                                                   );
 
                                               if (!mounted) return;
@@ -1218,6 +1851,17 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
               fontSize: 13,
             ),
           ),
+          if (item.reportedDateTime != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Reported item date: ${_formatPostedDate(item.reportedDateTime!)} ${_formatPostedTime(item.reportedDateTime!)}',
+              style: TextStyle(
+                color: textMuted,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: <Widget>[
@@ -1503,7 +2147,7 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                _primaryButton('THIS IS MINE', _showClaimDialog),
+                _primaryButton('I FOUND THIS', _showClaimDialog),
               ],
             ),
           ),

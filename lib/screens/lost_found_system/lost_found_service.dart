@@ -36,8 +36,7 @@ class LostFoundService {
         .get();
 
     for (final doc in snap.docs) {
-      final data = doc.data();
-      final rt = data['returnedAt'];
+      final rt = doc.data()['returnedAt'];
       DateTime? returnedAt;
       if (rt is Timestamp) returnedAt = rt.toDate();
 
@@ -48,7 +47,23 @@ class LostFoundService {
     }
   }
 
+  Future<String?> _convertImageToBase64(File? imageFile) async {
+    if (imageFile == null) return null;
+
+    final bytes = await imageFile.readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    if (base64Image.length > 800000) {
+      throw Exception(
+        'Image too big for Firestore. Please choose a smaller/compressed image.',
+      );
+    }
+
+    return base64Image;
+  }
+
   Future<void> createPost(LostItem item, File? imageFile) async {
+<<<<<<< Updated upstream
     String imageUrl = '';
 
     if (imageFile != null) {
@@ -58,6 +73,22 @@ class LostFoundService {
       final ref = _storage.ref().child(fileName);
       await ref.putFile(imageFile);
       imageUrl = await ref.getDownloadURL();
+=======
+    try {
+      final String? base64Image = await _convertImageToBase64(imageFile);
+      final data = item.toMap();
+
+      if (base64Image != null && base64Image.isNotEmpty) {
+        data['image_data'] = base64Image;
+      }
+
+      data['timestamp'] = FieldValue.serverTimestamp();
+
+      await _db.collection(_col).add(data);
+    } catch (e) {
+      print('ERROR uploading post: $e');
+      rethrow;
+>>>>>>> Stashed changes
     }
 
     final data = item.toMap();
@@ -65,6 +96,50 @@ class LostFoundService {
     data['timestamp'] = FieldValue.serverTimestamp();
 
     await _db.collection(_col).add(data);
+  }
+
+  Future<void> updatePostFull({
+    required String itemId,
+    required String title,
+    required String category,
+    required String description,
+    required String location,
+    required DateTime reportedDateTime,
+    File? imageFile,
+    bool removePhoto = false,
+  }) async {
+    final docRef = _db.collection(_col).doc(itemId);
+    final doc = await docRef.get();
+
+    if (!doc.exists) {
+      throw Exception('Post not found.');
+    }
+
+    final currentData = doc.data();
+    final currentStatus = (currentData?['status'] ?? '').toString();
+
+    if (currentStatus != 'Active') {
+      throw Exception('Only active posts can be edited.');
+    }
+
+    final Map<String, dynamic> updateData = {
+      'title': title.trim(),
+      'category': category.trim(),
+      'description': description.trim(),
+      'location': location.trim(),
+      'reportedDateTime': Timestamp.fromDate(reportedDateTime),
+    };
+
+    if (removePhoto) {
+      updateData['image_data'] = null;
+      updateData['imageUrl'] = '';
+    } else if (imageFile != null) {
+      final String? base64Image = await _convertImageToBase64(imageFile);
+      updateData['image_data'] = base64Image;
+      updateData['imageUrl'] = '';
+    }
+
+    await docRef.update(updateData);
   }
 
   Future<void> updatePostBasic({
@@ -86,6 +161,7 @@ class LostFoundService {
     final doc = await _db.collection(_col).doc(itemId).get();
     if (!doc.exists) return;
 
+<<<<<<< Updated upstream
     final data = doc.data();
     final imageUrl = (data?['imageUrl'] as String?) ?? '';
 
@@ -95,6 +171,8 @@ class LostFoundService {
       } catch (_) {}
     }
 
+=======
+>>>>>>> Stashed changes
     final messages = await _db
         .collection(_col)
         .doc(itemId)
