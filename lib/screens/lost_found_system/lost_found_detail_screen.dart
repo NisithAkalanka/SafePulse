@@ -29,6 +29,92 @@ class LostFoundDetailScreen extends StatefulWidget {
   State<LostFoundDetailScreen> createState() => _LostFoundDetailScreenState();
 }
 
+/// Temporary compatibility shim for newer Lost & Found detail screen actions.
+///
+/// These methods are currently missing from `LostFoundService` in this branch.
+/// The extension allows the app to compile until the real service methods are
+/// added in the service layer.
+///
+/// IMPORTANT: Replace these with real implementations inside LostFoundService
+/// when the service file is updated/merged.
+extension LostFoundServiceCompat on LostFoundService {
+  Future<void> updatePostFull({
+    required String itemId,
+    required String title,
+    required String category,
+    required String description,
+    required String location,
+    required DateTime reportedDateTime,
+    File? imageFile,
+    bool removePhoto = false,
+  }) async {
+    throw UnimplementedError(
+      'LostFoundService.updatePostFull is not implemented in this branch yet.',
+    );
+  }
+
+  Future<void> deletePost(String itemId) async {
+    throw UnimplementedError(
+      'LostFoundService.deletePost is not implemented in this branch yet.',
+    );
+  }
+
+  Future<void> submitFoundReport({
+    required String itemId,
+    required String requesterId,
+    required String requesterName,
+    required String question,
+  }) async {
+    throw UnimplementedError(
+      'LostFoundService.submitFoundReport is not implemented in this branch yet.',
+    );
+  }
+
+  Future<String> getVerificationQuestion(String itemId) async {
+    throw UnimplementedError(
+      'LostFoundService.getVerificationQuestion is not implemented in this branch yet.',
+    );
+  }
+
+  Future<void> submitOwnerAnswer({
+    required String itemId,
+    required String answer,
+  }) async {
+    throw UnimplementedError(
+      'LostFoundService.submitOwnerAnswer is not implemented in this branch yet.',
+    );
+  }
+
+  Future<void> submitClaimRequest({
+    required String itemId,
+    required String requesterId,
+    required String requesterName,
+    required String proofAnswer,
+  }) async {
+    throw UnimplementedError(
+      'LostFoundService.submitClaimRequest is not implemented in this branch yet.',
+    );
+  }
+
+  Future<String> getVerificationAnswer(String itemId) async {
+    throw UnimplementedError(
+      'LostFoundService.getVerificationAnswer is not implemented in this branch yet.',
+    );
+  }
+
+  Future<void> rejectRequest(String itemId) async {
+    throw UnimplementedError(
+      'LostFoundService.rejectRequest is not implemented in this branch yet.',
+    );
+  }
+
+  Future<void> enablePrivateChat(String itemId) async {
+    throw UnimplementedError(
+      'LostFoundService.enablePrivateChat is not implemented in this branch yet.',
+    );
+  }
+}
+
 class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
   final ImagePicker _picker = ImagePicker();
 

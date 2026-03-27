@@ -62,21 +62,6 @@ class LostFoundService {
   }
 
   Future<void> createPost(LostItem item, File? imageFile) async {
-
-    try {
-      String? base64Image;
-
-    String imageUrl = '';
-
-
-      if (imageFile != null) {
-        final bytes = await imageFile.readAsBytes();
-        base64Image = base64Encode(bytes);
-
-      final ref = _storage.ref().child(fileName);
-      await ref.putFile(imageFile);
-      imageUrl = await ref.getDownloadURL();
-
     try {
       final String? base64Image = await _convertImageToBase64(imageFile);
       final data = item.toMap();
@@ -91,7 +76,6 @@ class LostFoundService {
     } catch (e) {
       print('ERROR uploading post: $e');
       rethrow;
-
     }
   }
 
