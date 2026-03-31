@@ -34,12 +34,14 @@ class _HomeScreenState extends State<HomeScreen>
   Timer? _locationSyncTimer;
   StreamSubscription<User?>? _authSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _myAlertSub;
+  String? _activeEmergencyAlertId;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _helpOfferSub;
   final Set<String> _seenHelpOfferNotifications = <String>{};
 
   late final AnimationController _sosFlashController;
   late final Animation<double> _sosFlashOpacity;
+  bool _activeEmergency = false;
 
   // --- SHAKE TRIGGER VARIABLES ---
   ShakeDetector? _shakeDetector;
@@ -73,7 +75,6 @@ class _HomeScreenState extends State<HomeScreen>
 
     _initShakeDetection(); // ✅ start shake detection
 
-    // When user logs in/out, reload role so admin button shows correctly
     _authSub = FirebaseAuth.instance.authStateChanges().listen((u) {
       if (!mounted) return;
       if (u == null) {
@@ -84,6 +85,8 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           _userRole = 'student';
           _shakeEnabled = true;
+          _activeEmergency = false;
+          _activeEmergencyAlertId = null;
           _sosCategories = {
             "🚨 Medical Emergency": true,
             "⚠️ Threat / Hazard": true,
@@ -135,7 +138,6 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // --- SNAP-STYLE MAP SYNC (සෑම තත්පර 30කට වරක් ලොකේෂන් Update කරයි) ---
   void _startLiveLocationSync() {
     _locationSyncTimer = Timer.periodic(const Duration(seconds: 30), (
       timer,
@@ -161,21 +163,14 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-  // --- 🎯 SHAKE DETECTION LOGIC ---
-  // the detector callback used to be `void Function()`; newer
-  // versions supply a value, so accept an optional parameter and
-  // ignore it.
   void _onShakeAction([dynamic _]) {
     if (_shakeEnabled) {
       _showShakeConfirmationDialog();
     }
   }
 
-  // 2. ShakeDetector එක හදන හැටි (මෙතනයි Error එක තිබුණේ)
   void _initShakeDetection() {
     _shakeDetector = ShakeDetector.autoStart(
-      // the callback now takes an argument; our handler accepts
-      // an optional one, so we can pass it directly.
       onPhoneShake: _onShakeAction,
       shakeThresholdGravity: 2.7,
     );
@@ -272,8 +267,7 @@ class _HomeScreenState extends State<HomeScreen>
         if (!mounted) return;
         setState(() {
           _userRole = doc.data()?['role'] ?? "student";
-          _shakeEnabled =
-              doc.data()?['shake_enabled'] ?? true; // ✅ load shake setting
+          _shakeEnabled = doc.data()?['shake_enabled'] ?? true;
           if (doc.data()?['sos_categories'] != null) {
             _sosCategories = Map<String, bool>.from(
               doc.data()?['sos_categories'],
@@ -326,7 +320,6 @@ class _HomeScreenState extends State<HomeScreen>
       final user = FirebaseAuth.instance.currentUser;
       if (_currentPosition == null) await _getCurrentLocation();
 
-      // Cancel previous personal alert listener before creating a new one
       await _myAlertSub?.cancel();
       _myAlertSub = null;
 
@@ -345,26 +338,37 @@ class _HomeScreenState extends State<HomeScreen>
             'helper_name': null,
           });
 
+      if (mounted) {
+        setState(() {
+          _activeEmergency = true;
+          _activeEmergencyAlertId = alertRef.id;
+        });
+      }
+
       NotificationService.showSOSNotification(type, _currentAddress);
 
-      // Victim listens in real time for this exact alert document
       _myAlertSub = alertRef.snapshots().listen((snapshot) {
         if (!snapshot.exists) return;
         final data = snapshot.data();
         if (data == null) return;
 
-        // When someone accepts the help request
         if (data['status'] == 'Accepted' && data['helper_name'] != null) {
           final String helperName = data['helper_name'].toString();
 
-          // 1. Show system notification
           NotificationService.showSOSNotification(
             "HELP IS ON THE WAY!",
             "$helperName has accepted your request and is coming now.",
           );
 
-          // 2. Show in-app dialog
           _showHelperComingDialog(helperName);
+        }
+
+        if (data['status'] == 'Resolved') {
+          if (!mounted) return;
+          setState(() {
+            _activeEmergency = false;
+            _activeEmergencyAlertId = null;
+          });
         }
       });
 
@@ -482,6 +486,7 @@ class _HomeScreenState extends State<HomeScreen>
                 _showEmergencyAlert(
                   alertData?['type'] ?? 'Emergency',
                   alertData?['address'] ?? 'Nearby',
+                  change.doc.id,
                 );
               }
             }
@@ -585,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  void _showEmergencyAlert(String type, String location) {
+  void _showEmergencyAlert(String type, String location, String alertId) {
     if (!mounted) return;
     showDialog(
       context: context,
@@ -594,16 +599,47 @@ class _HomeScreenState extends State<HomeScreen>
         title: const Row(
           children: [
             Icon(Icons.warning, color: Colors.red),
-            Text(" HELP NEEDED"),
+            SizedBox(width: 10),
+            Text("HELP NEEDED"),
           ],
         ),
-        content: Text("A $type reported nearby:\n📍 $location"),
+        content: Text("A $type has been reported nearby at:\n📍 $location"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("CLOSE"),
+            child: const Text("CLOSE", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _respondToHelp(alertId);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text(
+              "I'M COMING TO HELP",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _respondToHelp(String alertId) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    await FirebaseFirestore.instance.collection('alerts').doc(alertId).update({
+      'status': 'Accepted',
+      'helper_name': user?.email?.split('@')[0] ?? "A SafePulse Member",
+      'helper_uid': user?.uid,
+      'accepted_at': FieldValue.serverTimestamp(),
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Confirmation sent! Please go safely."),
+        backgroundColor: Colors.green,
       ),
     );
   }
@@ -628,12 +664,51 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         actions: [
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context);
+              if (!mounted) return;
+              setState(() {
+                _activeEmergency = true;
+              });
+            },
             child: const Text("OK"),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _markCurrentAlertSafe() async {
+    final String? alertId = _activeEmergencyAlertId;
+    if (alertId == null) {
+      if (!mounted) return;
+      setState(() {
+        _activeEmergency = false;
+      });
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance.collection('alerts').doc(alertId).set({
+        'status': 'Resolved',
+        'resolved_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (!mounted) return;
+      setState(() {
+        _activeEmergency = false;
+        _activeEmergencyAlertId = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Alert cleared. Glad you're safe now."),
+          backgroundColor: Colors.blueAccent,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error clearing alert: $e');
+    }
   }
 
   Future<void> _checkProfileStatus() async {
@@ -681,16 +756,13 @@ class _HomeScreenState extends State<HomeScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: Text(
+        title: const Text(
           "SafePulse",
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.notifications_none_rounded,
               color: Colors.white,
               size: 30,
@@ -701,7 +773,11 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           IconButton(
-            icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: 30),
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              color: Colors.white,
+              size: 30,
+            ),
             onPressed: () {
               Navigator.of(context).push(
                 PageRouteBuilder(
@@ -913,7 +989,7 @@ class _HomeScreenState extends State<HomeScreen>
                                         _currentAddress,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -935,14 +1011,14 @@ class _HomeScreenState extends State<HomeScreen>
                                       color: Colors.white.withOpacity(0.16),
                                     ),
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     children: [
                                       Icon(
                                         Icons.cloud_done,
                                         color: Colors.white,
                                         size: 13,
                                       ),
-                                      const SizedBox(width: 5),
+                                      SizedBox(width: 5),
                                       Text(
                                         "Cloud Sync",
                                         style: TextStyle(
@@ -958,8 +1034,8 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           ),
                           const SizedBox(height: 18),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(28, 0, 28, 0),
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(28, 0, 28, 0),
                             child: Text(
                               "Shake your phone or hold SOS for instant help — your guardians will be notified.",
                               textAlign: TextAlign.center,
@@ -1410,6 +1486,34 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                             ),
                           ),
+                          if (_activeEmergency)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: _markCurrentAlertSafe,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      54,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    "I AM NOW SAFE - CLEAR ALERT",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -1452,7 +1556,7 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _userDocSub?.cancel();
-    _shakeDetector?.stopListening(); // ✅ stop shake
+    _shakeDetector?.stopListening();
     _globalAlertsSub?.cancel();
     _helpOfferSub?.cancel();
     _locationSyncTimer?.cancel();
@@ -1462,11 +1566,6 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 }
-
-// ===============================
-// Phase 3: App Security Lock (PIN)
-// NOTE: You can move this block into `lib/services/security_check.dart` later.
-// ===============================
 
 class SecurityCheck {
   static Future<void> validateAccess(
@@ -1481,7 +1580,6 @@ class SecurityCheck {
         .doc(user.uid)
         .get();
 
-    // If user has set an app PIN, force the PIN dialog before allowing access
     final appPin = doc.data()?['app_pin'];
     if (doc.exists && appPin != null && appPin.toString().isNotEmpty) {
       if (!context.mounted) return;
@@ -1496,7 +1594,6 @@ class SecurityCheck {
         onSuccess();
       }
     } else {
-      // If no PIN set, allow directly
       onSuccess();
     }
   }
@@ -1566,4 +1663,4 @@ class _SecurityLockDialogState extends State<SecurityLockDialog> {
       ],
     );
   }
-} //ori
+}
