@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lost_item_model.dart';
@@ -25,6 +25,14 @@ class LostFoundService {
 
       items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       return items;
+    });
+  }
+
+  Stream<LostItem?> getItemStream(String itemId) {
+    _cleanupReturnedItems();
+    return _db.collection(_col).doc(itemId).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return LostItem.fromMap(doc.data()!, doc.id);
     });
   }
 
@@ -55,10 +63,7 @@ class LostFoundService {
         final bytes = await imageFile.readAsBytes();
         base64Image = base64Encode(bytes);
 
-        print('Current String Length: ${base64Image.length}');
-
         if (base64Image.length > 800000) {
-          print('❌ Image too big for Firestore!');
           throw Exception(
             'Image too big for Firestore. Please choose a smaller/compressed image.',
           );
@@ -75,14 +80,29 @@ class LostFoundService {
 
       await _db.collection(_col).add(data);
     } catch (e) {
-      print('ERROR uploading post: $e');
       rethrow;
     }
   }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   Future<void> updatePostBasic({
 =======
+=======
+  Future<String?> _convertImageToBase64(File imageFile) async {
+    final bytes = await imageFile.readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    if (base64Image.length > 800000) {
+      throw Exception(
+        'Image too big for Firestore. Please choose a smaller/compressed image.',
+      );
+    }
+
+    return base64Image;
+  }
+
+>>>>>>> Stashed changes
   Future<void> updatePostFull({
 >>>>>>> Stashed changes
     required String itemId,
@@ -137,11 +157,31 @@ class LostFoundService {
 >>>>>>> Stashed changes
   }
 
+  Future<void> updatePostBasic({
+    required String itemId,
+    required String title,
+    required String category,
+    required String description,
+    required String location,
+  }) async {
+    await _db.collection(_col).doc(itemId).update({
+      'title': title.trim(),
+      'category': category.trim(),
+      'description': description.trim(),
+      'location': location.trim(),
+    });
+  }
+
+  Future<void> saveOrUpdatePost(LostItem item) async {
+    await _db
+        .collection(_col)
+        .doc(item.id)
+        .set(item.toMap(), SetOptions(merge: true));
+  }
+
   Future<void> deletePost(String itemId) async {
     final doc = await _db.collection(_col).doc(itemId).get();
     if (!doc.exists) return;
-
-    final data = doc.data();
 
     final messages = await _db
         .collection(_col)
@@ -174,6 +214,8 @@ class LostFoundService {
       'requesterChatAccepted': false,
       'ownerRetryMessage': null,
       'ownerRetryCount': 0,
+      'ownerMarkedReceived': false,
+      'requesterMarkedReturned': false,
     });
   }
 
@@ -203,6 +245,8 @@ class LostFoundService {
       'ownerChatAccepted': false,
       'requesterChatAccepted': false,
       'ownerRetryMessage': null,
+      'ownerMarkedReceived': false,
+      'requesterMarkedReturned': false,
     });
   }
 
@@ -223,6 +267,8 @@ class LostFoundService {
       'ownerChatAccepted': true,
       'chatEnabled': true,
       'ownerRetryMessage': null,
+      'ownerMarkedReceived': false,
+      'requesterMarkedReturned': false,
     });
   }
 
@@ -271,6 +317,9 @@ class LostFoundService {
       'requesterChatAccepted': false,
       'ownerRetryMessage': null,
       'ownerRetryCount': 0,
+      'ownerMarkedReceived': false,
+      'requesterMarkedReturned': false,
+      'returnedAt': null,
     });
   }
 
@@ -296,6 +345,9 @@ class LostFoundService {
       'ownerChatAccepted': true,
       'requesterChatAccepted': true,
       'ownerRetryMessage': null,
+      'ownerMarkedReceived': false,
+      'requesterMarkedReturned': false,
+      'returnedAt': null,
     });
   }
 
@@ -312,13 +364,65 @@ class LostFoundService {
       'requesterChatAccepted': false,
       'ownerRetryMessage': null,
       'ownerRetryCount': 0,
+      'ownerMarkedReceived': false,
+      'requesterMarkedReturned': false,
+      'returnedAt': null,
     });
+  }
+
+  Future<void> requesterMarksReturned(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    if (!doc.exists) return;
+
+    final data = doc.data() ?? {};
+    final bool ownerMarkedReceived = data['ownerMarkedReceived'] ?? false;
+
+    if (ownerMarkedReceived) {
+      await _db.collection(_col).doc(itemId).update({
+        'status': 'Returned',
+        'requesterMarkedReturned': true,
+        'ownerMarkedReceived': true,
+        'returnedAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await _db.collection(_col).doc(itemId).update({
+        'status': 'Return Pending',
+        'requesterMarkedReturned': true,
+        'returnedAt': null,
+      });
+    }
+  }
+
+  Future<void> ownerMarksReceived(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    if (!doc.exists) return;
+
+    final data = doc.data() ?? {};
+    final bool requesterMarkedReturned =
+        data['requesterMarkedReturned'] ?? false;
+
+    if (requesterMarkedReturned) {
+      await _db.collection(_col).doc(itemId).update({
+        'status': 'Returned',
+        'ownerMarkedReceived': true,
+        'requesterMarkedReturned': true,
+        'returnedAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await _db.collection(_col).doc(itemId).update({
+        'status': 'Receive Pending',
+        'ownerMarkedReceived': true,
+        'returnedAt': null,
+      });
+    }
   }
 
   Future<void> markAsReturned(String itemId) async {
     await _db.collection(_col).doc(itemId).update({
       'status': 'Returned',
       'returnedAt': FieldValue.serverTimestamp(),
+      'ownerMarkedReceived': true,
+      'requesterMarkedReturned': true,
     });
   }
 
@@ -335,13 +439,84 @@ class LostFoundService {
     required String itemId,
     required String senderId,
     required String senderName,
-    required String text,
+    String? text,
+    String type = 'text',
+    String? imageBase64,
+    String? audioBase64,
+    int? audioDurationMs,
   }) async {
     await _db.collection(_col).doc(itemId).collection('messages').add({
       'senderId': senderId,
       'senderName': senderName,
-      'text': text,
+      'type': type,
+      'text': text ?? '',
+      'image_data': imageBase64,
+      'audio_data': audioBase64,
+      'audio_duration_ms': audioDurationMs,
       'timestamp': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> sendTextMessage({
+    required String itemId,
+    required String senderId,
+    required String senderName,
+    required String text,
+  }) async {
+    await sendMessage(
+      itemId: itemId,
+      senderId: senderId,
+      senderName: senderName,
+      text: text,
+      type: 'text',
+    );
+  }
+
+  Future<void> sendImageMessage({
+    required String itemId,
+    required String senderId,
+    required String senderName,
+    required File imageFile,
+  }) async {
+    final bytes = await imageFile.readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    if (base64Image.length > 1000000) {
+      throw Exception('Selected image is too large. Choose a smaller image.');
+    }
+
+    await sendMessage(
+      itemId: itemId,
+      senderId: senderId,
+      senderName: senderName,
+      type: 'image',
+      imageBase64: base64Image,
+    );
+  }
+
+  Future<void> sendAudioMessage({
+    required String itemId,
+    required String senderId,
+    required String senderName,
+    required File audioFile,
+    int? audioDurationMs,
+  }) async {
+    final bytes = await audioFile.readAsBytes();
+    final base64Audio = base64Encode(bytes);
+
+    if (base64Audio.length > 1500000) {
+      throw Exception(
+        'Recorded audio is too large. Please record a shorter clip.',
+      );
+    }
+
+    await sendMessage(
+      itemId: itemId,
+      senderId: senderId,
+      senderName: senderName,
+      type: 'audio',
+      audioBase64: base64Audio,
+      audioDurationMs: audioDurationMs,
+    );
   }
 }
