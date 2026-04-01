@@ -80,19 +80,61 @@ class LostFoundService {
     }
   }
 
+<<<<<<< Updated upstream
   Future<void> updatePostBasic({
+=======
+  Future<void> updatePostFull({
+>>>>>>> Stashed changes
     required String itemId,
     required String title,
     required String category,
     required String description,
     required String location,
+<<<<<<< Updated upstream
   }) async {
     await _db.collection(_col).doc(itemId).update({
+=======
+    required DateTime reportedDateTime,
+    File? imageFile,
+    bool removePhoto = false,
+  }) async {
+    final docRef = _db.collection(_col).doc(itemId);
+    final doc = await docRef.get();
+
+    if (!doc.exists) {
+      throw Exception('Post not found.');
+    }
+
+    final currentData = doc.data();
+    final currentStatus = (currentData?['status'] ?? '').toString();
+
+    if (currentStatus != 'Active') {
+      throw Exception('Only active posts can be edited.');
+    }
+
+    final Map<String, dynamic> updateData = {
+>>>>>>> Stashed changes
       'title': title.trim(),
       'category': category.trim(),
       'description': description.trim(),
       'location': location.trim(),
+<<<<<<< Updated upstream
     });
+=======
+      'reportedDateTime': Timestamp.fromDate(reportedDateTime),
+    };
+
+    if (removePhoto) {
+      updateData['image_data'] = null;
+      updateData['imageUrl'] = '';
+    } else if (imageFile != null) {
+      final String? base64Image = await _convertImageToBase64(imageFile);
+      updateData['image_data'] = base64Image;
+      updateData['imageUrl'] = '';
+    }
+
+    await docRef.update(updateData);
+>>>>>>> Stashed changes
   }
 
   Future<void> deletePost(String itemId) async {
@@ -128,6 +170,10 @@ class LostFoundService {
       'verificationQuestion': question,
       'verificationAnswer': null,
       'chatEnabled': false,
+      'ownerChatAccepted': false,
+      'requesterChatAccepted': false,
+      'ownerRetryMessage': null,
+      'ownerRetryCount': 0,
     });
   }
 
@@ -141,20 +187,90 @@ class LostFoundService {
     });
   }
 
-  Future<void> submitClaimRequest({
+  Future<void> sendLostItemFoundRequest({
     required String itemId,
     required String requesterId,
     required String requesterName,
-    required String proofAnswer,
   }) async {
     await _db.collection(_col).doc(itemId).update({
-      'status': 'Claim Pending',
-      'requestType': 'claim',
+      'status': 'Chat Request Pending',
+      'requestType': 'chat_request',
       'requesterId': requesterId,
       'requesterName': requesterName,
-      'verificationQuestion': 'Describe any special marks or unique details.',
-      'verificationAnswer': proofAnswer,
+      'verificationQuestion': null,
+      'verificationAnswer': null,
       'chatEnabled': false,
+      'ownerChatAccepted': false,
+      'requesterChatAccepted': false,
+      'ownerRetryMessage': null,
+    });
+  }
+
+  Future<void> ownerRequestsChatOpen(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Owner Requested Chat Approval',
+      'ownerChatAccepted': true,
+      'requesterChatAccepted': false,
+      'chatEnabled': false,
+      'ownerRetryMessage': null,
+    });
+  }
+
+  Future<void> requesterAcceptsChat(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Chat Enabled',
+      'requesterChatAccepted': true,
+      'ownerChatAccepted': true,
+      'chatEnabled': true,
+      'ownerRetryMessage': null,
+    });
+  }
+
+  Future<void> requesterRejectsOwnerChatRequest(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Owner Chat Rejected',
+      'requesterChatAccepted': false,
+      'chatEnabled': false,
+    });
+  }
+
+  Future<void> ownerSendsRetryMessage({
+    required String itemId,
+    required String message,
+  }) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    if (!doc.exists) return;
+
+    final data = doc.data() ?? {};
+    final int currentCount = (data['ownerRetryCount'] ?? 0) as int;
+
+    if (currentCount >= 2) {
+      throw Exception('Retry limit reached.');
+    }
+
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Owner Retry Message Sent',
+      'ownerRetryMessage': message.trim(),
+      'ownerRetryCount': currentCount + 1,
+      'chatEnabled': false,
+      'ownerChatAccepted': true,
+      'requesterChatAccepted': false,
+    });
+  }
+
+  Future<void> rejectChatRequest(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Active',
+      'requestType': null,
+      'requesterId': null,
+      'requesterName': null,
+      'verificationQuestion': null,
+      'verificationAnswer': null,
+      'chatEnabled': false,
+      'ownerChatAccepted': false,
+      'requesterChatAccepted': false,
+      'ownerRetryMessage': null,
+      'ownerRetryCount': 0,
     });
   }
 
@@ -177,6 +293,9 @@ class LostFoundService {
     await _db.collection(_col).doc(itemId).update({
       'status': 'Chat Enabled',
       'chatEnabled': true,
+      'ownerChatAccepted': true,
+      'requesterChatAccepted': true,
+      'ownerRetryMessage': null,
     });
   }
 
@@ -189,6 +308,10 @@ class LostFoundService {
       'verificationQuestion': null,
       'verificationAnswer': null,
       'chatEnabled': false,
+      'ownerChatAccepted': false,
+      'requesterChatAccepted': false,
+      'ownerRetryMessage': null,
+      'ownerRetryCount': 0,
     });
   }
 

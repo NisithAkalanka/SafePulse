@@ -1,10 +1,11 @@
 import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'lost_item_model.dart';
-import 'lost_found_service.dart';
 import 'lost_found_detail_screen.dart';
+import 'lost_found_service.dart';
+import 'lost_item_model.dart';
 
 const Color lfRed = Color(0xFFE53935);
 const Color lfTextPrimary = Color(0xFF1E1E1E);
@@ -33,7 +34,7 @@ class LostFoundItemsSection extends StatelessWidget {
     final q = query.toLowerCase();
     final loc = locationFilter.toLowerCase();
 
-    final matchCategory = category == "All" || i.category == category;
+    final matchCategory = category == 'All' || i.category == category;
     final matchSearch =
         q.isEmpty ||
         i.title.toLowerCase().contains(q) ||
@@ -72,7 +73,7 @@ class LostFoundItemsSection extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Text(
-                "Loading error. Please reopen Lost & Found.",
+                'Loading error. Please reopen Lost & Found.',
                 style: TextStyle(
                   color: textPrimary,
                   fontWeight: FontWeight.w600,
@@ -92,7 +93,6 @@ class LostFoundItemsSection extends StatelessWidget {
         final filtered = snapshot.data!
             .where((i) => _matchFilters(i, currentUid))
             .toList();
-
         final todayPosts = filtered
             .where((i) => _isToday(i.timestamp))
             .toList();
@@ -120,7 +120,7 @@ class LostFoundItemsSection extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          "Showing only your posts",
+                          'Showing only your posts',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : lfRed,
@@ -183,7 +183,7 @@ class LostFoundItemsSection extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                "Today",
+                'Today',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -197,7 +197,7 @@ class LostFoundItemsSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   alignment: Alignment.center,
                   child: Text(
-                    "No posts added today.",
+                    'No posts added today.',
                     style: TextStyle(
                       color: textMuted,
                       fontWeight: FontWeight.w600,
@@ -224,7 +224,7 @@ class LostFoundItemsSection extends StatelessWidget {
                 ),
               const SizedBox(height: 14),
               Text(
-                "All Posts",
+                'All Posts',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -238,9 +238,9 @@ class LostFoundItemsSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   alignment: Alignment.center,
                   child: Text(
-                    category == "All"
-                        ? "No items found."
-                        : "No items found in $category.",
+                    category == 'All'
+                        ? 'No items found.'
+                        : 'No items found in $category.',
                     style: TextStyle(
                       color: textMuted,
                       fontWeight: FontWeight.w600,
@@ -294,12 +294,17 @@ class _ItemCardState extends State<_ItemCard> {
         return (bg: const Color(0xFFB71C1C), text: Colors.white);
       case 'Chat Enabled':
       case 'Answer Submitted':
+      case 'Owner Verification Sent':
         return (bg: const Color(0xFFEAF2FF), text: const Color(0xFF1565C0));
       case 'Claim Pending':
       case 'Verification Pending':
+      case 'Chat Request Pending':
+      case 'Return Pending':
         return (bg: const Color(0xFFFFF4DB), text: const Color(0xFFB26A00));
       case 'Returned':
         return (bg: const Color(0xFFE8F6EA), text: const Color(0xFF2E7D32));
+      case 'Chat Rejected':
+        return (bg: const Color(0xFFFFEBEE), text: const Color(0xFFC62828));
       default:
         return (bg: Colors.white.withOpacity(0.92), text: Colors.black87);
     }
@@ -307,20 +312,17 @@ class _ItemCardState extends State<_ItemCard> {
 
   String _remainingDeleteTime() {
     final returnedAt = widget.item.returnedAt;
-    if (returnedAt == null) return "Deletes in 1h 0m";
+    if (returnedAt == null) return 'Deletes in 1h 0m';
 
     final expiry = returnedAt.add(const Duration(hours: 1));
     final remaining = expiry.difference(DateTime.now());
 
-    if (remaining.isNegative) return "Deleting soon";
+    if (remaining.isNegative) return 'Deleting soon';
 
     final hours = remaining.inHours;
     final minutes = remaining.inMinutes.remainder(60);
-
-    if (hours > 0) {
-      return "Deletes in ${hours}h ${minutes}m";
-    }
-    return "Deletes in ${minutes}m";
+    if (hours > 0) return 'Deletes in ${hours}h ${minutes}m';
+    return 'Deletes in ${minutes}m';
   }
 
   String _formatPostedDate(DateTime date) {
@@ -538,7 +540,7 @@ class _ItemCardState extends State<_ItemCard> {
                       top: 8,
                       right: 8,
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 92),
+                        constraints: const BoxConstraints(maxWidth: 96),
                         child: _buildStatusOverlay(),
                       ),
                     ),
@@ -597,7 +599,7 @@ class _ItemCardState extends State<_ItemCard> {
                             Expanded(
                               child: Text(
                                 item.location.isEmpty
-                                    ? "Location not added"
+                                    ? 'Location not added'
                                     : item.location,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,

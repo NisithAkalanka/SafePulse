@@ -20,11 +20,17 @@ class LostItem {
 
   String? requesterId;
   String? requesterName;
-  String? requestType; // "found" or "claim"
+  String? requestType; // "found" or "claim" or "chat_request"
   String? verificationQuestion;
   String? verificationAnswer;
   bool chatEnabled;
   DateTime? returnedAt;
+
+  bool ownerChatAccepted;
+  bool requesterChatAccepted;
+
+  String? ownerRetryMessage;
+  int ownerRetryCount;
 
   LostItem({
     required this.id,
@@ -49,6 +55,10 @@ class LostItem {
     this.chatEnabled = false,
     this.returnedAt,
     this.imageData,
+    this.ownerChatAccepted = false,
+    this.requesterChatAccepted = false,
+    this.ownerRetryMessage,
+    this.ownerRetryCount = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -76,6 +86,10 @@ class LostItem {
       'verificationAnswer': verificationAnswer,
       'chatEnabled': chatEnabled,
       'returnedAt': returnedAt == null ? null : Timestamp.fromDate(returnedAt!),
+      'ownerChatAccepted': ownerChatAccepted,
+      'requesterChatAccepted': requesterChatAccepted,
+      'ownerRetryMessage': ownerRetryMessage,
+      'ownerRetryCount': ownerRetryCount,
     };
   }
 
@@ -127,6 +141,10 @@ class LostItem {
       verificationAnswer: map['verificationAnswer'],
       chatEnabled: map['chatEnabled'] ?? false,
       returnedAt: safeReturnedAt,
+      ownerChatAccepted: map['ownerChatAccepted'] ?? false,
+      requesterChatAccepted: map['requesterChatAccepted'] ?? false,
+      ownerRetryMessage: map['ownerRetryMessage'],
+      ownerRetryCount: map['ownerRetryCount'] ?? 0,
     );
   }
 }
