@@ -55,6 +55,13 @@ class _MockChatScreenState extends State<MockChatScreen> {
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
+  bool _canAccessChat(LostItem? item) {
+    if (item == null) return false;
+    final bool isOwner = item.userId == _myUid;
+    final bool isRequester = item.requesterId == _myUid;
+    return item.chatEnabled && (isOwner || isRequester);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -878,6 +885,68 @@ class _MockChatScreenState extends State<MockChatScreen> {
     );
   }
 
+  Widget _buildAccessDeniedScreen(
+    String headerName,
+    Color pageBg,
+    Color cardBg,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    return Column(
+      children: [
+        _buildChatHeader(headerName),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_outline, color: spRed, size: 42),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Private chat',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This chat can only be viewed by the two users involved in the conversation.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: textSecondary,
+                        fontWeight: FontWeight.w500,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     _recordTimer?.cancel();
@@ -914,6 +983,16 @@ class _MockChatScreenState extends State<MockChatScreen> {
         builder: (context, itemSnapshot) {
           final item = itemSnapshot.data;
           final headerName = _headerName(item);
+
+          if (!_canAccessChat(item)) {
+            return _buildAccessDeniedScreen(
+              headerName,
+              pageBg,
+              cardBg,
+              textPrimary,
+              textSecondary,
+            );
+          }
 
           return Column(
             children: [
