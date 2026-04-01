@@ -81,6 +81,10 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     return uid != null && uid == item.requesterId;
   }
 
+  bool _isConversationParticipant(LostItem item) {
+    return _isOwner(item) || _isRequester(item);
+  }
+
   bool _isActiveStatus(LostItem item) => item.status == 'Active';
 
   Widget _panel({required Widget child}) {
@@ -934,6 +938,8 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
   }
 
   void _openChat(LostItem item) {
+    if (!_isConversationParticipant(item)) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1638,6 +1644,8 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
   }
 
   Widget _chatCard(LostItem item) {
+    final bool isFoundItem = item.type == 'Found';
+
     return _panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1658,7 +1666,10 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
           const SizedBox(height: 14),
           _primaryButton('OPEN CHAT', () => _openChat(item)),
           const SizedBox(height: 12),
-          if (_isOwner(item) &&
+
+          // LOST ITEM LOGIC - unchanged
+          if (!isFoundItem &&
+              _isOwner(item) &&
               !item.ownerMarkedReceived &&
               item.status == 'Chat Enabled')
             _greenActionButton(
@@ -1666,7 +1677,9 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
               icon: Icons.inventory_2_outlined,
               onTap: () => _markReceivedByOwner(item),
             ),
-          if (!_isOwner(item) &&
+
+          if (!isFoundItem &&
+              !_isOwner(item) &&
               _isRequester(item) &&
               !item.requesterMarkedReturned &&
               item.status == 'Chat Enabled')
@@ -1675,6 +1688,71 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
               icon: Icons.assignment_turned_in_outlined,
               onTap: () => _markReturnedByRequester(item),
             ),
+
+          // FOUND ITEM LOGIC - swapped as requested
+          if (isFoundItem &&
+              _isOwner(item) &&
+              !item.requesterMarkedReturned &&
+              item.status == 'Chat Enabled')
+            _greenActionButton(
+              text: 'RETURNED ITEM',
+              icon: Icons.assignment_turned_in_outlined,
+              onTap: () => _markReturnedByRequester(item),
+            ),
+
+          if (isFoundItem &&
+              !_isOwner(item) &&
+              _isRequester(item) &&
+              !item.ownerMarkedReceived &&
+              item.status == 'Chat Enabled')
+            _greenActionButton(
+              text: 'RECEIVED ITEM',
+              icon: Icons.inventory_2_outlined,
+              onTap: () => _markReceivedByOwner(item),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _publicVerificationNoticeCard(LostItem item) {
+    String message = 'Verification in progress.';
+
+    if (item.chatEnabled || item.status == 'Chat Enabled') {
+      message =
+          'Verification in progress. Private chat is visible only to the two users involved.';
+    } else if (item.status == 'Chat Request Pending' ||
+        item.status == 'Owner Requested Chat Approval' ||
+        item.status == 'Owner Retry Message Sent' ||
+        item.status == 'Owner Chat Rejected' ||
+        item.status == 'Claim Pending' ||
+        item.status == 'Verification Pending' ||
+        item.status == 'Answer Submitted') {
+      message =
+          'Verification in progress. Only the users involved can see the private conversation.';
+    }
+
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Verification in progress',
+            style: TextStyle(
+              color: textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: TextStyle(
+              color: textSecondary,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+          ),
         ],
       ),
     );
@@ -1705,6 +1783,31 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     );
   }
 
+  Widget _foundItemMineCard(LostItem item) {
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Claim this found item',
+            style: TextStyle(
+              color: textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Let the person who posted this found item know that it belongs to you and request to open chat.',
+            style: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 14),
+          _primaryButton('THIS IS MINE', () => _sendFoundThisRequest(item)),
+        ],
+      ),
+    );
+  }
+
   Widget _ownerReceivedFoundRequestCard(LostItem item) {
     final requesterName = (item.requesterName ?? 'Someone').trim().isEmpty
         ? 'Someone'
@@ -1724,7 +1827,7 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '$requesterName clicked "I FOUND THIS". You can reject this request or ask them to open chat.',
+            '$requesterName clicked a claim button. You can reject this request or ask them to open chat.',
             style: TextStyle(
               color: textSecondary,
               fontWeight: FontWeight.w500,
@@ -2026,8 +2129,23 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     final List<Widget> cards = <Widget>[];
     final bool isOwner = _isOwner(item);
     final bool isRequester = _isRequester(item);
+    final bool isParticipant = _isConversationParticipant(item);
 
     if (item.status == 'Returned') {
+      return cards;
+    }
+
+    if (!isParticipant &&
+        (item.chatEnabled ||
+            item.status == 'Chat Enabled' ||
+            item.status == 'Chat Request Pending' ||
+            item.status == 'Owner Requested Chat Approval' ||
+            item.status == 'Owner Retry Message Sent' ||
+            item.status == 'Owner Chat Rejected' ||
+            item.status == 'Claim Pending' ||
+            item.status == 'Verification Pending' ||
+            item.status == 'Answer Submitted')) {
+      cards.add(_publicVerificationNoticeCard(item));
       return cards;
     }
 
@@ -2058,12 +2176,16 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     }
 
     if (item.chatEnabled) {
-      cards.add(_chatCard(item));
+      if (isParticipant) {
+        cards.add(_chatCard(item));
+      } else {
+        cards.add(_publicVerificationNoticeCard(item));
+      }
       return cards;
     }
 
     if (item.type == 'Lost') {
-      if (!isOwner && item.status == 'Active') {
+      if (!isOwner && !isRequester && item.status == 'Active') {
         cards.add(_lostItemRequesterCard(item));
       } else if (isOwner && item.status == 'Chat Request Pending') {
         cards.add(_ownerReceivedFoundRequestCard(item));
@@ -2141,35 +2263,40 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
         cards.add(_finderApprovalCard(item));
       }
     } else {
-      if (!isOwner && item.status == 'Active') {
+      if (!isOwner && !isRequester && item.status == 'Active') {
+        cards.add(_foundItemMineCard(item));
+      } else if (isOwner && item.status == 'Chat Request Pending') {
+        cards.add(_ownerReceivedFoundRequestCard(item));
+      } else if (!isOwner &&
+          isRequester &&
+          item.status == 'Chat Request Pending') {
         cards.add(
-          _panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Report found ownership',
-                  style: TextStyle(
-                    color: textPrimary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Ask a verification question before returning the item.',
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _primaryButton(
-                  'ASK VERIFICATION QUESTION',
-                  () => _showFoundQuestionDialog(item),
-                ),
-              ],
-            ),
+          _requesterWaitingCard(
+            'Your request was sent to the person who posted this item. Please wait for their response.',
+            showCancelButton: true,
+            onCancel: () => _cancelMyRequest(item),
+          ),
+        );
+      } else if (!isOwner &&
+          isRequester &&
+          item.status == 'Owner Requested Chat Approval') {
+        cards.add(_requesterOwnerAskedForChatCard(item));
+      } else if (isOwner && item.status == 'Owner Requested Chat Approval') {
+        cards.add(
+          _requesterWaitingCard(
+            'You requested to open chat. Please wait for the requester to accept.',
+          ),
+        );
+      } else if (isOwner && item.status == 'Owner Chat Rejected') {
+        cards.add(_ownerRejectedChatCard(item));
+      } else if (!isOwner &&
+          isRequester &&
+          item.status == 'Owner Retry Message Sent') {
+        cards.add(_requesterRetryMessageCard(item));
+      } else if (isOwner && item.status == 'Owner Retry Message Sent') {
+        cards.add(
+          _requesterWaitingCard(
+            'Your small message was sent. Please wait for the other user to accept or reject.',
           ),
         );
       } else if (isOwner &&

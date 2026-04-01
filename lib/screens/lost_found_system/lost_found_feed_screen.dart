@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'create_item_screen.dart';
 import 'lost_found_items_section.dart';
+import 'lost_found_notifications_screen.dart';
 import '../sos_system/main_menu_screen.dart';
 
 const Color lfRed = Color(0xFFE53935);
@@ -646,6 +647,13 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
     );
   }
 
+  void _openNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LostFoundNotificationsScreen()),
+    );
+  }
+
   Widget _quickAction({
     required IconData icon,
     required String title,
@@ -887,6 +895,11 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            tooltip: "Notifications",
+            onPressed: _openNotifications,
+            icon: const Icon(Icons.notifications_none_rounded),
+          ),
           IconButton(
             tooltip: "Main Menu",
             onPressed: _openMainMenu,

@@ -2,12 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'lost_found_notification_service.dart';
 import 'lost_item_model.dart';
 
 class LostFoundService {
   static const String _col = 'lost_found_posts';
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final LostFoundNotificationService _notificationService =
+      LostFoundNotificationService();
 
   Stream<List<LostItem>> getItemsStream(String type) {
     _cleanupReturnedItems();
@@ -78,7 +81,12 @@ class LostFoundService {
 
       data['timestamp'] = FieldValue.serverTimestamp();
 
-      await _db.collection(_col).add(data);
+      final docRef = await _db.collection(_col).add(data);
+
+      await _notificationService.notifyAllUsersAboutNewPost(
+        item: item,
+        itemId: docRef.id,
+      );
     } catch (e) {
       rethrow;
     }
@@ -202,6 +210,11 @@ class LostFoundService {
     required String requesterName,
     required String question,
   }) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    final item = doc.exists && doc.data() != null
+        ? LostItem.fromMap(doc.data()!, doc.id)
+        : null;
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Verification Pending',
       'requestType': 'found',
@@ -217,16 +230,45 @@ class LostFoundService {
       'ownerMarkedReceived': false,
       'requesterMarkedReturned': false,
     });
+
+    if (item != null) {
+      await _notificationService.sendToUser(
+        userId: item.userId,
+        title: 'New verification request',
+        body:
+            '$requesterName asked a verification question for "${item.title}".',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'claim_request',
+      );
+    }
   }
 
   Future<void> submitOwnerAnswer({
     required String itemId,
     required String answer,
   }) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    final item = doc.exists && doc.data() != null
+        ? LostItem.fromMap(doc.data()!, doc.id)
+        : null;
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Answer Submitted',
       'verificationAnswer': answer,
     });
+
+    if (item != null && (item.requesterId ?? '').isNotEmpty) {
+      await _notificationService.sendToUser(
+        userId: item.requesterId!,
+        title: 'Verification answer received',
+        body:
+            'The owner answered your verification request for "${item.title}".',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'verification_answer',
+      );
+    }
   }
 
   Future<void> sendLostItemFoundRequest({
@@ -234,6 +276,11 @@ class LostFoundService {
     required String requesterId,
     required String requesterName,
   }) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    final item = doc.exists && doc.data() != null
+        ? LostItem.fromMap(doc.data()!, doc.id)
+        : null;
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Chat Request Pending',
       'requestType': 'chat_request',
@@ -248,9 +295,25 @@ class LostFoundService {
       'ownerMarkedReceived': false,
       'requesterMarkedReturned': false,
     });
+
+    if (item != null) {
+      await _notificationService.sendToUser(
+        userId: item.userId,
+        title: 'New claim request',
+        body: '$requesterName sent a claim request for "${item.title}".',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'claim_request',
+      );
+    }
   }
 
   Future<void> ownerRequestsChatOpen(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    final item = doc.exists && doc.data() != null
+        ? LostItem.fromMap(doc.data()!, doc.id)
+        : null;
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Owner Requested Chat Approval',
       'ownerChatAccepted': true,
@@ -258,9 +321,25 @@ class LostFoundService {
       'chatEnabled': false,
       'ownerRetryMessage': null,
     });
+
+    if (item != null && (item.requesterId ?? '').isNotEmpty) {
+      await _notificationService.sendToUser(
+        userId: item.requesterId!,
+        title: 'Chat request received',
+        body: 'The owner requested to open chat for "${item.title}".',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'request_chat',
+      );
+    }
   }
 
   Future<void> requesterAcceptsChat(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    final item = doc.exists && doc.data() != null
+        ? LostItem.fromMap(doc.data()!, doc.id)
+        : null;
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Chat Enabled',
       'requesterChatAccepted': true,
@@ -270,14 +349,46 @@ class LostFoundService {
       'ownerMarkedReceived': false,
       'requesterMarkedReturned': false,
     });
+
+    if (item != null) {
+      final ids = <String>[
+        item.userId,
+        if ((item.requesterId ?? '').isNotEmpty) item.requesterId!,
+      ];
+
+      await _notificationService.sendToMultipleUsers(
+        userIds: ids,
+        title: 'Private chat enabled',
+        body: 'Private chat is now enabled for "${item.title}".',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'chat_accepted',
+      );
+    }
   }
 
   Future<void> requesterRejectsOwnerChatRequest(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    final item = doc.exists && doc.data() != null
+        ? LostItem.fromMap(doc.data()!, doc.id)
+        : null;
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Owner Chat Rejected',
       'requesterChatAccepted': false,
       'chatEnabled': false,
     });
+
+    if (item != null) {
+      await _notificationService.sendToUser(
+        userId: item.userId,
+        title: 'Chat request rejected',
+        body: 'Your chat request for "${item.title}" was rejected.',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'chat_rejected',
+      );
+    }
   }
 
   Future<void> ownerSendsRetryMessage({
@@ -288,6 +399,7 @@ class LostFoundService {
     if (!doc.exists) return;
 
     final data = doc.data() ?? {};
+    final item = LostItem.fromMap(data, doc.id);
     final int currentCount = (data['ownerRetryCount'] ?? 0) as int;
 
     if (currentCount >= 2) {
@@ -302,6 +414,18 @@ class LostFoundService {
       'ownerChatAccepted': true,
       'requesterChatAccepted': false,
     });
+
+    if ((item.requesterId ?? '').isNotEmpty) {
+      await _notificationService.sendToUser(
+        userId: item.requesterId!,
+        title: 'Message from owner',
+        body:
+            'The owner sent a message about "${item.title}": ${message.trim()}',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'retry_message',
+      );
+    }
   }
 
   Future<void> rejectChatRequest(String itemId) async {
@@ -339,6 +463,11 @@ class LostFoundService {
   }
 
   Future<void> enablePrivateChat(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    final item = doc.exists && doc.data() != null
+        ? LostItem.fromMap(doc.data()!, doc.id)
+        : null;
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Chat Enabled',
       'chatEnabled': true,
@@ -349,6 +478,22 @@ class LostFoundService {
       'requesterMarkedReturned': false,
       'returnedAt': null,
     });
+
+    if (item != null) {
+      final ids = <String>[
+        item.userId,
+        if ((item.requesterId ?? '').isNotEmpty) item.requesterId!,
+      ];
+
+      await _notificationService.sendToMultipleUsers(
+        userIds: ids,
+        title: 'Private chat enabled',
+        body: 'Private chat is now enabled for "${item.title}".',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'chat_accepted',
+      );
+    }
   }
 
   Future<void> rejectRequest(String itemId) async {
@@ -375,6 +520,7 @@ class LostFoundService {
     if (!doc.exists) return;
 
     final data = doc.data() ?? {};
+    final item = LostItem.fromMap(data, doc.id);
     final bool ownerMarkedReceived = data['ownerMarkedReceived'] ?? false;
 
     if (ownerMarkedReceived) {
@@ -391,6 +537,15 @@ class LostFoundService {
         'returnedAt': null,
       });
     }
+
+    await _notificationService.sendToUser(
+      userId: item.userId,
+      title: 'Item marked as returned',
+      body: 'The other user marked "${item.title}" as returned.',
+      itemId: itemId,
+      itemType: item.type,
+      actionType: 'returned',
+    );
   }
 
   Future<void> ownerMarksReceived(String itemId) async {
@@ -398,6 +553,7 @@ class LostFoundService {
     if (!doc.exists) return;
 
     final data = doc.data() ?? {};
+    final item = LostItem.fromMap(data, doc.id);
     final bool requesterMarkedReturned =
         data['requesterMarkedReturned'] ?? false;
 
@@ -415,15 +571,47 @@ class LostFoundService {
         'returnedAt': null,
       });
     }
+
+    if ((item.requesterId ?? '').isNotEmpty) {
+      await _notificationService.sendToUser(
+        userId: item.requesterId!,
+        title: 'Item marked as received',
+        body: 'The owner marked "${item.title}" as received.',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'received',
+      );
+    }
   }
 
   Future<void> markAsReturned(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    final item = doc.exists && doc.data() != null
+        ? LostItem.fromMap(doc.data()!, doc.id)
+        : null;
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Returned',
       'returnedAt': FieldValue.serverTimestamp(),
       'ownerMarkedReceived': true,
       'requesterMarkedReturned': true,
     });
+
+    if (item != null) {
+      final ids = <String>[
+        item.userId,
+        if ((item.requesterId ?? '').isNotEmpty) item.requesterId!,
+      ];
+
+      await _notificationService.sendToMultipleUsers(
+        userIds: ids,
+        title: 'Item return completed',
+        body: '"${item.title}" was marked as returned.',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'returned',
+      );
+    }
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getMessagesStream(String itemId) {
