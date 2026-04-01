@@ -219,6 +219,36 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     }
   }
 
+  Future<void> _saveEditedItem({
+    required String title,
+    required String category,
+    required String description,
+    required String location,
+  }) async {
+    widget.item.title = title;
+    widget.item.category = category;
+    widget.item.description = description;
+    widget.item.location = location;
+
+    final dynamic service = LostFoundService();
+
+    try {
+      await service.updatePostBasic(
+        itemId: widget.item.id,
+        title: title,
+        category: category,
+        description: description,
+        location: location,
+      );
+      return;
+    } catch (_) {}
+
+    try {
+      await service.saveOrUpdatePost(widget.item);
+      return;
+    } catch (_) {}
+  }
+
   Future<void> _showEditDialog() async {
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
     final TextEditingController titleController = TextEditingController(
@@ -466,20 +496,17 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                                 return;
                                               }
 
-                                              await LostFoundService()
-                                                  .updatePostBasic(
-                                                    itemId: widget.item.id,
-                                                    title: titleController.text
+                                              await _saveEditedItem(
+                                                title: titleController.text
+                                                    .trim(),
+                                                category: selectedCategory,
+                                                description:
+                                                    descriptionController.text
                                                         .trim(),
-                                                    category: selectedCategory,
-                                                    description:
-                                                        descriptionController
-                                                            .text
-                                                            .trim(),
-                                                    location: locationController
-                                                        .text
-                                                        .trim(),
-                                                  );
+                                                location: locationController
+                                                    .text
+                                                    .trim(),
+                                              );
 
                                               if (!mounted) return;
                                               Navigator.pop(context);
@@ -1852,3 +1879,4 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     );
   }
 }
+//ori

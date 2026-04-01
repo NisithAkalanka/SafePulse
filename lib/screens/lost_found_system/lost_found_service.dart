@@ -80,6 +80,22 @@ class LostFoundService {
     }
   }
 
+  Future<String?> _convertImageToBase64(File imageFile) async {
+    final bytes = await imageFile.readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    print('Current String Length: ${base64Image.length}');
+
+    if (base64Image.length > 800000) {
+      print('❌ Image too big for Firestore!');
+      throw Exception(
+        'Image too big for Firestore. Please choose a smaller/compressed image.',
+      );
+    }
+
+    return base64Image;
+  }
+
   Future<void> updatePostFull({
     required String itemId,
     required String title,
