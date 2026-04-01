@@ -236,16 +236,7 @@ class _ItemDetailsState extends State<ItemDetails> {
                       _buildAction(Icons.bookmark_added_rounded, "Save", isSaved, () => _toggleCollection('user_saved', isSaved, (val) => isSaved = val), isDark, cardBg, borderColor),
                   ]),
                   
-                  // ඔබ ඉල්ලූ Report Message එක (Subtitle)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 15),
-                    child: Center(
-                      child: Text(
-                        "If you want you can report this item by clicking the icon.",
-                        style: TextStyle(color: textSecondary, fontSize: 11, fontStyle: FontStyle.italic),
-                      ),
-                    ),
-                  ),
+                 
 
                   const SizedBox(height: 40),
 

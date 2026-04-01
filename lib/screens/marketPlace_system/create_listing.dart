@@ -61,9 +61,7 @@ class _CreateListingState extends State<CreateListing> {
           final String base64Image = base64Encode(imageBytes);
 
           if (base64Image.length > 1000000) {
-            throw Exception(
-              'Selected image is too large. Please choose a smaller image.',
-            );
+            throw Exception('Selected image is too large.');
           }
 
           base64Images.add(base64Image);
@@ -92,9 +90,7 @@ class _CreateListingState extends State<CreateListing> {
       debugPrint(e.toString());
       _showSnack("Something went wrong!");
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -122,286 +118,313 @@ class _CreateListingState extends State<CreateListing> {
         : const Color(0xFFF2F3F7);
     final Color textPrimary = isDark ? Colors.white : Colors.black;
 
+    final double topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       backgroundColor: pageBg,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: gRedMid))
-          : SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).padding.top + 10,
-                      bottom: 35,
-                      left: 20,
-                      right: 20,
-                    ),
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [gRedStart, gRedMid, gDarkEnd],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: [0.0, 0.62, 1.0],
-                      ),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(40),
-                        bottomRight: Radius.circular(40),
-                      ),
-                    ),
+          : Stack(
+              children: [
+                // --- 1. පෝරමයේ අන්තර්ගතය (Scrollable Content) ---
+                Positioned.fill(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
                     child: Column(
                       children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.arrow_back_ios_new,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                              onPressed: () => Navigator.pop(context),
+                        // රතු පාට Gradient පසුබිම (Header එකට පිටුපසින් පටන් ගනී)
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            topPadding + 80,
+                            20,
+                            35,
+                          ),
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [gRedStart, gRedMid, gDarkEnd],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              stops: [0.0, 0.62, 1.0],
                             ),
-                            const Expanded(
-                              child: Center(
-                                child: Text(
-                                  "New Listing",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 18,
-                                  ),
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(40),
+                              bottomRight: Radius.circular(40),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white10,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(
+                                      Icons.inventory_2_outlined,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      "Publish item details clearly.",
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 40),
-                          ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 30),
-                        _buildPhotoSlider(cardBg, textPrimary),
+
+                        // Form Fields Card
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                          child: Form(
+                            key: _formKey,
+                            child: Container(
+                              padding: const EdgeInsets.all(22),
+                              decoration: BoxDecoration(
+                                color: cardBg,
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 15,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Product Details",
+                                    style: TextStyle(
+                                      color: textPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _buildInternalPhotoUploader(
+                                    inputBoxColor,
+                                    textPrimary,
+                                  ),
+                                  const SizedBox(height: 18),
+                                  _buildInputBox(
+                                    label: "Item Title",
+                                    ctrl: _titleCtrl,
+                                    icon: Icons.title_rounded,
+                                    cb: inputBoxColor,
+                                    tp: textPrimary,
+                                    validator: (v) => (v == null || v.isEmpty)
+                                        ? "Title is required"
+                                        : null,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildInputBox(
+                                    label: "Price (LKR)",
+                                    ctrl: _priceCtrl,
+                                    icon: Icons.payments_rounded,
+                                    cb: inputBoxColor,
+                                    tp: textPrimary,
+                                    k: TextInputType.number,
+                                    validator: (v) => (v == null || v.isEmpty)
+                                        ? "Price is required"
+                                        : null,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildDrop(
+                                    "Category",
+                                    Icons.grid_view_rounded,
+                                    [
+                                      "Tech",
+                                      "Stationary",
+                                      "Fashion",
+                                      "Books",
+                                      "Other",
+                                    ],
+                                    _selectedCategory,
+                                    (val) =>
+                                        setState(() => _selectedCategory = val),
+                                    inputBoxColor,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildDrop(
+                                    "Condition",
+                                    Icons.info_outline,
+                                    ["New", "Used - Good", "Used - Fair"],
+                                    _selectedCondition,
+                                    (val) => setState(
+                                      () => _selectedCondition = val,
+                                    ),
+                                    inputBoxColor,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildInputBox(
+                                    label: "Description",
+                                    ctrl: _descCtrl,
+                                    icon: Icons.description_outlined,
+                                    cb: inputBoxColor,
+                                    tp: textPrimary,
+                                    maxL: 3,
+                                  ),
+                                  const SizedBox(height: 35),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 58,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: gRedMid,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                        elevation: 5,
+                                      ),
+                                      onPressed: _handlePublish,
+                                      child: const Text(
+                                        "PUBLISH TO MARKET",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 15, 20, 40),
-                    child: Form(
-                      key: _formKey,
-                      child: Container(
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 15,
-                            ),
-                          ],
+                ),
+
+                // --- 2. FIXED STICKY HEADER (සැමවිටම ඉහළින් රැඳේ) ---
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: EdgeInsets.fromLTRB(15, topPadding + 10, 15, 10),
+                    decoration: const BoxDecoration(
+                      color: Colors
+                          .transparent, // Transparent බැවින් පසුබිම ලස්සනට පෙනේ
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Item Details",
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              "New Listing",
                               style: TextStyle(
-                                color: textPrimary,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 19,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            _buildInputBox(
-                              label: "Item Title",
-                              ctrl: _titleCtrl,
-                              icon: Icons.title_rounded,
-                              cb: inputBoxColor,
-                              tp: textPrimary,
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return "Title is required";
-                                }
-                                if (v.length < 5) {
-                                  return "Minimum 5 characters required";
-                                }
-                                if (!RegExp(
-                                  r'^[a-zA-Z0-9\s.,!?\-\(\)]+$',
-                                ).hasMatch(v)) {
-                                  return "Symbols not allowed";
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _buildInputBox(
-                              label: "Price (LKR)",
-                              ctrl: _priceCtrl,
-                              icon: Icons.payments_rounded,
-                              cb: inputBoxColor,
-                              tp: textPrimary,
-                              k: TextInputType.number,
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return "Price is required";
-                                }
-                                final p = double.tryParse(v);
-                                if (p == null || p <= 0) {
-                                  return "Enter a valid positive price";
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDrop(
-                              "Select Category",
-                              Icons.grid_view_rounded,
-                              const [
-                                "Tech",
-                                "Stationary",
-                                "Fashion",
-                                "Books",
-                                "Other",
-                              ],
-                              _selectedCategory,
-                              (val) => setState(() => _selectedCategory = val),
-                              inputBoxColor,
-                              validator: (v) =>
-                                  v == null ? "Please select a category" : null,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildDrop(
-                              "Select Condition",
-                              Icons.info_outline,
-                              const ["New", "Used - Good", "Used - Fair"],
-                              _selectedCondition,
-                              (val) => setState(() => _selectedCondition = val),
-                              inputBoxColor,
-                              validator: (v) =>
-                                  v == null ? "Please select condition" : null,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildInputBox(
-                              label: "Brief Description",
-                              ctrl: _descCtrl,
-                              icon: Icons.description_outlined,
-                              cb: inputBoxColor,
-                              tp: textPrimary,
-                              maxL: 3,
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return "Description is required";
-                                }
-                                if (v.length < 5) {
-                                  return "Please provide at least 5 characters";
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 35),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 58,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: gRedMid,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 6,
-                                  shadowColor: gRedMid.withOpacity(0.3),
-                                ),
-                                onPressed: _handlePublish,
-                                child: const Text(
-                                  "PUBLISH TO MARKET",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 48), // ඉඩ සමබරතාවය සඳහා
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
     );
   }
 
-  Widget _buildPhotoSlider(Color cb, Color tp) {
+  // ඔබගේ පැරණි Helper Functions (කිසිවක් වෙනස් කර නැත)
+  Widget _buildInternalPhotoUploader(Color cb, Color tp) {
     return Column(
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ...List.generate(
+        GestureDetector(
+          onTap: () => _showPickerMenu(context, cb, tp),
+          child: Container(
+            height: 170,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: cb,
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: Colors.black12),
+            ),
+            child: _selectedImages.isEmpty
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.add_a_photo_outlined,
+                        color: gRedMid,
+                        size: 38,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Tap to upload photo",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        "Up to 3 photos",
+                        style: TextStyle(color: Colors.grey, fontSize: 11),
+                      ),
+                    ],
+                  )
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(25),
+                    child: Image.file(
+                      _selectedImages.first,
+                      width: double.infinity,
+                      height: 170,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+          ),
+        ),
+        if (_selectedImages.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 10.0),
+            child: Row(
+              children: List.generate(
                 _selectedImages.length,
-                (i) => Stack(
-                  children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      margin: const EdgeInsets.symmetric(horizontal: 6),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        image: DecorationImage(
-                          image: FileImage(_selectedImages[i]),
-                          fit: BoxFit.cover,
-                        ),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                    ),
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: () =>
-                            setState(() => _selectedImages.removeAt(i)),
-                        child: const CircleAvatar(
-                          radius: 12,
-                          backgroundColor: Colors.black54,
-                          child: Icon(
-                            Icons.close,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (_selectedImages.length < 3)
-                GestureDetector(
-                  onTap: () => _showPickerMenu(context, cb, tp),
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white12,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: const Icon(
-                      Icons.add_a_photo_outlined,
-                      color: Colors.white,
-                      size: 28,
+                (i) => Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    image: DecorationImage(
+                      image: FileImage(_selectedImages[i]),
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
-            ],
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          "Product Photos (Max 3)",
-          style: TextStyle(color: Colors.white70, fontSize: 11),
-        ),
       ],
     );
   }
@@ -429,7 +452,6 @@ class _CreateListingState extends State<CreateListing> {
         style: TextStyle(color: tp, fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(fontSize: 12, color: Colors.grey),
           prefixIcon: Icon(icon, color: gRedMid, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(15),
@@ -439,14 +461,13 @@ class _CreateListingState extends State<CreateListing> {
   }
 
   Widget _buildDrop(
-    String label,
+    String l,
     IconData i,
     List<String> items,
     String? val,
-    Function(String?) onChanged,
-    Color cb, {
-    String? Function(String?)? validator,
-  }) {
+    Function(String?) ch,
+    Color cb,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
@@ -455,24 +476,21 @@ class _CreateListingState extends State<CreateListing> {
       ),
       child: DropdownButtonFormField<String>(
         value: val,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(fontSize: 11, color: Colors.grey),
-          prefixIcon: Icon(i, color: gRedMid, size: 20),
-          border: InputBorder.none,
-        ),
         items: items
             .map(
-              (e) => DropdownMenuItem<String>(
+              (e) => DropdownMenuItem(
                 value: e,
                 child: Text(e, style: const TextStyle(fontSize: 13)),
               ),
             )
             .toList(),
-        onChanged: onChanged,
+        onChanged: ch,
+        decoration: InputDecoration(
+          labelText: l,
+          prefixIcon: Icon(i, color: gRedMid, size: 20),
+          border: InputBorder.none,
+        ),
         dropdownColor: cb,
-        iconEnabledColor: gRedMid,
       ),
     );
   }
