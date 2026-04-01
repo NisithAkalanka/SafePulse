@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ඔබේ ප්‍රොජෙක්ට් පෝල්ඩරයට අනුව මෙම Imports නිවැරදිද බලන්න
+// ඔබේ ප්‍රොජෙක්ට් පෝල්ඩරයට අනුව මෙම Imports නිවැරදි බවට වග බලා ගන්න
 import 'sos_system/home_screen.dart';
 import 'sos_system/guardian_map_screen.dart';
 import 'sos_system/admin_full_dashboard.dart';
+import 'sos_system/login_screen.dart'; // 💡 අත්‍යවශ්‍යයි
 import 'lost_found_system/lost_found_feed_screen.dart';
 import 'marketPlace_system/market_home.dart';
 import 'help_screen.dart';
 
-// Placeholder (අනිත් අයගේ වැඩ වෙනුවෙන්)
+// Placeholder (සාමාජිකයින්ගේ ඉතිරි වැඩ සඳහා)
 class PlaceholderScreen extends StatelessWidget {
   final String title;
   const PlaceholderScreen(this.title, {super.key});
@@ -46,7 +47,7 @@ class PlaceholderScreen extends StatelessWidget {
               ),
             ),
             const Text(
-              "SafePulse: Module arriving soon...",
+              "SafePulse: Feature coming soon!",
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey),
             ),
@@ -75,12 +76,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     super.initState();
     _checkUserRole();
 
+    // Login/logout තත්ත්වය සජීවීව බලාගන්න Listener එක
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (!mounted) return;
       if (user == null) {
         setState(() {
           _userRole = 'student';
-          _selectedIndex = 0;
+          _selectedIndex = 0; // Logout වූ විට මුලටම හරවයි
         });
       } else {
         _checkUserRole();
@@ -121,50 +123,57 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     });
   }
 
-  // --- පෙන්වන පිටු ලැයිස්තුව (Role අනුව) ---
+  // --- පද්ධතියේ පිටු ව්‍යුහය (Order must match items) ---
   List<Widget> _getScreens() {
     if (_userRole == 'admin') {
       return [
-        const HomeScreen(), // 0. SOS
-        const AdminFullDashboard(), // 1. ADMIN
-        const GuardianMapScreen(), // 2. MAP
-        const HelpScreen(), // 3. HELP
-        const LostFoundFeedScreen(), // 4. LOST
-        MarketHome(), // 5. MARKET
+        const HomeScreen(), // 0
+        const AdminFullDashboard(), // 1
+        const GuardianMapScreen(), // 2
+        const HelpScreen(), // 3
+        const LostFoundFeedScreen(), // 4
+        MarketHome(), // 5
       ];
     }
     return [
-      const HomeScreen(), // 0. SOS
-      const GuardianMapScreen(), // 1. MAP
-      const HelpScreen(), // 2. HELP
-      const LostFoundFeedScreen(), // 3. LOST
-      MarketHome(), // 4. MARKET
+      const HomeScreen(), // 0
+      const GuardianMapScreen(), // 1
+      const HelpScreen(), // 2
+      const LostFoundFeedScreen(), // 3
+      MarketHome(), // 4
     ];
   }
 
+  // --- 🎯 මෙන්න ඔයාගේ ප්‍රශ්නය විසඳූ වැදගත්ම Logic එක ---
   void _onItemTapped(int index) async {
-    // SOS ටැබ් එක පරීක්ෂාව
+    // SOS ටැබ් එක (0) සෑමවිටම විවෘතය
     if (index == 0) {
       setState(() => _selectedIndex = index);
       return;
     }
 
-    // ලොග් වී නැතිනම් ලොගින් පේජ් එක පෙන්වමු
+    // වෙනත් ඕනෑම ටැබ් එකක් එබීමට පෙර Login චෙක් කිරීම
     if (FirebaseAuth.instance.currentUser == null) {
+      // ලොග් වී නැති නිසා බලහත්කාරයෙන් Login Screen පෙන්වීම
       await Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) =>
-              const PlaceholderScreen("Login Screen (Linked)"),
-        ),
-        // 💡 මෙහි 'LoginScreen()' යොදන්න
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
+
+      // Login පිටුවේ සිට ආපසු පැමිණි පසු (යූසර් ලොග් වූවාදැයි පරීක්ෂාව)
       if (FirebaseAuth.instance.currentUser != null) {
-        _checkUserRole();
+        // ලොග් වී ඇත්නම් භූමිකාව පරීක්ෂා කර ඔහු එබූ පිටුවට ගෙන යන්න
+        await _checkUserRole();
         setState(() => _selectedIndex = index);
+      } else {
+        // ලොග් නොවී හිතාමතාම පස්සට (Back) ආවේ නම් ඔහුව ආපහු මුලට (SOS) හරවා යවයි
+        setState(() => _selectedIndex = 0);
       }
     } else {
-      setState(() => _selectedIndex = index);
+      // දැනටමත් ලොග් වී සිටී නම් සාමාන්‍ය පරිදි යෑම
+      setState(() {
+        _selectedIndex = index;
+      });
     }
   }
 
@@ -173,7 +182,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final screens = _getScreens();
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Index mismatch පාලනය
+    // Safety: භූමිකාව වෙනස් වූ විට දත්ත වැරදීම පාලනය කරයි
     if (_selectedIndex >= screens.length) {
       _selectedIndex = 0;
     }
@@ -182,10 +191,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       backgroundColor: isDark
           ? const Color(0xFF0F0F13)
           : const Color(0xFFF6F7FB),
-      // සජීවී ලෙස දත්ත පවත්වා ගැනීමට IndexedStack
       body: IndexedStack(index: _selectedIndex, children: screens),
 
-      // --- යාවත්කාලීන කළ ලස්සන NAVIGATION BAR කොටස ---
+      // ලස්සන floating navigation bar එක
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         child: ClipRRect(
@@ -193,11 +201,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1B1B22) : Colors.white,
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: Colors.black.withOpacity(0.08),
                   blurRadius: 10,
-                  offset: Offset(0, -2),
                 ),
               ],
             ),
@@ -206,15 +213,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 currentIndex: _selectedIndex,
                 onTap: _onItemTapped,
                 type: BottomNavigationBarType.fixed,
-                backgroundColor:
-                    Colors.transparent, // Container එකෙන් පාට පාලනය කරයි
+                backgroundColor: Colors.transparent,
                 selectedItemColor: const Color(0xFFFF4B4B),
                 unselectedItemColor: isDark
                     ? Colors.grey[500]
                     : Colors.blueGrey[300],
                 elevation: 0,
-
-                // 💡 ඔබ ඉල්ලූ Labels පෙන්වීමේ කොටස
                 showSelectedLabels: true,
                 showUnselectedLabels: true,
                 selectedLabelStyle: const TextStyle(
@@ -225,7 +229,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   fontWeight: FontWeight.w600,
                   fontSize: 10,
                 ),
-
                 items: [
                   const BottomNavigationBarItem(
                     icon: Icon(Icons.security_outlined),
