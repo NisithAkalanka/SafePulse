@@ -7,17 +7,26 @@ import 'guardian_map_screen.dart';
 import 'admin_full_dashboard.dart'; // Admin පේජ් එක
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 // අනෙකුත් සාමාජිකයින්ගේ වැඩ සඳහා Placeholder පිටු
 =======
+=======
+// ඔබේ ප්‍රොජෙක්ට් පෝල්ඩරයට අනුව මෙම Imports නිවැරදි බවට වග බලා ගන්න
+>>>>>>> Stashed changes
 import 'sos_system/home_screen.dart';
 import 'sos_system/login_screen.dart';
 import 'sos_system/guardian_map_screen.dart';
 import 'sos_system/admin_full_dashboard.dart';
+import 'sos_system/login_screen.dart'; // 💡 අත්‍යවශ්‍යයි
 import 'lost_found_system/lost_found_feed_screen.dart';
 import 'marketPlace_system/market_home.dart';
 import 'help_screen.dart';
 
+<<<<<<< Updated upstream
 // Placeholder (අවශ්‍යතාවය අනුව පාවිච්චි කිරීමට)
+>>>>>>> Stashed changes
+=======
+// Placeholder (සාමාජිකයින්ගේ ඉතිරි වැඩ සඳහා)
 >>>>>>> Stashed changes
 class PlaceholderScreen extends StatelessWidget {
   final String title;
@@ -64,12 +73,17 @@ class PlaceholderScreen extends StatelessWidget {
               ),
             ),
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
             const Text("This module is under development."),
 =======
             const SizedBox(height: 6),
             Text(
               "Member's implementation coming soon...",
+=======
+            const Text(
+              "SafePulse: Feature coming soon!",
+>>>>>>> Stashed changes
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: isDark ? const Color(0xFFB7BBC6) : Colors.grey,
@@ -212,13 +226,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 =======
     _checkUserRole();
 
+<<<<<<< Updated upstream
     // යූසර්ගේ Login status එක වෙනස් වූ සැණින් භූමිකාව (Role) නැවත පරීක්ෂා කරමු
+=======
+    // Login/logout තත්ත්වය සජීවීව බලාගන්න Listener එක
+>>>>>>> Stashed changes
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (!mounted) return;
       if (user == null) {
         setState(() {
           _userRole = 'student';
+<<<<<<< Updated upstream
           _selectedIndex = 0; // Logout වූ පසු SOS වෙත යවමු
+=======
+          _selectedIndex = 0; // Logout වූ විට මුලටම හරවයි
+>>>>>>> Stashed changes
         });
       } else {
         _checkUserRole();
@@ -262,6 +284,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     });
   }
 
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
   List<Widget> _getScreens() {
     if (_userRole == 'admin') {
@@ -281,6 +304,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         const LostFoundFeedScreen(), // 3. LOST
         MarketHome(), // 4. MARKET
 >>>>>>> Stashed changes
+=======
+  // --- පද්ධතියේ පිටු ව්‍යුහය (Order must match items) ---
+  List<Widget> _getScreens() {
+    if (_userRole == 'admin') {
+      return [
+        const HomeScreen(), // 0
+        const AdminFullDashboard(), // 1
+        const GuardianMapScreen(), // 2
+        const HelpScreen(), // 3
+        const LostFoundFeedScreen(), // 4
+        MarketHome(), // 5
+>>>>>>> Stashed changes
       ];
     }
   }
@@ -293,6 +328,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // --- ටැබ් ලැයිස්තුව: Bottom Nav Items ---
   List<BottomNavigationBarItem> _getNavItems() {
     return [
+<<<<<<< Updated upstream
       const BottomNavigationBarItem(
         icon: Icon(Icons.security_outlined),
         activeIcon: Icon(Icons.security),
@@ -330,11 +366,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Future<void> _onItemTapped(int index) async {
     // SOS ටැබ් එක (0) සැමවිටම විවෘතව පවතී
 >>>>>>> Stashed changes
+=======
+      const HomeScreen(), // 0
+      const GuardianMapScreen(), // 1
+      const HelpScreen(), // 2
+      const LostFoundFeedScreen(), // 3
+      MarketHome(), // 4
+    ];
+  }
+
+  // --- 🎯 මෙන්න ඔයාගේ ප්‍රශ්නය විසඳූ වැදගත්ම Logic එක ---
+  void _onItemTapped(int index) async {
+    // SOS ටැබ් එක (0) සෑමවිටම විවෘතය
+>>>>>>> Stashed changes
     if (index == 0) {
       setState(() { _selectedIndex = index; });
       return;
     }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
     // වෙනත් ඕනෑම ටැබ් එකක් එබීමට පෙර ලොගින් පරීක්ෂා කරමු
 =======
@@ -342,10 +392,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 >>>>>>> Stashed changes
     if (FirebaseAuth.instance.currentUser == null) {
       // 1. කෙලින්ම ලොගින් පේජ් එකට යවමු
+=======
+    // වෙනත් ඕනෑම ටැබ් එකක් එබීමට පෙර Login චෙක් කිරීම
+    if (FirebaseAuth.instance.currentUser == null) {
+      // ලොග් වී නැති නිසා බලහත්කාරයෙන් Login Screen පෙන්වීම
+>>>>>>> Stashed changes
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
       
       // 2. ලොගින් පේජ් එකේ සිට ආපසු පැමිණි පසු (Success නම්)
@@ -368,6 +424,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       }
       return;
 >>>>>>> Stashed changes
+=======
+
+      // Login පිටුවේ සිට ආපසු පැමිණි පසු (යූසර් ලොග් වූවාදැයි පරීක්ෂාව)
+      if (FirebaseAuth.instance.currentUser != null) {
+        // ලොග් වී ඇත්නම් භූමිකාව පරීක්ෂා කර ඔහු එබූ පිටුවට ගෙන යන්න
+        await _checkUserRole();
+        setState(() => _selectedIndex = index);
+      } else {
+        // ලොග් නොවී හිතාමතාම පස්සට (Back) ආවේ නම් ඔහුව ආපහු මුලට (SOS) හරවා යවයි
+        setState(() => _selectedIndex = 0);
+      }
+    } else {
+      // දැනටමත් ලොග් වී සිටී නම් සාමාන්‍ය පරිදි යෑම
+      setState(() {
+        _selectedIndex = index;
+      });
+>>>>>>> Stashed changes
     }
   }
 
@@ -382,6 +455,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 >>>>>>> Stashed changes
 
+<<<<<<< Updated upstream
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
@@ -436,6 +510,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final navItems = _getNavItems();
 
     // Role මාරු වෙද්දී ඇතිවන Index බිඳවැටීම් (Out of range) වැළැක්වීම
+=======
+    // Safety: භූමිකාව වෙනස් වූ විට දත්ත වැරදීම පාලනය කරයි
+>>>>>>> Stashed changes
     if (_selectedIndex >= screens.length) {
       _selectedIndex = 0;
     }
@@ -444,6 +521,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       backgroundColor: isDark
           ? const Color(0xFF121217)
           : const Color(0xFFF6F7FB),
+<<<<<<< Updated upstream
       extendBody: true,
       body: IndexedStack(index: _selectedIndex, children: screens),
       bottomNavigationBar: SafeArea(
@@ -477,6 +555,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 selectedItemColor: const Color(0xFFFF5A63),
                 unselectedItemColor: const Color(0xFF90A0AC),
                 onTap: _onItemTapped,
+=======
+      body: IndexedStack(index: _selectedIndex, children: screens),
+
+      // ලස්සන floating navigation bar එක
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1B1B22) : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: SafeArea(
+              child: BottomNavigationBar(
+                currentIndex: _selectedIndex,
+                onTap: _onItemTapped,
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: Colors.transparent,
+                selectedItemColor: const Color(0xFFFF4B4B),
+                unselectedItemColor: isDark
+                    ? Colors.grey[500]
+                    : Colors.blueGrey[300],
+                elevation: 0,
+                showSelectedLabels: true,
+                showUnselectedLabels: true,
+>>>>>>> Stashed changes
                 selectedLabelStyle: const TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 11,
@@ -487,8 +597,44 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.2,
                 ),
+<<<<<<< Updated upstream
                 iconSize: 27,
                 items: navItems,
+=======
+                items: [
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.security_outlined),
+                    activeIcon: Icon(Icons.security),
+                    label: "SOS",
+                  ),
+                  if (_userRole == 'admin')
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.analytics_outlined),
+                      activeIcon: Icon(Icons.analytics),
+                      label: "ADMIN",
+                    ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.map_outlined),
+                    activeIcon: Icon(Icons.map_rounded),
+                    label: "MAP",
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.handshake_outlined),
+                    activeIcon: Icon(Icons.handshake),
+                    label: "HELP",
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.search_outlined),
+                    activeIcon: Icon(Icons.search_rounded),
+                    label: "LOST",
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.storefront_outlined),
+                    activeIcon: Icon(Icons.store),
+                    label: "MARKET",
+                  ),
+                ],
+>>>>>>> Stashed changes
               ),
             ),
           ),
