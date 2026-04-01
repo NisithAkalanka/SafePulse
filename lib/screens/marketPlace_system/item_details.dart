@@ -1,4 +1,4 @@
-import 'dart:convert'; // Base64 Decoding සඳහා අනිවාර්යයි
+import 'dart:convert'; 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -29,12 +29,11 @@ class ItemDetails extends StatefulWidget {
 }
 
 class _ItemDetailsState extends State<ItemDetails> {
-  bool isAlert = false;
   bool isFav = false;
   bool isSaved = false;
+  bool isReported = false; 
   String sellerName = "Loading...";
 
-  // Teammate Style Colors
   static const Color gRedStart = Color(0xFFFF4B4B);
   static const Color gRedMid = Color(0xFFB31217);
   static const Color gDarkEnd = Color(0xFF1B1B1B);
@@ -46,7 +45,6 @@ class _ItemDetailsState extends State<ItemDetails> {
     _fetchSellerName();
   }
 
-  // --- පියවර 1: Seller ගේ නම ලබාගැනීම ---
   void _fetchSellerName() async {
     if (widget.sellerId == null || widget.sellerId!.isEmpty) {
       setState(() => sellerName = "Verified Seller");
@@ -67,7 +65,6 @@ class _ItemDetailsState extends State<ItemDetails> {
     }
   }
 
-  // --- පියවර 2: කලින් Fav/Save කර ඇත්දැයි බැලීම ---
   void _checkInitialStatus() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || widget.docId == null) return;
@@ -78,9 +75,27 @@ class _ItemDetailsState extends State<ItemDetails> {
 
     var savedDoc = await FirebaseFirestore.instance.collection('user_saved').doc(docPath).get();
     if (savedDoc.exists) setState(() => isSaved = true);
+    
+    var itemDoc = await FirebaseFirestore.instance.collection('listings').doc(widget.docId).get();
+    if (itemDoc.exists && itemDoc.data()?['reported'] == true) {
+      setState(() => isReported = true);
+    }
   }
 
-  // --- පියවර 3: Favourites සහ Saved ලිස්ට් එක පාලනය කිරීම ---
+  // පියවර 1: Admin Hub එකට සජීවීව දත්ත ලැබෙන සේ Report කිරීම
+  void _reportItemAction() async {
+    if (widget.docId == null || isReported) return;
+    try {
+      await FirebaseFirestore.instance.collection('listings').doc(widget.docId).update({
+        'reported': true,
+      });
+      setState(() => isReported = true);
+      _snack("Security Alert: Item Reported to Administration.");
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
   void _toggleCollection(String colName, bool currentStatus, Function(bool) updater) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || widget.docId == null) return;
@@ -102,7 +117,7 @@ class _ItemDetailsState extends State<ItemDetails> {
           'createdAt': Timestamp.now(),
         });
         setState(() => updater(true));
-        _snack("Added successfully!");
+        _snack("Saved successfully!");
       }
     } catch (e) {
       debugPrint("Error: $e");
@@ -110,7 +125,7 @@ class _ItemDetailsState extends State<ItemDetails> {
   }
 
   void _snack(String m) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), duration: const Duration(milliseconds: 600)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), duration: const Duration(milliseconds: 700)));
   }
 
   @override
@@ -122,13 +137,17 @@ class _ItemDetailsState extends State<ItemDetails> {
     final Color textSecondary = isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86);
     final Color borderColor = isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0);
 
+    // පියවර 2: සෙලර් පරීක්ෂාව
+    final String? currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final bool isMyPost = currentUid != null && currentUid == widget.sellerId;
+
     return Scaffold(
       backgroundColor: pageBg,
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            // --- PREMIUM GRADIENT HEADER (Exact Teammate Curve) ---
+            // PREMIUM GRADIENT HEADER (Exact teammate style radius 34)
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
@@ -148,7 +167,7 @@ class _ItemDetailsState extends State<ItemDetails> {
                         const SizedBox(width: 48),
                     ]),
                   ),
-                  // Image Area (Base64 Hack Applied here)
+                  // Image Area (Base64 hack)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(30, 10, 30, 40),
                     child: Hero(
@@ -156,14 +175,8 @@ class _ItemDetailsState extends State<ItemDetails> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(22),
                         child: (widget.itemImage != null && widget.itemImage!.length > 100)
-                            ? Image.memory(
-                                base64Decode(widget.itemImage!), 
-                                height: 250, width: double.infinity, fit: BoxFit.cover,
-                              )
-                            : Container(
-                                height: 250, color: Colors.white12,
-                                child: const Icon(Icons.image, color: Colors.white24, size: 60),
-                              ),
+                            ? Image.memory(base64Decode(widget.itemImage!), height: 250, width: double.infinity, fit: BoxFit.cover)
+                            : Container(height: 250, color: Colors.white12, child: const Icon(Icons.image, color: Colors.white24, size: 60)),
                       ),
                     ),
                   ),
@@ -175,49 +188,77 @@ class _ItemDetailsState extends State<ItemDetails> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.itemName ?? "Product Name", style: TextStyle(color: textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
+                  Text(widget.itemName ?? "Campus Gear", style: TextStyle(color: textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 5),
-                  // Price with Rs.
                   Text("Rs. ${widget.itemPrice ?? "0"}", style: const TextStyle(color: gRedStart, fontSize: 28, fontWeight: FontWeight.w900)),
 
                   const SizedBox(height: 25),
 
-                  // Message Bar
+                  // Message Bar (Conditional Display for Sellers)
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFFFF4F4), borderRadius: BorderRadius.circular(22), border: Border.all(color: borderColor)),
+                    decoration: BoxDecoration(
+                      color: isMyPost ? Colors.grey.withOpacity(0.08) : (isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFFFF4F4)),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: borderColor),
+                    ),
                     child: Row(children: [
-                      Expanded(child: Text("Hi, is this still available?", style: TextStyle(color: textSecondary, fontWeight: FontWeight.w600, fontSize: 13.5))),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: gRedMid, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 0),
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => NegotiationChat(docId: widget.docId, itemName: widget.itemName, itemPrice: widget.itemPrice, itemImage: widget.itemImage, sellerId: widget.sellerId, initialMessage: "Hi, is this available?"))),
-                        child: const Text("CHAT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      Expanded(
+                        child: Text(
+                          isMyPost ? "Viewing your own listing" : "Hi, is this still available?", 
+                          style: TextStyle(color: textSecondary, fontWeight: FontWeight.w600, fontSize: 13.5)
+                        )
                       ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isMyPost ? Colors.blueGrey : gRedMid,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          elevation: 0,
+                        ),
+                        // පෝස්ට් එක මගේ නම් චැට් වැඩ කරන්නේ නැත
+                        onPressed: isMyPost ? null : () => Navigator.push(context, MaterialPageRoute(builder: (c) => NegotiationChat(
+                          docId: widget.docId, itemName: widget.itemName, itemImage: widget.itemImage, itemPrice: widget.itemPrice, sellerId: widget.sellerId, initialMessage: "Hello, is this still available?"
+                        ))),
+                        child: Text(isMyPost ? "MY POST" : "CHAT", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      )
                     ]),
                   ),
 
                   const SizedBox(height: 35),
 
-                  // Interactive Circle Row
+                  // Action Circles (With Report replacement)
                   Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                      _buildAction(Icons.notifications_active_rounded, "Alert", isAlert, () => setState(() => isAlert = !isAlert), isDark, cardBg, borderColor),
+                      _buildAction(
+                        isReported ? Icons.report_gmailerrorred_rounded : Icons.report_gmailerrorred_outlined, 
+                        "Report", isReported, _reportItemAction, isDark, cardBg, borderColor
+                      ),
                       _buildAction(Icons.favorite_rounded, "Fav", isFav, () => _toggleCollection('user_favourites', isFav, (val) => isFav = val), isDark, cardBg, borderColor),
                       _buildAction(Icons.bookmark_added_rounded, "Save", isSaved, () => _toggleCollection('user_saved', isSaved, (val) => isSaved = val), isDark, cardBg, borderColor),
                   ]),
+                  
+                  // ඔබ ඉල්ලූ Report Message එක (Subtitle)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 15),
+                    child: Center(
+                      child: Text(
+                        "If you want you can report this item by clicking the icon.",
+                        style: TextStyle(color: textSecondary, fontSize: 11, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ),
 
                   const SizedBox(height: 40),
 
                   Text("Item Description", style: TextStyle(color: gRedStart, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  Text(widget.itemDescription ?? "Verified student gear checking in for trade inside university campus.", style: TextStyle(color: textSecondary, fontSize: 15, height: 1.6, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 12),
+                  Text(widget.itemDescription ?? "Verified student gear available for campus trade inside the university safe network.", style: TextStyle(color: textSecondary, fontSize: 15, height: 1.6, fontWeight: FontWeight.w500)),
                   
                   const Divider(height: 60, thickness: 0.8),
 
-                  _buildSpecRow("Item Condition", widget.itemCondition ?? "Safe-Checked", textSecondary, textPrimary),
-                  _buildSpecRow("Seller Profile", sellerName, textSecondary, textPrimary),
-                  _buildSpecRow("Product Code", widget.docId != null ? "#${widget.docId!.substring(0, 6)}" : "#00100", textSecondary, textPrimary),
-
-                  const SizedBox(height: 50),
+                  _buildSpecRow("Condition", widget.itemCondition ?? "Clean Checked", textSecondary, textPrimary),
+                  _buildSpecRow("Seller Information", sellerName, textSecondary, textPrimary),
+                  _buildSpecRow("Item Trace ID", widget.docId != null ? "#${widget.docId!.substring(0, 5)}" : "#99042", textSecondary, textPrimary),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -227,7 +268,7 @@ class _ItemDetailsState extends State<ItemDetails> {
     );
   }
 
-  // REUSABLE CIRCLE HELPER
+  // Action Icon Builder (Using the shared teammate style)
   Widget _buildAction(IconData i, String l, bool a, VoidCallback t, bool isDark, Color cb, Color bc) {
     return GestureDetector(onTap: t, child: Column(children: [
         Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: a ? gRedStart.withOpacity(0.12) : cb, shape: BoxShape.circle, border: Border.all(color: a ? gRedStart : bc)), child: Icon(i, color: a ? gRedStart : Colors.grey, size: 24)),
@@ -235,7 +276,7 @@ class _ItemDetailsState extends State<ItemDetails> {
     ]));
   }
 
-  // REUSABLE INFO ROW HELPER
+  // Information Table Row Builder
   Widget _buildSpecRow(String l, String r, Color s, Color p) {
     return Padding(padding: const EdgeInsets.only(bottom: 18), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l, style: TextStyle(color: s, fontWeight: FontWeight.w600, fontSize: 14)), Flexible(child: Text(r, textAlign: TextAlign.right, style: TextStyle(color: p, fontWeight: FontWeight.w900, fontSize: 14)))]));
   }
