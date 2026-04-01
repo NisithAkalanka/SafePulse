@@ -61,7 +61,9 @@ class _CreateListingState extends State<CreateListing> {
           final String base64Image = base64Encode(imageBytes);
 
           if (base64Image.length > 1000000) {
-            throw Exception('Selected image is too large.');
+            throw Exception(
+              'Selected image is too large. Please choose a smaller image.',
+            );
           }
 
           base64Images.add(base64Image);
@@ -90,7 +92,9 @@ class _CreateListingState extends State<CreateListing> {
       debugPrint(e.toString());
       _showSnack("Something went wrong!");
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -126,18 +130,18 @@ class _CreateListingState extends State<CreateListing> {
           ? const Center(child: CircularProgressIndicator(color: gRedMid))
           : Stack(
               children: [
-                // --- 1. පෝරමයේ අන්තර්ගතය (Scrollable Content) ---
+                // --- 1. SCROLLABLE CONTENT ---
                 Positioned.fill(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Column(
                       children: [
-                        // රතු පාට Gradient පසුබිම (Header එකට පිටුපසින් පටන් ගනී)
+                        // රතු පාට Premium Banner කොටස (Header එකට පිටුපසින් පටන් ගනී)
                         Container(
                           width: double.infinity,
                           padding: EdgeInsets.fromLTRB(
                             20,
-                            topPadding + 80,
+                            topPadding + 85,
                             20,
                             35,
                           ),
@@ -178,6 +182,7 @@ class _CreateListingState extends State<CreateListing> {
                                       style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 13,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
@@ -187,7 +192,7 @@ class _CreateListingState extends State<CreateListing> {
                           ),
                         ),
 
-                        // Form Fields Card
+                        // Form Fields Section
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
                           child: Form(
@@ -201,6 +206,7 @@ class _CreateListingState extends State<CreateListing> {
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.04),
                                     blurRadius: 15,
+                                    offset: const Offset(0, 5),
                                   ),
                                 ],
                               ),
@@ -227,9 +233,17 @@ class _CreateListingState extends State<CreateListing> {
                                     icon: Icons.title_rounded,
                                     cb: inputBoxColor,
                                     tp: textPrimary,
-                                    validator: (v) => (v == null || v.isEmpty)
-                                        ? "Title is required"
-                                        : null,
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty)
+                                        return "Title is required";
+                                      if (v.length < 5)
+                                        return "Minimum 5 characters required";
+                                      if (!RegExp(
+                                        r'^[a-zA-Z0-9\s.,!?\-\(\)]+$',
+                                      ).hasMatch(v))
+                                        return "Symbols not allowed";
+                                      return null;
+                                    },
                                   ),
                                   const SizedBox(height: 16),
                                   _buildInputBox(
@@ -239,15 +253,20 @@ class _CreateListingState extends State<CreateListing> {
                                     cb: inputBoxColor,
                                     tp: textPrimary,
                                     k: TextInputType.number,
-                                    validator: (v) => (v == null || v.isEmpty)
-                                        ? "Price is required"
-                                        : null,
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty)
+                                        return "Price is required";
+                                      final p = double.tryParse(v);
+                                      if (p == null || p <= 0)
+                                        return "Enter a valid positive price";
+                                      return null;
+                                    },
                                   ),
                                   const SizedBox(height: 16),
                                   _buildDrop(
-                                    "Category",
+                                    "Select Category",
                                     Icons.grid_view_rounded,
-                                    [
+                                    const [
                                       "Tech",
                                       "Stationary",
                                       "Fashion",
@@ -258,26 +277,39 @@ class _CreateListingState extends State<CreateListing> {
                                     (val) =>
                                         setState(() => _selectedCategory = val),
                                     inputBoxColor,
+                                    validator: (v) => v == null
+                                        ? "Please select a category"
+                                        : null,
                                   ),
                                   const SizedBox(height: 16),
                                   _buildDrop(
-                                    "Condition",
+                                    "Select Condition",
                                     Icons.info_outline,
-                                    ["New", "Used - Good", "Used - Fair"],
+                                    const ["New", "Used - Good", "Used - Fair"],
                                     _selectedCondition,
                                     (val) => setState(
                                       () => _selectedCondition = val,
                                     ),
                                     inputBoxColor,
+                                    validator: (v) => v == null
+                                        ? "Please select condition"
+                                        : null,
                                   ),
                                   const SizedBox(height: 16),
                                   _buildInputBox(
-                                    label: "Description",
+                                    label: "Brief Description",
                                     ctrl: _descCtrl,
                                     icon: Icons.description_outlined,
                                     cb: inputBoxColor,
                                     tp: textPrimary,
                                     maxL: 3,
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty)
+                                        return "Description is required";
+                                      if (v.length < 5)
+                                        return "Minimum 5 characters";
+                                      return null;
+                                    },
                                   ),
                                   const SizedBox(height: 35),
                                   SizedBox(
@@ -291,7 +323,8 @@ class _CreateListingState extends State<CreateListing> {
                                             16,
                                           ),
                                         ),
-                                        elevation: 5,
+                                        elevation: 6,
+                                        shadowColor: gRedMid.withOpacity(0.3),
                                       ),
                                       onPressed: _handlePublish,
                                       child: const Text(
@@ -313,16 +346,15 @@ class _CreateListingState extends State<CreateListing> {
                   ),
                 ),
 
-                // --- 2. FIXED STICKY HEADER (සැමවිටම ඉහළින් රැඳේ) ---
+                // --- 2. FIXED STICKY HEADER (සැමවිටම ඉහළ රැඳී පවතී) ---
                 Positioned(
                   top: 0,
                   left: 0,
                   right: 0,
                   child: Container(
-                    padding: EdgeInsets.fromLTRB(15, topPadding + 10, 15, 10),
+                    padding: EdgeInsets.fromLTRB(15, topPadding + 10, 15, 12),
                     decoration: const BoxDecoration(
-                      color: Colors
-                          .transparent, // Transparent බැවින් පසුබිම ලස්සනට පෙනේ
+                      color: Colors.transparent, // Transparent Card effect
                     ),
                     child: Row(
                       children: [
@@ -341,12 +373,14 @@ class _CreateListingState extends State<CreateListing> {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
-                                fontSize: 19,
+                                fontSize: 18,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 48), // ඉඩ සමබරතාවය සඳහා
+                        const SizedBox(
+                          width: 48,
+                        ), // Balancing space for the center title
                       ],
                     ),
                   ),
@@ -356,14 +390,13 @@ class _CreateListingState extends State<CreateListing> {
     );
   }
 
-  // ඔබගේ පැරණි Helper Functions (කිසිවක් වෙනස් කර නැත)
   Widget _buildInternalPhotoUploader(Color cb, Color tp) {
     return Column(
       children: [
         GestureDetector(
           onTap: () => _showPickerMenu(context, cb, tp),
           child: Container(
-            height: 170,
+            height: 180,
             width: double.infinity,
             decoration: BoxDecoration(
               color: cb,
@@ -377,37 +410,80 @@ class _CreateListingState extends State<CreateListing> {
                       Icon(
                         Icons.add_a_photo_outlined,
                         color: gRedMid,
-                        size: 38,
+                        size: 40,
                       ),
-                      SizedBox(height: 8),
+                      SizedBox(height: 12),
                       Text(
                         "Tap to upload photo",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
                       Text(
                         "Up to 3 photos",
-                        style: TextStyle(color: Colors.grey, fontSize: 11),
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
                   )
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(25),
-                    child: Image.file(
-                      _selectedImages.first,
-                      width: double.infinity,
-                      height: 170,
-                      fit: BoxFit.cover,
-                    ),
+                : Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(25),
+                        child: Image.file(
+                          _selectedImages.first,
+                          width: double.infinity,
+                          height: 180,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      if (_selectedImages.length > 1)
+                        Positioned(
+                          right: 15,
+                          bottom: 15,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              "+${_selectedImages.length - 1} more",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedImages.clear()),
+                          child: const CircleAvatar(
+                            radius: 14,
+                            backgroundColor: Colors.white70,
+                            child: Icon(
+                              Icons.refresh,
+                              color: Colors.black,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
           ),
         ),
         if (_selectedImages.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 10.0),
+            padding: const EdgeInsets.only(top: 12.0),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: List.generate(
                 _selectedImages.length,
                 (i) => Container(
@@ -449,9 +525,10 @@ class _CreateListingState extends State<CreateListing> {
         maxLines: maxL,
         keyboardType: k,
         validator: validator,
-        style: TextStyle(color: tp, fontSize: 14),
+        style: TextStyle(color: tp, fontSize: 14, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: const TextStyle(fontSize: 12, color: Colors.grey),
           prefixIcon: Icon(icon, color: gRedMid, size: 20),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(15),
@@ -461,13 +538,14 @@ class _CreateListingState extends State<CreateListing> {
   }
 
   Widget _buildDrop(
-    String l,
+    String label,
     IconData i,
     List<String> items,
     String? val,
-    Function(String?) ch,
-    Color cb,
-  ) {
+    Function(String?) onChanged,
+    Color cb, {
+    String? Function(String?)? validator,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
@@ -476,21 +554,30 @@ class _CreateListingState extends State<CreateListing> {
       ),
       child: DropdownButtonFormField<String>(
         value: val,
-        items: items
-            .map(
-              (e) => DropdownMenuItem(
-                value: e,
-                child: Text(e, style: const TextStyle(fontSize: 13)),
-              ),
-            )
-            .toList(),
-        onChanged: ch,
+        validator: validator,
         decoration: InputDecoration(
-          labelText: l,
+          labelText: label,
+          labelStyle: const TextStyle(fontSize: 11, color: Colors.grey),
           prefixIcon: Icon(i, color: gRedMid, size: 20),
           border: InputBorder.none,
         ),
+        items: items
+            .map(
+              (e) => DropdownMenuItem<String>(
+                value: e,
+                child: Text(
+                  e,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
         dropdownColor: cb,
+        iconEnabledColor: gRedMid,
       ),
     );
   }
@@ -506,7 +593,7 @@ class _CreateListingState extends State<CreateListing> {
         children: [
           ListTile(
             leading: const Icon(Icons.photo_library),
-            title: const Text("Gallery"),
+            title: const Text("Pick from Gallery"),
             onTap: () {
               Navigator.pop(ctx);
               _pickImage(ImageSource.gallery);
@@ -514,7 +601,7 @@ class _CreateListingState extends State<CreateListing> {
           ),
           ListTile(
             leading: const Icon(Icons.photo_camera),
-            title: const Text("Camera"),
+            title: const Text("Take a Photo"),
             onTap: () {
               Navigator.pop(ctx);
               _pickImage(ImageSource.camera);
