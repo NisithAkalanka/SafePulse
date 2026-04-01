@@ -171,13 +171,19 @@ class _HelpScreenState extends State<HelpScreen>
               'Request help',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 20,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.2,
               ),
             ),
             centerTitle: true,
             actions: [
+              IconButton(
+                tooltip: 'Switch to Helper mode',
+                icon: const Icon(Icons.swap_horiz_rounded),
+                onPressed: () {
+                  HelpRoleModeService.instance.toggle();
+                },
+              ),
               IconButton(
                 tooltip: 'More',
                 icon: const Icon(Icons.more_vert_rounded),

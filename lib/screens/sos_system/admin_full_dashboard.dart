@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// මීට කලින් ඔයා හදාගත්ත SOS මැනේජ් කරන ලොජික් එක මෙතනට ලින්ක් කරමු
 import 'sos_management_page.dart';
+import '../marketPlace_system/market_admin_hub.dart';
+
+// --- පියවර: ඔබේ Marketplace Admin පිටුව මෙතැනට Import කළා ---
 
 class AdminFullDashboard extends StatefulWidget {
   const AdminFullDashboard({super.key});
@@ -236,7 +238,13 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
                               Icons.shopping_bag_rounded,
                               const Color(0xFF22C55E),
                               () {
-                                /* Member 4 Page */
+                                // --- පියවර: ඔබගේ Marketplace Admin පිටුව මෙතැනින් Navigate වේ ---
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (c) => const MarketAdminHub(),
+                                  ),
+                                );
                               },
                             ),
                           ],

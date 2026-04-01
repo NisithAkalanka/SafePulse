@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'rating_screen.dart';
 
 class NegotiationChat extends StatefulWidget {
@@ -8,6 +10,7 @@ class NegotiationChat extends StatefulWidget {
   final String? itemPrice;
   final String? itemImage;
   final String? initialMessage;
+  final String? sellerId;
 
   const NegotiationChat({
     super.key,
@@ -16,253 +19,349 @@ class NegotiationChat extends StatefulWidget {
     this.itemPrice,
     this.itemImage,
     this.initialMessage,
+    this.sellerId,
   });
 
   @override
-  State<NegotiationChat> createState() => _NegotiationChatState();
+  State<NegotiationChat> createState() => _MarketplaceNegotiationChatState();
 }
 
-class _NegotiationChatState extends State<NegotiationChat> {
+class _MarketplaceNegotiationChatState extends State<NegotiationChat> {
   final TextEditingController _msgController = TextEditingController();
-  final List<Map<String, dynamic>> _chatHistory = [];
+  final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-  static const Color primaryRed = Color(0xFFB31217);
-  static const Color accentRed = Color(0xFFFF4B4B);
+  // Branding Colors
+  static const Color gRedStart = Color(0xFFFF4B4B);
+  static const Color gRedMid = Color(0xFFB31217);
+  static const Color gDarkEnd = Color(0xFF1B1B1B);
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
-      _chatHistory.add({
-        "msg": widget.initialMessage,
-        "isMe": true,
-      });
+    // චැට් එක ආරම්භයේදීම මුල් පණිවිඩය ඇත්නම් එය සජීවීව සේව් කිරීමට උත්සාහ කරයි
+    if (widget.initialMessage != null && widget.docId != null) {
+      _checkAndSendInitialMessage();
+    }
+  }
+
+  // පළමු වරට පණිවිඩයක් ලැබෙන විට පමණක් එය Firestore එකට යැවීමේ Logic එක
+  void _checkAndSendInitialMessage() async {
+    final chatRef = FirebaseFirestore.instance
+        .collection('listings')
+        .doc(widget.docId)
+        .collection('messages');
+
+    var existingMessages = await chatRef.limit(1).get();
+
+    // චැට් එක අලුත්ම එකක් නම් (හිස් නම්) පමණක් initial message එක පෝස්ට් කරයි
+    if (existingMessages.docs.isEmpty) {
+      _sendMessageToFirestore(widget.initialMessage!);
+    }
+  }
+
+  // --- Real-time Message යැවීමේ ප්‍රධාන කොටස ---
+  Future<void> _sendMessageToFirestore(String text) async {
+    if (widget.docId == null || currentUserId == null) return;
+
+    try {
+      // මෙය එක උපාංගයකින් කළ විට සැනින් Firestore එකට දත්ත එක්වේ
+      await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.docId)
+          .collection('messages')
+          .add({
+            'senderId': currentUserId,
+            'msg': text,
+            'createdAt':
+                FieldValue.serverTimestamp(), // කාලය අනුව පේළි ගැසීමට අත්‍යවශ්‍යයි
+          });
+    } catch (e) {
+      debugPrint("Messaging Error: $e");
     }
   }
 
   void _sendMessage() {
     String text = _msgController.text.trim();
-    if (text.isEmpty && _chatHistory.isEmpty) text = "Is this still available?";
-    if (text.isEmpty) return;
+    if (text.isEmpty && widget.initialMessage == null) return;
 
-    setState(() {
-      _chatHistory.add({
-        "msg": text,
-        "isMe": true,
-      });
-      _msgController.clear();
-    });
+    // ටයිප් කර ඇත්නම් එය ද, හිස්ව බටන් එක එබුවහොත් default message එක ද යවයි
+    _sendMessageToFirestore(
+      text.isEmpty ? "Hi, is this still available?" : text,
+    );
+    _msgController.clear();
   }
 
-  Future<void> _deleteItemAndProceed() async {
+  void _confirmAndMarkAsSold() async {
     if (widget.docId != null) {
       try {
-        await FirebaseFirestore.instance.collection('listings').doc(widget.docId).delete();
-        debugPrint("Product removed successfully.");
+        await FirebaseFirestore.instance
+            .collection('listings')
+            .doc(widget.docId)
+            .update({'status': 'Sold', 'soldAt': FieldValue.serverTimestamp()});
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (c) => RatingScreen(
+                itemName: widget.itemName ?? "Product",
+                itemImage: widget.itemImage ?? "",
+              ),
+            ),
+          );
+        }
       } catch (e) {
-        debugPrint("Error: $e");
+        debugPrint("Update status failed: $e");
       }
     }
-
-    if (mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RatingScreen(
-        itemName: widget.itemName ?? "Product",
-        itemImage: widget.itemImage ?? "https://via.placeholder.com/150",
-      )));
-    }
-  }
-
-  void _showMarkAsSoldDialog(Color dialogBg, Color txtPrimary) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: dialogBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: Text("Success Trade?", style: TextStyle(color: txtPrimary)),
-        content: Text(
-          "Once you click confirm, this item will be permanently deleted from the database.",
-          style: TextStyle(color: txtPrimary.withOpacity(0.7)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx), 
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey))
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: primaryRed),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _deleteItemAndProceed();
-            },
-            child: const Text("Confirmed", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // --- Dark Mode Awareness ---
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color pageBg = isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB);
+    final Color pageBg = isDark
+        ? const Color(0xFF0F0F13)
+        : const Color(0xFFF6F7FB);
     final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
-    final Color textPrimary = isDark ? Colors.white : Colors.black87;
-    final Color inputBg = isDark ? const Color(0xFF25252D) : const Color(0xFFF3F5F7);
-    final Color bottomNavBg = isDark ? const Color(0xFF14141A) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : Colors.black;
+    final Color textSecondary = isDark ? Colors.white70 : Colors.black87;
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE8EAF0);
+
+    // සෙලර් පරීක්ෂාව
+    final bool isSeller =
+        currentUserId != null && currentUserId == widget.sellerId;
 
     return Scaffold(
       backgroundColor: pageBg,
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [gRedStart, gRedMid, gDarkEnd],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.62, 1.0],
+            ),
+          ),
+        ),
+        elevation: 0,
+        title: Text(
+          widget.itemName ?? "Chat",
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: Column(
         children: [
-          // 1. Curved Gradient Header
+          // Banner Area (භාණ්ඩයේ තොරතුරු පෙන්වන කොටස)
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 65, 18, 25),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [accentRed, primaryRed, Color(0xFF1B1B1B)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(34),
-                bottomRight: Radius.circular(34),
-              ),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cardBg,
+              border: Border(bottom: BorderSide(color: borderColor)),
             ),
-            child: Column(
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white), 
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const Text("Negotiation Chat", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  ],
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child:
+                      (widget.itemImage != null &&
+                          widget.itemImage!.length > 100)
+                      ? Image.memory(
+                          base64Decode(widget.itemImage!),
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(Icons.image, size: 50, color: Colors.grey),
                 ),
-                Container(
-                  margin: const EdgeInsets.only(top: 15),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.14),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: Colors.white.withOpacity(0.18)),
-                  ),
-                  child: Row(
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(
-                        width: 55,
-                        height: 55,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(15),
-                          child: Image.network(
-                            widget.itemImage ?? "https://via.placeholder.com/150",
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, e, s) => Container(color: Colors.white10, child: const Icon(Icons.image, color: Colors.white24)),
-                          ),
+                      Text(
+                        widget.itemName ?? "Product Inquiry",
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.itemName ?? "Product",
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              widget.itemPrice ?? "",
-                              style: const TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                      Text(
+                        "Rs. ${widget.itemPrice ?? "0"}",
+                        style: const TextStyle(
+                          color: gRedMid,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
                         ),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          shape: const StadiumBorder(),
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                        ),
-                        onPressed: () => _showMarkAsSoldDialog(cardBg, textPrimary),
-                        child: const Text("MARK SOLD", style: TextStyle(fontSize: 10, color: primaryRed, fontWeight: FontWeight.w900)),
                       ),
                     ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isSeller
+                      ? () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: cardBg,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                              title: Text(
+                                "Transaction Success?",
+                                style: TextStyle(
+                                  color: textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              content: Text(
+                                "Marking this as sold will remove the listing for others.",
+                                style: TextStyle(
+                                  color: textSecondary,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text("CANCEL"),
+                                ),
+                                ElevatedButton(
+                                  onPressed: _confirmAndMarkAsSold,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: gRedMid,
+                                  ),
+                                  child: const Text(
+                                    "CONFIRM",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      : null, // බයර් හට ඉබේම Disabled වේ
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isSeller
+                        ? Colors.black87
+                        : Colors.grey.withOpacity(0.3),
+                  ),
+                  child: const Text(
+                    "MARK SOLD",
+                    style: TextStyle(color: Colors.white, fontSize: 10),
                   ),
                 ),
               ],
             ),
           ),
 
-          // 2. Dynamic Chat View
+          // --- වැදගත්ම කොටස: උපාංග දෙකක මැසේජ් සජීවීව පෙන්වන STREAM BUILDER ---
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: _chatHistory.length,
-              itemBuilder: (context, index) {
-                final chat = _chatHistory[index];
-                return Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(4),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('listings')
+                  .doc(widget.docId)
+                  .collection('messages')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  return const Center(child: CircularProgressIndicator());
+                final docs = snapshot.data?.docs ?? [];
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(15),
+                  reverse: true,
+                  itemCount: docs.length,
+                  itemBuilder: (ctx, i) {
+                    var data = docs[i].data() as Map<String, dynamic>;
+                    bool isMe = data['senderId'] == currentUserId;
+                    return Align(
+                      alignment: isMe
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isMe
+                              ? gRedMid
+                              : (isDark ? Colors.white10 : Colors.grey[200]),
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(18),
+                            topRight: const Radius.circular(18),
+                            bottomLeft: Radius.circular(isMe ? 18 : 2),
+                            bottomRight: Radius.circular(isMe ? 2 : 18),
+                          ),
+                        ),
+                        child: Text(
+                          data['msg'] ?? "",
+                          style: TextStyle(
+                            color: isMe ? Colors.white : textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDark ? Colors.black26 : Colors.black.withOpacity(0.04), 
-                          blurRadius: 4
-                        )
-                      ],
-                    ),
-                    child: Text(
-                      chat['msg'], 
-                      style: TextStyle(fontWeight: FontWeight.w600, color: textPrimary)
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),
           ),
 
-          // 3. Persistent Input Field
+          // Message input bar
           Container(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 35),
-            color: bottomNavBg,
+            decoration: BoxDecoration(
+              color: cardBg,
+              border: Border(top: BorderSide(color: borderColor)),
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: Container(
-                    decoration: BoxDecoration(color: inputBg, borderRadius: BorderRadius.circular(25)),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : const Color(0xFFF3F5F7),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                     child: TextField(
                       controller: _msgController,
                       style: TextStyle(color: textPrimary),
-                      decoration: InputDecoration(
-                        hintText: "Enter a message...", 
-                        hintStyle: TextStyle(color: textPrimary.withOpacity(0.4)),
-                        border: InputBorder.none, 
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 18)
+                      decoration: const InputDecoration(
+                        hintText: "Make an offer...",
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 15,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
-                  onTap: _sendMessage,
+                  onTap:
+                      _sendMessage, // මවුලය: දැන් සජීවීව පෝස්ට් කරන්නේ මෙතැනිනි
                   child: const CircleAvatar(
-                    backgroundColor: primaryRed, 
-                    radius: 24, 
-                    child: Icon(Icons.send_rounded, color: Colors.white, size: 20)
+                    backgroundColor: gRedMid,
+                    radius: 24,
+                    child: Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
               ],

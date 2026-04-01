@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -215,6 +217,36 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
         child: Icon(Icons.broken_image_outlined, size: 40, color: lfRed),
       );
     }
+  }
+
+  Future<void> _saveEditedItem({
+    required String title,
+    required String category,
+    required String description,
+    required String location,
+  }) async {
+    widget.item.title = title;
+    widget.item.category = category;
+    widget.item.description = description;
+    widget.item.location = location;
+
+    final dynamic service = LostFoundService();
+
+    try {
+      await service.updatePostBasic(
+        itemId: widget.item.id,
+        title: title,
+        category: category,
+        description: description,
+        location: location,
+      );
+      return;
+    } catch (_) {}
+
+    try {
+      await service.saveOrUpdatePost(widget.item);
+      return;
+    } catch (_) {}
   }
 
   Future<void> _showEditDialog() async {
@@ -464,20 +496,17 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                                 return;
                                               }
 
-                                              await LostFoundService()
-                                                  .updatePostBasic(
-                                                    itemId: widget.item.id,
-                                                    title: titleController.text
+                                              await _saveEditedItem(
+                                                title: titleController.text
+                                                    .trim(),
+                                                category: selectedCategory,
+                                                description:
+                                                    descriptionController.text
                                                         .trim(),
-                                                    category: selectedCategory,
-                                                    description:
-                                                        descriptionController
-                                                            .text
-                                                            .trim(),
-                                                    location: locationController
-                                                        .text
-                                                        .trim(),
-                                                  );
+                                                location: locationController
+                                                    .text
+                                                    .trim(),
+                                              );
 
                                               if (!mounted) return;
                                               Navigator.pop(context);
@@ -841,86 +870,45 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     );
   }
 
-  Future<void> _showClaimDialog() async {
-    final TextEditingController controller = TextEditingController();
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  Future<void> _sendFoundThisRequest() async {
+    await LostFoundService().sendLostItemFoundRequest(
+      itemId: widget.item.id,
+      requesterId: currentUid,
+      requesterName: currentName,
+    );
 
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          backgroundColor: cardBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            'Verification Required',
-            style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700),
-          ),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(
-                  'Describe any special marks or unique details.',
-                  style: TextStyle(
-                    color: textPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: controller,
-                  style: TextStyle(
-                    color: textPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  validator: _validateProof,
-                  decoration: _dialogFieldDecoration('Type proof here'),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: lfRed),
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) return;
+    if (!mounted) return;
 
-                await LostFoundService().submitClaimRequest(
-                  itemId: widget.item.id,
-                  requesterId: currentUid,
-                  requesterName: currentName,
-                  proofAnswer: controller.text.trim(),
-                );
+    setState(() {
+      widget.item.status = 'Chat Request Pending';
+      widget.item.requestType = 'chat_request';
+      widget.item.requesterId = currentUid;
+      widget.item.requesterName = currentName;
+      widget.item.chatEnabled = false;
+    });
 
-                if (!mounted) return;
-                Navigator.pop(context);
-                Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Found request sent to owner.')),
+    );
+  }
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Claim request sent.')),
-                );
-              },
-              child: const Text(
-                'Submit',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
+  Future<void> _cancelMyRequest() async {
+    await LostFoundService().rejectChatRequest(widget.item.id);
+
+    if (!mounted) return;
+
+    setState(() {
+      widget.item.status = 'Active';
+      widget.item.requestType = null;
+      widget.item.requesterId = null;
+      widget.item.requesterName = null;
+      widget.item.verificationQuestion = null;
+      widget.item.verificationAnswer = null;
+      widget.item.chatEnabled = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Request cancelled. Item is active again.')),
     );
   }
 
@@ -1014,6 +1002,8 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
         break;
       case 'Claim Pending':
       case 'Verification Pending':
+      case 'Chat Request Pending':
+      case 'Owner Requested Chat Approval':
         bg = const Color(0xFFFFF4DB);
         fg = const Color(0xFFB26A00);
         break;
@@ -1457,21 +1447,55 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     );
   }
 
-  Widget _requesterWaitingCard(String text) {
+  Widget _requesterWaitingCard(
+    String text, {
+    bool showCancelButton = false,
+    VoidCallback? onCancel,
+  }) {
     return _panel(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Icon(Icons.hourglass_top_rounded, color: lfRed),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: textSecondary,
-                fontWeight: FontWeight.w600,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Icon(Icons.hourglass_top_rounded, color: lfRed),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    color: textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (showCancelButton && onCancel != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: onCancel,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: lfRed,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Cancel Request',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1502,6 +1526,200 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     );
   }
 
+  Widget _lostItemRequesterCard() {
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Claim this item',
+            style: TextStyle(
+              color: textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Let the owner know that you found this item and request to open chat.',
+            style: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 14),
+          _primaryButton('I FOUND THIS', _sendFoundThisRequest),
+        ],
+      ),
+    );
+  }
+
+  Widget _ownerReceivedFoundRequestCard() {
+    final requesterName =
+        (widget.item.requesterName ?? 'Someone').trim().isEmpty
+        ? 'Someone'
+        : widget.item.requesterName!.trim();
+
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Found request received',
+            style: TextStyle(
+              color: textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$requesterName clicked "I FOUND THIS". You can reject this request or ask them to open chat.',
+            style: TextStyle(
+              color: textSecondary,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await LostFoundService().rejectChatRequest(widget.item.id);
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    side: BorderSide(color: borderColor),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    'Reject',
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await LostFoundService().ownerRequestsChatOpen(
+                      widget.item.id,
+                    );
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: lfRed,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text(
+                    'Request Chat',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _requesterOwnerAskedForChatCard() {
+    final ownerName = _posterDisplayName(widget.item);
+
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Chat request from owner',
+            style: TextStyle(
+              color: textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$ownerName sent a request to open chat. If both of you accept, the private chat will open.',
+            style: TextStyle(
+              color: textSecondary,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await LostFoundService().rejectChatRequest(widget.item.id);
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    side: BorderSide(color: borderColor),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    'Reject',
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await LostFoundService().requesterAcceptsChat(
+                      widget.item.id,
+                    );
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: lfRed,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text(
+                    'Accept',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildWorkflowCards() {
     final LostItem item = widget.item;
     final List<Widget> cards = <Widget>[];
@@ -1513,31 +1731,27 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
 
     if (item.type == 'Lost') {
       if (!isOwner && item.status == 'Active') {
+        cards.add(_lostItemRequesterCard());
+      } else if (isOwner && item.status == 'Chat Request Pending') {
+        cards.add(_ownerReceivedFoundRequestCard());
+      } else if (!isOwner &&
+          isRequester &&
+          item.status == 'Chat Request Pending') {
         cards.add(
-          _panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Claim this item',
-                  style: TextStyle(
-                    color: textPrimary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Provide proof to request ownership verification.',
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _primaryButton('THIS IS MINE', _showClaimDialog),
-              ],
-            ),
+          _requesterWaitingCard(
+            'Your request was sent to the owner. Please wait for the owner response.',
+            showCancelButton: true,
+            onCancel: _cancelMyRequest,
+          ),
+        );
+      } else if (!isOwner &&
+          isRequester &&
+          item.status == 'Owner Requested Chat Approval') {
+        cards.add(_requesterOwnerAskedForChatCard());
+      } else if (isOwner && item.status == 'Owner Requested Chat Approval') {
+        cards.add(
+          _requesterWaitingCard(
+            'You requested to open chat. Please wait for the requester to accept.',
           ),
         );
       } else if (isOwner && item.status == 'Claim Pending') {
@@ -1665,3 +1879,4 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     );
   }
 }
+//ori
