@@ -35,7 +35,8 @@ class LostFoundService {
         .get();
 
     for (final doc in snap.docs) {
-      final rt = doc.data()['returnedAt'];
+      final data = doc.data();
+      final rt = data['returnedAt'];
       DateTime? returnedAt;
       if (rt is Timestamp) returnedAt = rt.toDate();
 
@@ -46,24 +47,24 @@ class LostFoundService {
     }
   }
 
-  Future<String?> _convertImageToBase64(File? imageFile) async {
-    if (imageFile == null) return null;
-
-    final bytes = await imageFile.readAsBytes();
-    final base64Image = base64Encode(bytes);
-
-    if (base64Image.length > 800000) {
-      throw Exception(
-        'Image too big for Firestore. Please choose a smaller/compressed image.',
-      );
-    }
-
-    return base64Image;
-  }
-
   Future<void> createPost(LostItem item, File? imageFile) async {
     try {
-      final String? base64Image = await _convertImageToBase64(imageFile);
+      String? base64Image;
+
+      if (imageFile != null) {
+        final bytes = await imageFile.readAsBytes();
+        base64Image = base64Encode(bytes);
+
+        print('Current String Length: ${base64Image.length}');
+
+        if (base64Image.length > 800000) {
+          print('❌ Image too big for Firestore!');
+          throw Exception(
+            'Image too big for Firestore. Please choose a smaller/compressed image.',
+          );
+        }
+      }
+
       final data = item.toMap();
 
       if (base64Image != null && base64Image.isNotEmpty) {
@@ -123,24 +124,11 @@ class LostFoundService {
     await docRef.update(updateData);
   }
 
-  Future<void> updatePostBasic({
-    required String itemId,
-    required String title,
-    required String category,
-    required String description,
-    required String location,
-  }) async {
-    await _db.collection(_col).doc(itemId).update({
-      'title': title.trim(),
-      'category': category.trim(),
-      'description': description.trim(),
-      'location': location.trim(),
-    });
-  }
-
   Future<void> deletePost(String itemId) async {
     final doc = await _db.collection(_col).doc(itemId).get();
     if (!doc.exists) return;
+
+    final data = doc.data();
 
     final messages = await _db
         .collection(_col)
@@ -169,6 +157,10 @@ class LostFoundService {
       'verificationQuestion': question,
       'verificationAnswer': null,
       'chatEnabled': false,
+      'ownerChatAccepted': false,
+      'requesterChatAccepted': false,
+      'ownerRetryMessage': null,
+      'ownerRetryCount': 0,
     });
   }
 
@@ -182,20 +174,90 @@ class LostFoundService {
     });
   }
 
-  Future<void> submitClaimRequest({
+  Future<void> sendLostItemFoundRequest({
     required String itemId,
     required String requesterId,
     required String requesterName,
-    required String proofAnswer,
   }) async {
     await _db.collection(_col).doc(itemId).update({
-      'status': 'Claim Pending',
-      'requestType': 'claim',
+      'status': 'Chat Request Pending',
+      'requestType': 'chat_request',
       'requesterId': requesterId,
       'requesterName': requesterName,
-      'verificationQuestion': 'Describe any special marks or unique details.',
-      'verificationAnswer': proofAnswer,
+      'verificationQuestion': null,
+      'verificationAnswer': null,
       'chatEnabled': false,
+      'ownerChatAccepted': false,
+      'requesterChatAccepted': false,
+      'ownerRetryMessage': null,
+    });
+  }
+
+  Future<void> ownerRequestsChatOpen(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Owner Requested Chat Approval',
+      'ownerChatAccepted': true,
+      'requesterChatAccepted': false,
+      'chatEnabled': false,
+      'ownerRetryMessage': null,
+    });
+  }
+
+  Future<void> requesterAcceptsChat(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Chat Enabled',
+      'requesterChatAccepted': true,
+      'ownerChatAccepted': true,
+      'chatEnabled': true,
+      'ownerRetryMessage': null,
+    });
+  }
+
+  Future<void> requesterRejectsOwnerChatRequest(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Owner Chat Rejected',
+      'requesterChatAccepted': false,
+      'chatEnabled': false,
+    });
+  }
+
+  Future<void> ownerSendsRetryMessage({
+    required String itemId,
+    required String message,
+  }) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    if (!doc.exists) return;
+
+    final data = doc.data() ?? {};
+    final int currentCount = (data['ownerRetryCount'] ?? 0) as int;
+
+    if (currentCount >= 2) {
+      throw Exception('Retry limit reached.');
+    }
+
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Owner Retry Message Sent',
+      'ownerRetryMessage': message.trim(),
+      'ownerRetryCount': currentCount + 1,
+      'chatEnabled': false,
+      'ownerChatAccepted': true,
+      'requesterChatAccepted': false,
+    });
+  }
+
+  Future<void> rejectChatRequest(String itemId) async {
+    await _db.collection(_col).doc(itemId).update({
+      'status': 'Active',
+      'requestType': null,
+      'requesterId': null,
+      'requesterName': null,
+      'verificationQuestion': null,
+      'verificationAnswer': null,
+      'chatEnabled': false,
+      'ownerChatAccepted': false,
+      'requesterChatAccepted': false,
+      'ownerRetryMessage': null,
+      'ownerRetryCount': 0,
     });
   }
 
@@ -218,6 +280,9 @@ class LostFoundService {
     await _db.collection(_col).doc(itemId).update({
       'status': 'Chat Enabled',
       'chatEnabled': true,
+      'ownerChatAccepted': true,
+      'requesterChatAccepted': true,
+      'ownerRetryMessage': null,
     });
   }
 
@@ -230,6 +295,10 @@ class LostFoundService {
       'verificationQuestion': null,
       'verificationAnswer': null,
       'chatEnabled': false,
+      'ownerChatAccepted': false,
+      'requesterChatAccepted': false,
+      'ownerRetryMessage': null,
+      'ownerRetryCount': 0,
     });
   }
 
