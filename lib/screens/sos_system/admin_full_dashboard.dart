@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'sos_management_page.dart';
 import '../marketPlace_system/market_admin_hub.dart';
 import '../lost_found_system/lost_found_admin_hub.dart';
+import '../community_requests_admin_screen.dart';
 
 // --- පියවර: ඔබේ Marketplace Admin පිටුව මෙතැනට Import කළා ---
 
@@ -215,7 +216,20 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
                                 ),
                               ),
                             ),
-                            _                _moduleCard(
+                            _moduleCard(
+                              context,
+                              "Community\nRequests",
+                              Icons.handshake_rounded,
+                              const Color(0xFF3B82F6),
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (c) =>
+                                      const CommunityRequestsAdminScreen(),
+                                ),
+                              ),
+                            ),
+                            _moduleCard(
                               context,
                               "Lost & Found\nHub",
                               Icons.search_off_rounded,

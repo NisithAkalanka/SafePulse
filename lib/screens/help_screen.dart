@@ -25,10 +25,7 @@ const List<_HelpCategory> _kDefaultHelpCategories = [
     asset: 'assets/images/safety_transport.png',
     title: 'Safety Transport',
   ),
-  _HelpCategory(
-    asset: 'assets/images/tech_support.png',
-    title: 'Tech Support',
-  ),
+  _HelpCategory(asset: 'assets/images/tech_support.png', title: 'Tech Support'),
   _HelpCategory(
     asset: 'assets/images/canteen_runner.png',
     title: 'Canteen Runner',
@@ -86,36 +83,36 @@ class _HelpScreenState extends State<HelpScreen>
     _categoriesSub = CommunityRequestsAdminService.instance
         .watchActiveCategories()
         .listen((data) {
-      if (!mounted) return;
-      final mapped = data
-          .map(
-            (c) => _HelpCategory(
-              asset: _assetForCategory(c.name),
-              title: _normalizeCategoryTitle(c.name),
-            ),
-          )
-          .where((c) => c.title.trim().isNotEmpty)
-          .toList();
+          if (!mounted) return;
+          final mapped = data
+              .map(
+                (c) => _HelpCategory(
+                  asset: _assetForCategory(c.name),
+                  title: _normalizeCategoryTitle(c.name),
+                ),
+              )
+              .where((c) => c.title.trim().isNotEmpty)
+              .toList();
 
-      final merged = List<_HelpCategory>.from(_kDefaultHelpCategories);
-      for (final item in mapped) {
-        final exists = merged.any(
-          (d) => d.title.toLowerCase() == item.title.toLowerCase(),
-        );
-        if (!exists) {
-          merged.add(item);
-        }
-      }
+          final merged = List<_HelpCategory>.from(_kDefaultHelpCategories);
+          for (final item in mapped) {
+            final exists = merged.any(
+              (d) => d.title.toLowerCase() == item.title.toLowerCase(),
+            );
+            if (!exists) {
+              merged.add(item);
+            }
+          }
 
-      setState(() {
-        _categories = merged;
-        if (_selectedCategoryIndex >= _categories.length) {
-          _selectedCategoryIndex = 0;
-        }
-      });
+          setState(() {
+            _categories = merged;
+            if (_selectedCategoryIndex >= _categories.length) {
+              _selectedCategoryIndex = 0;
+            }
+          });
 
-      _maybeOpenInitialCategory();
-    });
+          _maybeOpenInitialCategory();
+        });
   }
 
   String _assetForCategory(String title) {
@@ -126,7 +123,8 @@ class _HelpScreenState extends State<HelpScreen>
     }
 
     final lower = title.toLowerCase();
-    if (lower.contains('transport')) return 'assets/images/safety_transport.png';
+    if (lower.contains('transport'))
+      return 'assets/images/safety_transport.png';
     if (lower.contains('study')) return 'assets/images/study_support.png';
     if (lower.contains('tech')) return 'assets/images/tech_support.png';
     if (lower.contains('resource')) return 'assets/images/resource_sharing.png';
@@ -171,9 +169,7 @@ class _HelpScreenState extends State<HelpScreen>
   void _openYourRequestsPageAfterSubmit() {
     if (!mounted) return;
     Navigator.of(context, rootNavigator: true).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const YourRequestsPage(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const YourRequestsPage()),
     );
   }
 
@@ -191,15 +187,16 @@ class _HelpScreenState extends State<HelpScreen>
     _selectedCategoryIndex = idx;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final result = await Navigator.of(context, rootNavigator: true).push<bool>(
-        MaterialPageRoute<bool>(
-          builder: (_) => HelpRequestDetailScreen(
-            category: _categories[idx].title,
-            initialNote: '',
-            onViewYourRequests: _onViewYourRequestsAfterSubmit,
-          ),
-        ),
-      );
+      final result = await Navigator.of(context, rootNavigator: true)
+          .push<bool>(
+            MaterialPageRoute<bool>(
+              builder: (_) => HelpRequestDetailScreen(
+                category: _categories[idx].title,
+                initialNote: '',
+                onViewYourRequests: _onViewYourRequestsAfterSubmit,
+              ),
+            ),
+          );
       if (!mounted) return;
       if (result == true) {
         _focusMyRequestsTab();
@@ -256,17 +253,10 @@ class _HelpScreenState extends State<HelpScreen>
             automaticallyImplyLeading: false,
             actions: [
               IconButton(
-<<<<<<< Updated upstream
-                tooltip: 'Switch to Helper mode',
-                icon: const Icon(Icons.swap_horiz_rounded),
-                onPressed: () {
-                  HelpRoleModeService.instance.toggle();
-=======
                 tooltip: 'Switch to Helper Mode',
                 icon: const Icon(Icons.published_with_changes_rounded),
                 onPressed: () {
                   HelpRoleModeService.instance.setHelperMode(true);
->>>>>>> Stashed changes
                 },
               ),
               IconButton(
@@ -327,7 +317,9 @@ class _HelpScreenState extends State<HelpScreen>
                       left: 18,
                       right: 18,
                       bottom: 16,
-                      child: _HeaderTabSwitch(controller: _requesterTabController),
+                      child: _HeaderTabSwitch(
+                        controller: _requesterTabController,
+                      ),
                     ),
                   ],
                 ),
@@ -463,9 +455,7 @@ class _CategoryCard extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? GuardianUi.redTint
-                      : g.chipUnselectedFill,
+                  color: isSelected ? GuardianUi.redTint : g.chipUnselectedFill,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isSelected
@@ -497,9 +487,7 @@ class _CategoryCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w900,
-                        color: isSelected
-                            ? g.textPrimary
-                            : g.textPrimary,
+                        color: isSelected ? g.textPrimary : g.textPrimary,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -520,9 +508,7 @@ class _CategoryCard extends StatelessWidget {
                 isSelected
                     ? Icons.check_circle_rounded
                     : Icons.chevron_right_rounded,
-                color: isSelected
-                    ? GuardianUi.redPrimary
-                    : g.captionGrey,
+                color: isSelected ? GuardianUi.redPrimary : g.captionGrey,
                 size: isSelected ? 22 : 20,
               ),
             ],

@@ -79,17 +79,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     );
   }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
   String _distanceLabel(HelpRequest request) {
     // Distance display disabled in UI.
     return '';
   }
 
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
   String _timeAgoLabel(DateTime time) {
     final diff = DateTime.now().difference(time);
     if (diff.inMinutes < 1) return 'Just now';
@@ -124,7 +118,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
       markerColor = Colors.redAccent;
     }
 
-    return (tagColor: tagColor, markerColor: markerColor, statusLabel: statusLabel);
+    return (
+      tagColor: tagColor,
+      markerColor: markerColor,
+      statusLabel: statusLabel,
+    );
   }
 
   /// Matches [GuardianMapScreen] header glass card.
@@ -279,7 +277,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
         final currentUid = FirebaseAuth.instance.currentUser?.uid;
         // Only show requests that are NOT the user's own and have no active offer from someone else
         final requests = _sortedRequests(all)
-            .where((r) => !r.isMine && (r.helperUid == null || r.helperUid == currentUid))
+            .where(
+              (r) =>
+                  !r.isMine &&
+                  (r.helperUid == null || r.helperUid == currentUid),
+            )
             .toList();
         final g = GuardianTheme.of(context);
 
@@ -301,17 +303,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
             elevation: 0,
             actions: [
               IconButton(
-<<<<<<< Updated upstream
-                tooltip: 'Switch to Requester mode',
-                icon: const Icon(Icons.swap_horiz_rounded),
-                onPressed: () {
-                  HelpRoleModeService.instance.toggle();
-=======
                 tooltip: 'Switch to Requester Mode',
                 icon: const Icon(Icons.published_with_changes_rounded),
                 onPressed: () {
                   HelpRoleModeService.instance.setHelperMode(false);
->>>>>>> Stashed changes
                 },
               ),
               IconButton(
@@ -513,10 +508,6 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-<<<<<<< Updated upstream
-                          const SizedBox(width: 8),
-=======
->>>>>>> Stashed changes
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -572,9 +563,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     decoration: BoxDecoration(
                       color: GuardianUi.redTint,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: redPrimary.withOpacity(0.35),
-                      ),
+                      border: Border.all(color: redPrimary.withOpacity(0.35)),
                     ),
                     child: Text(
                       'Urgent',
