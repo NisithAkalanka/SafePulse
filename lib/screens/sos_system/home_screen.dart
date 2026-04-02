@@ -1711,8 +1711,4 @@ class _SecurityLockDialogState extends State<SecurityLockDialog> {
       ],
     );
   }
-
 }
-
-} //ori
-
