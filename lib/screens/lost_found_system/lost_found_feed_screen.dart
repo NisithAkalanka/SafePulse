@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import 'create_item_screen.dart';
 import 'lost_found_items_section.dart';
-import 'lost_found_notifications_screen.dart';
 import '../sos_system/main_menu_screen.dart';
 
 const Color lfRed = Color(0xFFE53935);
@@ -647,13 +646,6 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
     );
   }
 
-  void _openNotifications() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const LostFoundNotificationsScreen()),
-    );
-  }
-
   Widget _quickAction({
     required IconData icon,
     required String title,
@@ -895,11 +887,6 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            tooltip: "Notifications",
-            onPressed: _openNotifications,
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
           IconButton(
             tooltip: "Main Menu",
             onPressed: _openMainMenu,
@@ -1388,8 +1375,11 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
         style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           icon: const Icon(Icons.search, color: lfRed),
-          hintText: "Search by title, category, location...",
-          hintStyle: TextStyle(color: _textMuted, fontWeight: FontWeight.w500),
+          hintText: "Search your posts...",
+          hintStyle: TextStyle(
+            color: _isDark ? const Color(0xFFB8BFCD) : lfHint,
+            fontWeight: FontWeight.w500,
+          ),
           border: InputBorder.none,
         ),
         onChanged: (val) => setState(() => _searchQuery = val.trim()),
@@ -1403,12 +1393,11 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
       backgroundColor: _pageBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(
-          "My Posts",
-          style: TextStyle(
+        title: Text(
+          widget.type == 'Lost' ? 'My Lost Posts' : 'My Found Posts',
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
-            letterSpacing: 0.2,
           ),
         ),
         centerTitle: true,
@@ -1416,6 +1405,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
+<<<<<<< Updated upstream
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -1448,6 +1438,60 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(34),
                   bottomRight: Radius.circular(34),
+=======
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset + 24),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 108, 18, 20),
+                decoration: BoxDecoration(
+                  gradient: _isDark
+                      ? const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFFF3B3B),
+                            Color(0xFFE10613),
+                            Color(0xFFB30012),
+                            Color(0xFF140910),
+                          ],
+                          stops: [0.0, 0.35, 0.72, 1.0],
+                        )
+                      : const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFFF4B4B),
+                            Color(0xFFB31217),
+                            Color(0xFF1B1B1B),
+                          ],
+                          stops: [0.0, 0.62, 1.0],
+                        ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(34),
+                    bottomRight: Radius.circular(34),
+                  ),
+                ),
+                child: _myPostsHeaderCard(),
+              ),
+              const SizedBox(height: 24),
+              _searchBar(),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: LostFoundItemsSection(
+                  type: widget.type,
+                  query: _searchQuery,
+                  category: _selectedCategory,
+                  locationFilter: _locationFilter,
+                  showOnlyMyPosts: true,
+                  categoryChipOnTap: _openCategoryPicker,
+>>>>>>> Stashed changes
                 ),
               ),
               child: _myPostsHeaderCard(),

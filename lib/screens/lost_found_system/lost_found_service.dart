@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'lost_found_notification_service.dart';
 import 'lost_item_model.dart';
 
@@ -39,6 +41,24 @@ class LostFoundService {
     });
   }
 
+  Future<LostItem?> getItemById(String itemId) async {
+    await _cleanupReturnedItems();
+
+    final doc = await _db.collection(_col).doc(itemId).get();
+
+    if (!doc.exists || doc.data() == null) return null;
+
+    final item = LostItem.fromMap(doc.data()!, doc.id);
+
+    if (item.status == 'Returned' && item.returnedAt != null) {
+      final expired =
+          DateTime.now().difference(item.returnedAt!).inMinutes >= 60;
+      if (expired) return null;
+    }
+
+    return item;
+  }
+
   Future<void> _cleanupReturnedItems() async {
     final snap = await _db
         .collection(_col)
@@ -49,7 +69,10 @@ class LostFoundService {
       final data = doc.data();
       final rt = data['returnedAt'];
       DateTime? returnedAt;
-      if (rt is Timestamp) returnedAt = rt.toDate();
+
+      if (rt is Timestamp) {
+        returnedAt = rt.toDate();
+      }
 
       if (returnedAt != null &&
           DateTime.now().difference(returnedAt).inMinutes >= 60) {
@@ -429,6 +452,17 @@ class LostFoundService {
   }
 
   Future<void> rejectChatRequest(String itemId) async {
+    final doc = await _db.collection(_col).doc(itemId).get();
+    if (!doc.exists || doc.data() == null) return;
+
+    final item = LostItem.fromMap(doc.data()!, doc.id);
+    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    final bool ownerRejected =
+        currentUid.isNotEmpty && currentUid == item.userId;
+    final bool requesterCancelled =
+        currentUid.isNotEmpty && currentUid == (item.requesterId ?? '');
+
     await _db.collection(_col).doc(itemId).update({
       'status': 'Active',
       'requestType': null,
@@ -445,6 +479,26 @@ class LostFoundService {
       'requesterMarkedReturned': false,
       'returnedAt': null,
     });
+
+    if (ownerRejected && (item.requesterId ?? '').isNotEmpty) {
+      await _notificationService.sendToUser(
+        userId: item.requesterId!,
+        title: 'Request rejected',
+        body: 'Your request for "${item.title}" was rejected.',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'chat_rejected',
+      );
+    } else if (requesterCancelled && item.userId.trim().isNotEmpty) {
+      await _notificationService.sendToUser(
+        userId: item.userId,
+        title: 'Request cancelled',
+        body: 'The request for "${item.title}" was cancelled.',
+        itemId: itemId,
+        itemType: item.type,
+        actionType: 'chat_rejected',
+      );
+    }
   }
 
   Future<String> getVerificationAnswer(String itemId) async {
@@ -669,8 +723,8 @@ class LostFoundService {
     final bytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(bytes);
 
-    if (base64Image.length > 1000000) {
-      throw Exception('Selected image is too large. Choose a smaller image.');
+    if (base64Image.length > 900000) {
+      throw Exception('Image is too large to send.');
     }
 
     await sendMessage(
@@ -692,10 +746,8 @@ class LostFoundService {
     final bytes = await audioFile.readAsBytes();
     final base64Audio = base64Encode(bytes);
 
-    if (base64Audio.length > 1500000) {
-      throw Exception(
-        'Recorded audio is too large. Please record a shorter clip.',
-      );
+    if (base64Audio.length > 1200000) {
+      throw Exception('Audio is too large to send.');
     }
 
     await sendMessage(
