@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+<<<<<<< Updated upstream
+=======
+import 'dart:ui';
+>>>>>>> Stashed changes
 
 // ඔබේ පද්ධතියේ ගොනු (Paths ඔබේ VS Code එකට අනුව නිවැරදි දැයි බලන්න)
 import 'create_listing.dart';
@@ -12,10 +16,26 @@ import '../sos_system/main_menu_screen.dart';
 class MarketHome extends StatelessWidget {
   const MarketHome({super.key});
 
+<<<<<<< Updated upstream
   // SafePulse Branding Colors
   static const Color primaryRed = Color(0xFFD32F2F);
   static const Color intenseRed = Color(0xFFFF1744);
   static const Color darkBg = Color(0xFF121212);
+=======
+  @override
+  State<MarketHome> createState() => _MarketHomeState();
+}
+
+class _MarketHomeState extends State<MarketHome> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchText = "";
+  String _selectedCategory = "All"; 
+  bool _isSearching = false; 
+
+  final List<String> _categories = ["All", "Tech", "Stationary", "Fashion", "Books"];
+
+  static const Color gRedMid = Color(0xFFB31217);
+>>>>>>> Stashed changes
 
   @override
   Widget build(BuildContext context) {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
-import 'sos_system/profile_screen.dart';
 import 'sos_system/alerts_hub_screen.dart'; // Add this line
 import '../help/help_request.dart';
 import '../theme/guardian_ui.dart';
@@ -81,11 +80,14 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
   }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   String _distanceLabel(HelpRequest request) {
     // Distance display disabled in UI.
     return '';
   }
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
   String _timeAgoLabel(DateTime time) {

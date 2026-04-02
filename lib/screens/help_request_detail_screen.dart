@@ -383,6 +383,24 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     return null;
   }
 
+  String? _validateRequesterName(String? v) {
+    final t = v?.trim() ?? '';
+    if (t.isEmpty) {
+      return 'Please enter your name';
+    }
+    if (t.length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    if (t.length > 80) {
+      return 'Name is too long';
+    }
+    final lettersOnly = RegExp(r'^[A-Za-z ]+$');
+    if (!lettersOnly.hasMatch(t)) {
+      return 'Name can only contain letters';
+    }
+    return null;
+  }
+
   Map<String, dynamic> _buildHelperPreferencesMap() {
     final tip = _tipController.text.trim();
     final phys = _physicalController.text.trim();
@@ -837,6 +855,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+<<<<<<< Updated upstream
                           _figmaFormSection(
                             icon: Icons.badge_outlined,
                             label: 'Requester name',
@@ -853,6 +872,27 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                 prefixIcon: const Icon(
                                   Icons.person_outline_rounded,
                                   size: 22,
+=======
+                              _figmaFormSection(
+                                icon: Icons.badge_outlined,
+                                label: 'Requester name',
+                                child: TextFormField(
+                                  controller: _requesterNameController,
+                                  textCapitalization: TextCapitalization.words,
+                                  textInputAction: TextInputAction.next,
+                                  readOnly: !_isEditing,
+                                  style: _inputTextStyle,
+                                  cursorColor: _kFigmaAccent,
+                                  decoration: _inputDecoration(
+                                    hint:
+                                        'Your name as it should appear to helpers',
+                                    prefixIcon: const Icon(
+                                      Icons.person_outline_rounded,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  validator: _validateRequesterName,
+>>>>>>> Stashed changes
                                 ),
                               ),
                               validator: (v) {
