@@ -26,7 +26,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
+<<<<<<< Updated upstream
     with SingleTickerProviderStateMixin {
+=======
+    with TickerProviderStateMixin, WidgetsBindingObserver {
+>>>>>>> Stashed changes
   String _currentAddress = "Detecting location...";
   Position? _currentPosition;
   String _userRole = "student";
@@ -44,6 +48,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   late final AnimationController _sosFlashController;
   late final Animation<double> _sosFlashOpacity;
+  late final AnimationController _sosTapController;
+  late final Animation<double> _sosTapScale;
+  late final Animation<double> _sosTapGlow;
+  bool _showSosHint = false;
   bool _activeEmergency = false;
 
   // --- SHAKE TRIGGER VARIABLES ---
@@ -66,6 +74,20 @@ class _HomeScreenState extends State<HomeScreen>
     );
     _sosFlashOpacity = Tween<double>(begin: 0.0, end: 0.20).animate(
       CurvedAnimation(parent: _sosFlashController, curve: Curves.easeOut),
+    );
+
+    _sosTapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      reverseDuration: const Duration(milliseconds: 260),
+    );
+
+    _sosTapScale = Tween<double>(begin: 1.0, end: 0.93).animate(
+      CurvedAnimation(parent: _sosTapController, curve: Curves.easeOutCubic),
+    );
+
+    _sosTapGlow = Tween<double>(begin: 0.20, end: 0.42).animate(
+      CurvedAnimation(parent: _sosTapController, curve: Curves.easeOut),
     );
 
     _getCurrentLocation();
@@ -1058,6 +1080,17 @@ class _HomeScreenState extends State<HomeScreen>
                           const SizedBox(height: 16),
                           Center(
                             child: GestureDetector(
+                              onTapDown: (_) {
+                                HapticFeedback.selectionClick();
+                                _sosTapController.forward();
+                              },
+                              onTapUp: (_) {
+                                _sosTapController.reverse();
+                                _showSOSOptions();
+                              },
+                              onTapCancel: () {
+                                _sosTapController.reverse();
+                              },
                               onLongPressStart: (_) {
                                 HapticFeedback.heavyImpact();
                                 _triggerSOSPressEffect();
@@ -1066,6 +1099,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 HapticFeedback.vibrate();
                                 _showSOSOptions();
                               },
+<<<<<<< Updated upstream
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
@@ -1087,51 +1121,103 @@ class _HomeScreenState extends State<HomeScreen>
                                           blurRadius: 28,
                                           spreadRadius: 6,
                                           offset: Offset(0, 12),
+=======
+                              child: AnimatedBuilder(
+                                animation: Listenable.merge([
+                                  _sosTapController,
+                                  _sosFlashController,
+                                ]),
+                                builder: (context, child) {
+                                  return Transform.scale(
+                                    scale: _sosTapScale.value,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        if (!isDark)
+                                          Container(
+                                            width: 245,
+                                            height: 245,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: const Color(
+                                                0xFFE11D34,
+                                              ).withOpacity(0.08),
+                                            ),
+                                          ),
+                                        _ripple(300, 0.05),
+                                        _ripple(255, 0.085),
+                                        _ripple(215, 0.12),
+                                        Container(
+                                          width: 176,
+                                          height: 176,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white.withOpacity(
+                                                0.22,
+                                              ),
+                                              width: 2.2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(0x33D3192A)
+                                                    .withOpacity(
+                                                      _sosTapGlow.value,
+                                                    ),
+                                                blurRadius: 32,
+                                                spreadRadius: 8,
+                                                offset: const Offset(0, 12),
+                                              ),
+                                            ],
+                                            gradient: const RadialGradient(
+                                              colors: [
+                                                Color(0xFFFF6B74),
+                                                Color(0xFFE11928),
+                                                Color(0xFF95000E),
+                                              ],
+                                              stops: [0.0, 0.60, 1.0],
+                                            ),
+                                          ),
+                                          child: Container(
+                                            margin: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.white.withOpacity(
+                                                0.04,
+                                              ),
+                                            ),
+                                            child: const Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  "SOS",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 50,
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: 1.2,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 3),
+                                                Text(
+                                                  "PRESS & HOLD",
+                                                  style: TextStyle(
+                                                    color: Colors.white70,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 1.2,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+>>>>>>> Stashed changes
                                         ),
                                       ],
-                                      gradient: const RadialGradient(
-                                        colors: [
-                                          Color(0xFFFF6B74),
-                                          Color(0xFFE11928),
-                                          Color(0xFF95000E),
-                                        ],
-                                        stops: [0.0, 0.60, 1.0],
-                                      ),
                                     ),
-                                    child: Container(
-                                      margin: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.white.withOpacity(0.04),
-                                      ),
-                                      child: const Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            "SOS",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 50,
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: 1.2,
-                                            ),
-                                          ),
-                                          SizedBox(height: 3),
-                                          Text(
-                                            "PRESS & HOLD",
-                                            style: TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 1.2,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                  );
+                                },
                               ),
                             ),
                           ),
@@ -1554,6 +1640,7 @@ class _HomeScreenState extends State<HomeScreen>
     _locationSyncTimer?.cancel();
     _authSub?.cancel();
     _myAlertSub?.cancel();
+    _sosTapController.dispose();
     _sosFlashController.dispose();
     super.dispose();
   }
