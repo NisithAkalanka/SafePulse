@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
 import 'sos_system/alerts_hub_screen.dart'; // Add this line
 import '../help/help_request.dart';
 import '../theme/guardian_ui.dart';
@@ -303,8 +302,8 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
             elevation: 0,
             actions: [
               IconButton(
-                tooltip: 'Switch to Requester Mode',
-                icon: const Icon(Icons.published_with_changes_rounded),
+                tooltip: 'Switch to Requester mode',
+                icon: const Icon(Icons.swap_horiz_rounded),
                 onPressed: () {
                   HelpRoleModeService.instance.setHelperMode(false);
                 },
@@ -340,7 +339,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
                   child: Container(
                     decoration: BoxDecoration(
                       color: g.panelBg,
@@ -359,10 +358,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           : ListView.builder(
                               physics: const AlwaysScrollableScrollPhysics(),
                               padding: const EdgeInsets.fromLTRB(
-                                14,
+                                2,
                                 16,
-                                14,
-                                24,
+                                2,
+                                90, // Adding bottom padding to scroll past navigation
                               ),
                               itemCount: requests.length,
                               itemBuilder: (context, index) {
@@ -384,83 +383,118 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     const Color redPrimary = GuardianUi.redPrimary;
     final g = GuardianTheme.of(context);
     final s = _styleFor(request);
+
+    Future<void> sendOffer() async {
+      final ok = await HelpOfferNotificationService.instance
+          .notifyRequesterAboutOffer(request);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Offer sent. Redirecting to Alerts Hub...'
+                : 'Could not send offer notification. Please try again.',
+          ),
+        ),
+      );
+
+      if (ok) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AlertsHubScreen()),
+        );
+      }
+    }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: g.listItemBg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: g.chipBorder),
-        boxShadow: g.cardShadow,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.only(bottom: 14),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: sendOffer,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 132),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            decoration: BoxDecoration(
+              color: g.listItemBg,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: g.chipBorder.withValues(alpha: 0.95),
+                width: 1.6,
+              ),
+              boxShadow: g.cardShadow,
+            ),
+            child: Row(
               children: [
                 Container(
-                  width: 4,
-                  height: 52,
-                  margin: const EdgeInsets.only(right: 10, top: 2),
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
-                    color: s.tagColor,
-                    borderRadius: BorderRadius.circular(4),
+                    color: GuardianUi.redTint,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: redPrimary.withValues(alpha: 0.20),
+                      width: 1.2,
+                    ),
                   ),
-                ),
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: GuardianUi.redTint,
-                  child: Icon(
+                  child: const Icon(
                     Icons.person_rounded,
                     color: redPrimary,
-                    size: 20,
+                    size: 34,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 20),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         request.category,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 19,
                           fontWeight: FontWeight.w900,
                           color: g.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 7),
                       Text(
                         request.requesterName.isNotEmpty
                             ? request.requesterName
-                            : 'Requester',
+                            : request.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
                           color: g.textSecondary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 7),
                       Text(
                         request.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: g.textPrimary,
+                          fontSize: 13,
+                          color: g.textSecondary.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       if (request.description.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
                           request.description.trim(),
-                          maxLines: 4,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 13,
                             height: 1.35,
-                            color: g.textSecondary.withOpacity(0.9),
+                            color: g.textSecondary.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -474,7 +508,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E9E5A).withOpacity(0.12),
+                              color: const Color(
+                                0xFF1E9E5A,
+                              ).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -508,6 +544,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -529,99 +566,63 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.event_available_rounded,
-                            size: 14,
-                            color: redPrimary.withOpacity(0.85),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              'Needed ${DateFormat.yMMMd().add_jm().format(request.neededAt)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: g.textPrimary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
-                if (request.isUrgent)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: GuardianUi.redTint,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: redPrimary.withOpacity(0.35)),
-                    ),
-                    child: Text(
-                      'Urgent',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: redPrimary,
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (request.isUrgent)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: GuardianUi.redTint,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: redPrimary.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: const Text(
+                          'Urgent',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: redPrimary,
+                          ),
+                        ),
+                      ),
+                    SizedBox(
+                      height: 44,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: redPrimary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        onPressed: sendOffer,
+                        child: const Text('Offer Help'),
                       ),
                     ),
-                  ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: redPrimary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                onPressed: () async {
-                  final ok = await HelpOfferNotificationService.instance
-                      .notifyRequesterAboutOffer(request);
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        ok
-                            ? 'Offer sent. Redirecting to Alerts Hub...'
-                            : 'Could not send offer notification. Please try again.',
-                      ),
-                    ),
-                  );
-
-                  if (ok) {
-                    // Redirect to Alerts Hub Screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AlertsHubScreen(),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('OFFER HELP'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
