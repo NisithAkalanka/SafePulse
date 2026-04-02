@@ -121,6 +121,29 @@ class LostFoundNotificationService {
     );
   }
 
+  Future<void> notifyAdminDeletedPost({
+    required String userId,
+    required String itemId,
+    required String itemType,
+    required String itemTitle,
+    String? reason,
+  }) async {
+    final String finalReason = (reason ?? '').trim().isEmpty
+        ? 'because it may be unsuitable or due to some other reason'
+        : reason!.trim();
+
+    await sendToUser(
+      userId: userId,
+      title: 'Post removed by system',
+      body:
+          'Your Lost & Found post "$itemTitle" was removed by the system $finalReason.',
+      itemId: itemId,
+      itemType: itemType,
+      actionType: 'admin_deleted_post',
+      extraData: {'adminDeleteReason': finalReason},
+    );
+  }
+
   Future<void> markAsRead(String notificationId) async {
     await _db.collection(_notificationsCol).doc(notificationId).update({
       'isRead': true,

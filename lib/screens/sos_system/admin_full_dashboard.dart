@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 // මීට කලින් ඔයා හදාගත්ත SOS මැනේජ් කරන ලොජික් එක මෙතනට ලින්ක් කරමු
 import 'sos_management_page.dart';
+<<<<<<< Updated upstream
+=======
+import '../marketPlace_system/market_admin_hub.dart';
+import '../lost_found_system/lost_found_admin_hub.dart';
+
+// --- පියවර: ඔබේ Marketplace Admin පිටුව මෙතැනට Import කළා ---
+>>>>>>> Stashed changes
 
 class AdminFullDashboard extends StatefulWidget {
   const AdminFullDashboard({super.key});
@@ -227,7 +234,12 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
                               Icons.search_off_rounded,
                               const Color(0xFFF59E0B),
                               () {
-                                /* Member 3 Page */
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (c) => const LostFoundAdminHub(),
+                                  ),
+                                );
                               },
                             ),
                             _moduleCard(
