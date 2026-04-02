@@ -32,6 +32,9 @@ class LostItem {
   String? ownerRetryMessage;
   int ownerRetryCount;
 
+  bool ownerMarkedReceived;
+  bool requesterMarkedReturned;
+
   LostItem({
     required this.id,
     required this.userId,
@@ -59,6 +62,8 @@ class LostItem {
     this.requesterChatAccepted = false,
     this.ownerRetryMessage,
     this.ownerRetryCount = 0,
+    this.ownerMarkedReceived = false,
+    this.requesterMarkedReturned = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -90,6 +95,8 @@ class LostItem {
       'requesterChatAccepted': requesterChatAccepted,
       'ownerRetryMessage': ownerRetryMessage,
       'ownerRetryCount': ownerRetryCount,
+      'ownerMarkedReceived': ownerMarkedReceived,
+      'requesterMarkedReturned': requesterMarkedReturned,
     };
   }
 
@@ -145,6 +152,8 @@ class LostItem {
       requesterChatAccepted: map['requesterChatAccepted'] ?? false,
       ownerRetryMessage: map['ownerRetryMessage'],
       ownerRetryCount: map['ownerRetryCount'] ?? 0,
+      ownerMarkedReceived: map['ownerMarkedReceived'] ?? false,
+      requesterMarkedReturned: map['requesterMarkedReturned'] ?? false,
     );
   }
 }

@@ -1381,8 +1381,11 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
         style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           icon: const Icon(Icons.search, color: lfRed),
-          hintText: "Search by title, category, location...",
-          hintStyle: TextStyle(color: _textMuted, fontWeight: FontWeight.w500),
+          hintText: "Search your posts...",
+          hintStyle: TextStyle(
+            color: _isDark ? const Color(0xFFB8BFCD) : lfHint,
+            fontWeight: FontWeight.w500,
+          ),
           border: InputBorder.none,
         ),
         onChanged: (val) => setState(() => _searchQuery = val.trim()),
@@ -1398,12 +1401,11 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
       backgroundColor: _pageBg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(
-          "My Posts",
-          style: TextStyle(
+        title: Text(
+          widget.type == 'Lost' ? 'My Lost Posts' : 'My Found Posts',
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w800,
-            letterSpacing: 0.2,
           ),
         ),
         centerTitle: true,
@@ -1420,7 +1422,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(18, 100, 18, 18),
+                padding: const EdgeInsets.fromLTRB(18, 108, 18, 20),
                 decoration: BoxDecoration(
                   gradient: _isDark
                       ? const LinearGradient(
@@ -1451,9 +1453,9 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                 ),
                 child: _myPostsHeaderCard(),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 24),
               _searchBar(),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: LostFoundItemsSection(

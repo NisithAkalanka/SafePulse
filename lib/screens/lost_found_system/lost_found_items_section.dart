@@ -288,6 +288,20 @@ class _ItemCardState extends State<_ItemCard> {
     return uid != null && uid == widget.item.userId;
   }
 
+  bool get _isRequester {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    return uid != null && uid == widget.item.requesterId;
+  }
+
+  bool get _isConversationParticipant => _isOwner || _isRequester;
+
+  String _displayStatus() {
+    if (widget.item.status == 'Chat Enabled' && !_isConversationParticipant) {
+      return 'Verification in progress';
+    }
+    return widget.item.status;
+  }
+
   ({Color bg, Color text}) _statusColors(String status) {
     switch (status) {
       case 'Active':
@@ -296,6 +310,8 @@ class _ItemCardState extends State<_ItemCard> {
       case 'Answer Submitted':
       case 'Owner Verification Sent':
         return (bg: const Color(0xFFEAF2FF), text: const Color(0xFF1565C0));
+      case 'Verification in progress':
+        return (bg: const Color(0xFFFFF4DB), text: const Color(0xFFB26A00));
       case 'Claim Pending':
       case 'Verification Pending':
       case 'Chat Request Pending':
@@ -382,7 +398,8 @@ class _ItemCardState extends State<_ItemCard> {
   }
 
   Widget _buildStatusOverlay() {
-    final colors = _statusColors(widget.item.status);
+    final displayStatus = _displayStatus();
+    final colors = _statusColors(displayStatus);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -394,7 +411,7 @@ class _ItemCardState extends State<_ItemCard> {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
-            widget.item.status,
+            displayStatus,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -540,7 +557,7 @@ class _ItemCardState extends State<_ItemCard> {
                       top: 8,
                       right: 8,
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 96),
+                        constraints: const BoxConstraints(maxWidth: 120),
                         child: _buildStatusOverlay(),
                       ),
                     ),
