@@ -43,6 +43,8 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
         return Icons.assignment_turned_in_outlined;
       case 'received':
         return Icons.inventory_2_outlined;
+      case 'admin_deleted_post':
+        return Icons.gpp_bad_outlined;
       default:
         return Icons.notifications_none_rounded;
     }
@@ -61,9 +63,20 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
     Map<String, dynamic> row,
   ) async {
     final itemId = (row['itemId'] ?? '').toString();
+    final actionType = (row['actionType'] ?? '').toString();
 
     if (row['isRead'] != true) {
       await _lostFoundNotificationService.markAsRead(docId);
+    }
+
+    if (actionType == 'admin_deleted_post') {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This post was removed by the system administration.'),
+        ),
+      );
+      return;
     }
 
     if (itemId.isEmpty) {

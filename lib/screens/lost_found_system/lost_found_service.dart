@@ -9,6 +9,7 @@ import 'lost_item_model.dart';
 
 class LostFoundService {
   static const String _col = 'lost_found_posts';
+  static const String _archiveCol = 'lost_found_returned_archive';
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final LostFoundNotificationService _notificationService =
@@ -59,6 +60,33 @@ class LostFoundService {
     return item;
   }
 
+  Future<void> _archiveReturnedDocument(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) async {
+    final data = doc.data();
+
+    final archiveRef = _db.collection(_archiveCol).doc(doc.id);
+
+    final Map<String, dynamic> archiveData = Map<String, dynamic>.from(data);
+    archiveData['archivedAt'] = FieldValue.serverTimestamp();
+    archiveData['originalDocId'] = doc.id;
+
+    final messagesSnap = await doc.reference.collection('messages').get();
+    final List<Map<String, dynamic>> archivedMessages = messagesSnap.docs
+        .map((m) => m.data())
+        .toList();
+
+    archiveData['archivedMessages'] = archivedMessages;
+
+    await archiveRef.set(archiveData, SetOptions(merge: true));
+
+    for (final messageDoc in messagesSnap.docs) {
+      await messageDoc.reference.delete();
+    }
+
+    await doc.reference.delete();
+  }
+
   Future<void> _cleanupReturnedItems() async {
     final snap = await _db
         .collection(_col)
@@ -72,11 +100,13 @@ class LostFoundService {
 
       if (rt is Timestamp) {
         returnedAt = rt.toDate();
+      } else if (rt is DateTime) {
+        returnedAt = rt;
       }
 
       if (returnedAt != null &&
           DateTime.now().difference(returnedAt).inMinutes >= 60) {
-        await doc.reference.delete();
+        await _archiveReturnedDocument(doc);
       }
     }
   }
