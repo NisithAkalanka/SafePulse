@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
-import 'sos_system/profile_screen.dart';
 import 'sos_system/alerts_hub_screen.dart'; // Add this line
 import '../help/help_request.dart';
 import '../theme/guardian_ui.dart';
@@ -80,11 +79,17 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     );
   }
 
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
   String _distanceLabel(HelpRequest request) {
     // Distance display disabled in UI.
     return '';
   }
 
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
   String _timeAgoLabel(DateTime time) {
     final diff = DateTime.now().difference(time);
     if (diff.inMinutes < 1) return 'Just now';
@@ -119,11 +124,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
       markerColor = Colors.redAccent;
     }
 
-    return (
-      tagColor: tagColor,
-      markerColor: markerColor,
-      statusLabel: statusLabel,
-    );
+    return (tagColor: tagColor, markerColor: markerColor, statusLabel: statusLabel);
   }
 
   /// Matches [GuardianMapScreen] header glass card.
@@ -234,12 +235,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
     );
   }
 
-  Widget _buildEmptyHelpState() {
+  Widget _buildEmptyHelpState(BuildContext context) {
     final g = GuardianTheme.of(context);
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
-      shrinkWrap: true,
       children: [
         Icon(
           Icons.handshake_outlined,
@@ -273,17 +273,13 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ValueListenableBuilder<List<HelpRequest>>(
       valueListenable: HelpRequestsStore.instance.requests,
       builder: (context, all, _) {
         final currentUid = FirebaseAuth.instance.currentUser?.uid;
+        // Only show requests that are NOT the user's own and have no active offer from someone else
         final requests = _sortedRequests(all)
-            .where(
-              (r) =>
-                  !r.isMine &&
-                  (r.helperUid == null || r.helperUid == currentUid),
-            )
+            .where((r) => !r.isMine && (r.helperUid == null || r.helperUid == currentUid))
             .toList();
         final g = GuardianTheme.of(context);
 
@@ -305,10 +301,17 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
             elevation: 0,
             actions: [
               IconButton(
+<<<<<<< Updated upstream
                 tooltip: 'Switch to Requester mode',
                 icon: const Icon(Icons.swap_horiz_rounded),
                 onPressed: () {
                   HelpRoleModeService.instance.toggle();
+=======
+                tooltip: 'Switch to Requester Mode',
+                icon: const Icon(Icons.published_with_changes_rounded),
+                onPressed: () {
+                  HelpRoleModeService.instance.setHelperMode(false);
+>>>>>>> Stashed changes
                 },
               ),
               IconButton(
@@ -318,85 +321,64 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                   MainMenuScreen.showOverlay(context);
                 },
               ),
-              const SizedBox(width: 6),
             ],
           ),
-          body: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
-                    decoration: BoxDecoration(
-                      gradient: isDark
-                          ? const LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFFFF3B3B),
-                                Color(0xFFE10613),
-                                Color(0xFFB30012),
-                                Color(0xFF140910),
-                              ],
-                              stops: [0.0, 0.35, 0.72, 1.0],
-                            )
-                          : g.headerGradient,
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(34),
-                        bottomRight: Radius.circular(34),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildHelpHeaderCard(),
-                        const SizedBox(height: 12),
-                        _buildHelpTopInfoStrip(requests.length),
-                      ],
-                    ),
+          body: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 108, 18, 24),
+                decoration: BoxDecoration(
+                  gradient: g.headerGradient,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(34),
+                    bottomRight: Radius.circular(34),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 120),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: g.panelBg,
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: g.cardShadow,
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: RefreshIndicator(
-                        color: GuardianUi.redPrimary,
-                        onRefresh: () async {
-                          await _loadLocation();
-                          await HelpRequestService.instance.refreshOnce();
-                        },
-                        child: requests.isEmpty
-                            ? _buildEmptyHelpState()
-                            : ListView.builder(
-                                physics: const NeverScrollableScrollPhysics(),
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.fromLTRB(
-                                  14,
-                                  16,
-                                  14,
-                                  24,
-                                ),
-                                itemCount: requests.length,
-                                itemBuilder: (context, index) {
-                                  return _featuredCard(
-                                    context,
-                                    requests[index],
-                                  );
-                                },
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+                child: Column(
+                  children: [
+                    _buildHelpHeaderCard(),
+                    const SizedBox(height: 12),
+                    _buildHelpTopInfoStrip(requests.length),
+                  ],
+                ),
               ),
-            ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 110),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: g.panelBg,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: g.cardShadow,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: RefreshIndicator(
+                      color: GuardianUi.redPrimary,
+                      onRefresh: () async {
+                        await _loadLocation();
+                        await HelpRequestService.instance.refreshOnce();
+                      },
+                      child: requests.isEmpty
+                          ? _buildEmptyHelpState(context)
+                          : ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(
+                                14,
+                                16,
+                                14,
+                                24,
+                              ),
+                              itemCount: requests.length,
+                              itemBuilder: (context, index) {
+                                return _featuredCard(context, requests[index]);
+                              },
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -531,7 +513,10 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+<<<<<<< Updated upstream
                           const SizedBox(width: 8),
+=======
+>>>>>>> Stashed changes
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -587,7 +572,9 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     decoration: BoxDecoration(
                       color: GuardianUi.redTint,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: redPrimary.withOpacity(0.35)),
+                      border: Border.all(
+                        color: redPrimary.withOpacity(0.35),
+                      ),
                     ),
                     child: Text(
                       'Urgent',
@@ -633,6 +620,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                   );
 
                   if (ok) {
+                    // Redirect to Alerts Hub Screen
                     Navigator.push(
                       context,
                       MaterialPageRoute(

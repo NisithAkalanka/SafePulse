@@ -107,7 +107,6 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
 
   // --- Figma-style design tokens (Help request form) ---
   static const double _kFigmaRadius = 12;
-
   /// Primary red from spec (#D32F2F) — focus ring & cursor on inputs.
   static const Color _kFigmaAccent = Color(0xFFD32F2F);
   static const double _kFigmaSectionGap = 16;
@@ -384,6 +383,24 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     return null;
   }
 
+  String? _validateRequesterName(String? v) {
+    final t = v?.trim() ?? '';
+    if (t.isEmpty) {
+      return 'Please enter your name';
+    }
+    if (t.length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    if (t.length > 80) {
+      return 'Name is too long';
+    }
+    final lettersOnly = RegExp(r'^[A-Za-z ]+$');
+    if (!lettersOnly.hasMatch(t)) {
+      return 'Name can only contain letters';
+    }
+    return null;
+  }
+
   Map<String, dynamic> _buildHelperPreferencesMap() {
     final tip = _tipController.text.trim();
     final phys = _physicalController.text.trim();
@@ -512,9 +529,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: You must be logged in to post.'),
-          ),
+          const SnackBar(content: Text('Error: You must be logged in to post.')),
         );
       }
       return;
@@ -544,7 +559,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
 
         final ok = await HelpRequestService.instance
             .updateRequest(_persistedDocId!, updated)
-            .timeout(const Duration(seconds: 45), onTimeout: () => false);
+            .timeout(
+              const Duration(seconds: 45),
+              onTimeout: () => false,
+            );
 
         if (mounted) setState(() => _isSubmitting = false);
         if (!mounted) return;
@@ -657,9 +675,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
         final msg = e is TimeoutException
             ? 'Request timed out. Check your connection and try again.'
             : 'Could not submit. Please try again.';
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
     }
   }
@@ -839,6 +855,24 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+<<<<<<< Updated upstream
+                          _figmaFormSection(
+                            icon: Icons.badge_outlined,
+                            label: 'Requester name',
+                            child: TextFormField(
+                              controller: _requesterNameController,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.next,
+                              readOnly: !_isEditing,
+                              style: _inputTextStyle,
+                              cursorColor: _kFigmaAccent,
+                              decoration: _inputDecoration(
+                                hint:
+                                    'Your name as it should appear to helpers',
+                                prefixIcon: const Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 22,
+=======
                               _figmaFormSection(
                                 icon: Icons.badge_outlined,
                                 label: 'Requester name',
@@ -857,236 +891,226 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                                       size: 22,
                                     ),
                                   ),
-                                  validator: (v) {
-                                    final t = v?.trim() ?? '';
-                                    if (t.isEmpty) {
-                                      return 'Please enter your name';
-                                    }
-                                    if (t.length < 2) {
-                                      return 'Name must be at least 2 characters';
-                                    }
-                                    if (t.length > 80) {
-                                      return 'Name is too long';
-                                    }
-                                    return null;
-                                  },
+                                  validator: _validateRequesterName,
+>>>>>>> Stashed changes
                                 ),
                               ),
-                              const SizedBox(height: _kFigmaSectionGap),
-                              _figmaFormSection(
-                                icon: Icons.event_rounded,
-                                label: 'Date you need help',
-                                child: _buildDateTimePickers(
+                              validator: (v) {
+                                final t = v?.trim() ?? '';
+                                if (t.isEmpty) {
+                                  return 'Please enter your name';
+                                }
+                                if (t.length < 2) {
+                                  return 'Name must be at least 2 characters';
+                                }
+                                if (t.length > 80) {
+                                  return 'Name is too long';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: _kFigmaSectionGap),
+                          _figmaFormSection(
+                            icon: Icons.event_rounded,
+                            label: 'Date you need help',
+                            child: _buildDateTimePickers(
+                              context,
+                              redPrimary,
+                              _isEditing,
+                            ),
+                          ),
+                          const SizedBox(height: _kFigmaSectionGap),
+                          _figmaFormSection(
+                            icon: Icons.short_text_rounded,
+                            label: 'Short title',
+                            child: TextFormField(
+                              controller: _titleController,
+                              textInputAction: TextInputAction.next,
+                              readOnly: !_isEditing,
+                              style: _inputTextStyle,
+                              cursorColor: _kFigmaAccent,
+                              decoration: _inputDecoration(
+                                hint: 'E.g. Need help carrying medical bag',
+                              ),
+                              validator: (v) {
+                                final t = v?.trim() ?? '';
+                                if (t.isEmpty) {
+                                  return 'Please enter a short title';
+                                }
+                                if (t.length < 2) {
+                                  return 'Title must be at least 2 characters';
+                                }
+                                if (t.length > 80) {
+                                  return 'Title is too long';
+                                }
+
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: _kFigmaSectionGap),
+                          _figmaFormSection(
+                            icon: Icons.subject_rounded,
+                            label: 'Describe what you need',
+                            child: TextFormField(
+                              controller: _descriptionController,
+                              minLines: 2,
+                              maxLines: 4,
+                              textInputAction: TextInputAction.done,
+                              onEditingComplete: () =>
+                                  FocusManager.instance.primaryFocus?.unfocus(),
+                              scrollPadding: const EdgeInsets.fromLTRB(
+                                20,
+                                20,
+                                20,
+                                200,
+                              ),
+                              readOnly: !_isEditing,
+                              style: _inputTextStyle,
+                              cursorColor: _kFigmaAccent,
+                              decoration: _inputDecoration(
+                                hint:
+                                    'Share details like when, where and any special instructions.',
+                              ),
+                              validator: (v) {
+                                final t = v?.trim() ?? '';
+                                if (t.isEmpty) {
+                                  return 'Please describe what you need';
+                                }
+                                if (t.length < 5) {
+                                  return 'Please add a bit more detail (at least 5 characters)';
+                                }
+                                if (t.length > 400) {
+                                  return 'Description is too long (max 400 characters)';
+                                }
+
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: _kFigmaSectionGap),
+                          _figmaFormSection(
+                            icon: Icons.place_rounded,
+                            label: 'Location',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _slitBuildings.entries.map((entry) {
+                                  final key = entry.key;
+                                  final loc = entry.value;
+                                  final isSel = _selectedSlitLocationKey == key;
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: _isEditing
+                                          ? () {
+                                              setState(() {
+                                                _selectedSlitLocationKey = key;
+                                              });
+                                            }
+                                          : null,
+                                      borderRadius: BorderRadius.circular(24),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 180,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          gradient: isSel
+                                              ? GuardianUi.ctaGradient
+                                              : null,
+                                          color: isSel
+                                              ? null
+                                              : _fieldFill,
+                                          borderRadius: BorderRadius.circular(
+                                            24,
+                                          ),
+                                          border: Border.all(
+                                            color: isSel
+                                                ? Colors.transparent
+                                                : _fieldBorder,
+                                            width: isSel ? 0 : 1,
+                                          ),
+                                          boxShadow: isSel
+                                              ? [
+                                                  BoxShadow(
+                                                    color: GuardianUi.redPrimary
+                                                        .withValues(
+                                                          alpha: 0.28,
+                                                        ),
+                                                    blurRadius: 10,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (isSel)
+                                              const Icon(
+                                                Icons.check_rounded,
+                                                size: 18,
+                                                color: Colors.white,
+                                              ),
+                                            if (isSel) const SizedBox(width: 6),
+                                            Text(
+                                              loc.label,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 12,
+                                                color: isSel
+                                                    ? Colors.white
+                                                    : _ink,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: _kFigmaSectionGap),
+                          ExpansionTile(
+                            enabled: _isEditing,
+                            tilePadding: EdgeInsets.zero,
+                            collapsedIconColor: redPrimary,
+                            iconColor: redPrimary,
+                            backgroundColor: Colors.transparent,
+                            collapsedBackgroundColor: Colors.transparent,
+                            childrenPadding: EdgeInsets.zero,
+                            title: Text(
+                              'Advanced options (optional)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: redPrimary,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            trailing: const Icon(Icons.expand_more_rounded),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: _buildHelperPreferencesSection(
                                   context,
                                   redPrimary,
-                                  _isEditing,
                                 ),
                               ),
-                              const SizedBox(height: _kFigmaSectionGap),
-                              _figmaFormSection(
-                                icon: Icons.short_text_rounded,
-                                label: 'Short title',
-                                child: TextFormField(
-                                  controller: _titleController,
-                                  textInputAction: TextInputAction.next,
-                                  readOnly: !_isEditing,
-                                  style: _inputTextStyle,
-                                  cursorColor: _kFigmaAccent,
-                                  decoration: _inputDecoration(
-                                    hint: 'E.g. Need help carrying medical bag',
-                                  ),
-                                  validator: (v) {
-                                    final t = v?.trim() ?? '';
-                                    if (t.isEmpty) {
-                                      return 'Please enter a short title';
-                                    }
-                                    if (t.length < 2) {
-                                      return 'Title must be at least 2 characters';
-                                    }
-                                    if (t.length > 80) {
-                                      return 'Title is too long';
-                                    }
-
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: _kFigmaSectionGap),
-                              _figmaFormSection(
-                                icon: Icons.subject_rounded,
-                                label: 'Describe what you need',
-                                child: TextFormField(
-                                  controller: _descriptionController,
-                                  minLines: 2,
-                                  maxLines: 4,
-                                  textInputAction: TextInputAction.done,
-                                  onEditingComplete: () => FocusManager
-                                      .instance
-                                      .primaryFocus
-                                      ?.unfocus(),
-                                  scrollPadding: const EdgeInsets.fromLTRB(
-                                    20,
-                                    20,
-                                    20,
-                                    200,
-                                  ),
-                                  readOnly: !_isEditing,
-                                  style: _inputTextStyle,
-                                  cursorColor: _kFigmaAccent,
-                                  decoration: _inputDecoration(
-                                    hint:
-                                        'Share details like when, where and any special instructions.',
-                                  ),
-                                  validator: (v) {
-                                    final t = v?.trim() ?? '';
-                                    if (t.isEmpty) {
-                                      return 'Please describe what you need';
-                                    }
-                                    if (t.length < 5) {
-                                      return 'Please add a bit more detail (at least 5 characters)';
-                                    }
-                                    if (t.length > 400) {
-                                      return 'Description is too long (max 400 characters)';
-                                    }
-
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: _kFigmaSectionGap),
-                              _figmaFormSection(
-                                icon: Icons.place_rounded,
-                                label: 'Location',
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: _slitBuildings.entries.map((
-                                        entry,
-                                      ) {
-                                        final key = entry.key;
-                                        final loc = entry.value;
-                                        final isSel =
-                                            _selectedSlitLocationKey == key;
-                                        return Material(
-                                          color: Colors.transparent,
-                                          child: InkWell(
-                                            onTap: _isEditing
-                                                ? () {
-                                                    setState(() {
-                                                      _selectedSlitLocationKey =
-                                                          key;
-                                                    });
-                                                  }
-                                                : null,
-                                            borderRadius: BorderRadius.circular(
-                                              24,
-                                            ),
-                                            child: AnimatedContainer(
-                                              duration: const Duration(
-                                                milliseconds: 180,
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 14,
-                                                    vertical: 10,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                gradient: isSel
-                                                    ? GuardianUi.ctaGradient
-                                                    : null,
-                                                color: isSel
-                                                    ? null
-                                                    : _fieldFill,
-                                                borderRadius:
-                                                    BorderRadius.circular(24),
-                                                border: Border.all(
-                                                  color: isSel
-                                                      ? Colors.transparent
-                                                      : _fieldBorder,
-                                                  width: isSel ? 0 : 1,
-                                                ),
-                                                boxShadow: isSel
-                                                    ? [
-                                                        BoxShadow(
-                                                          color: GuardianUi
-                                                              .redPrimary
-                                                              .withValues(
-                                                                alpha: 0.28,
-                                                              ),
-                                                          blurRadius: 10,
-                                                          offset: const Offset(
-                                                            0,
-                                                            4,
-                                                          ),
-                                                        ),
-                                                      ]
-                                                    : null,
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  if (isSel)
-                                                    const Icon(
-                                                      Icons.check_rounded,
-                                                      size: 18,
-                                                      color: Colors.white,
-                                                    ),
-                                                  if (isSel)
-                                                    const SizedBox(width: 6),
-                                                  Text(
-                                                    loc.label,
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      fontSize: 12,
-                                                      color: isSel
-                                                          ? Colors.white
-                                                          : _ink,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                    const SizedBox(height: 12),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: _kFigmaSectionGap),
-                              ExpansionTile(
-                                enabled: _isEditing,
-                                tilePadding: EdgeInsets.zero,
-                                collapsedIconColor: redPrimary,
-                                iconColor: redPrimary,
-                                backgroundColor: Colors.transparent,
-                                collapsedBackgroundColor: Colors.transparent,
-                                childrenPadding: EdgeInsets.zero,
-                                title: Text(
-                                  'Advanced options (optional)',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: redPrimary,
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                                trailing: const Icon(Icons.expand_more_rounded),
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 12),
-                                    child: _buildHelperPreferencesSection(
-                                      context,
-                                      redPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                ],
-                              ),
+                              const SizedBox(height: 10),
+                            ],
+                          ),
                             ],
                           ),
                         ),
@@ -1172,7 +1196,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.calendar_today_rounded, size: 20, color: _muted),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 20,
+                      color: _muted,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -1201,7 +1229,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                         ],
                       ),
                     ),
-                    Icon(Icons.expand_more_rounded, color: _muted, size: 22),
+                    Icon(
+                      Icons.expand_more_rounded,
+                      color: _muted,
+                      size: 22,
+                    ),
                   ],
                 ),
               ),
@@ -1227,7 +1259,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.schedule_rounded, size: 20, color: _muted),
+                    Icon(
+                      Icons.schedule_rounded,
+                      size: 20,
+                      color: _muted,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -1254,7 +1290,11 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                         ],
                       ),
                     ),
-                    Icon(Icons.expand_more_rounded, color: _muted, size: 22),
+                    Icon(
+                      Icons.expand_more_rounded,
+                      color: _muted,
+                      size: 22,
+                    ),
                   ],
                 ),
               ),
@@ -1271,9 +1311,8 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     Color redPrimary,
   ) {
     final gt = GuardianTheme.of(context);
-    final innerBg = gt.isDark
-        ? const Color(0xFF1E1A1C)
-        : const Color(0xFFFFF8F8);
+    final innerBg =
+        gt.isDark ? const Color(0xFF1E1A1C) : const Color(0xFFFFF8F8);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(3),
@@ -1628,9 +1667,8 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
             value: value,
             activeTrackColor: redPrimary,
             activeThumbColor: Colors.white,
-            inactiveTrackColor: _g.isDark
-                ? const Color(0xFF3A3A45)
-                : Colors.grey.shade300,
+            inactiveTrackColor:
+                _g.isDark ? const Color(0xFF3A3A45) : Colors.grey.shade300,
             onChanged: enabled ? onChanged : null,
           ),
         ],
@@ -1761,20 +1799,26 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
   }
 
   TextStyle get _inputTextStyle => TextStyle(
-    fontSize: 15,
-    height: 1.45,
-    fontWeight: FontWeight.w400,
-    color: _ink,
-    letterSpacing: 0.02,
-  );
+        fontSize: 15,
+        height: 1.45,
+        fontWeight: FontWeight.w400,
+        color: _ink,
+        letterSpacing: 0.02,
+      );
 
-  InputDecoration _inputDecoration({required String hint, Widget? prefixIcon}) {
+  InputDecoration _inputDecoration({
+    required String hint,
+    Widget? prefixIcon,
+  }) {
     final r = BorderRadius.circular(_kFigmaRadius);
     const errorColor = Color(0xFFC62828);
     final prefix = prefixIcon == null
         ? null
         : IconTheme.merge(
-            data: IconThemeData(size: 21, color: _muted),
+            data: IconThemeData(
+              size: 21,
+              color: _muted,
+            ),
             child: prefixIcon,
           );
 
@@ -1787,7 +1831,10 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
         fontWeight: FontWeight.w400,
       ),
       prefixIcon: prefix,
-      prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+      prefixIconConstraints: const BoxConstraints(
+        minWidth: 48,
+        minHeight: 48,
+      ),
       filled: true,
       fillColor: _fieldFill,
       isDense: false,
