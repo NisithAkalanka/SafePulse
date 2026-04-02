@@ -214,16 +214,7 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
                                 ),
                               ),
                             ),
-                            _moduleCard(
-                              context,
-                              "Community\nRequests",
-                              Icons.handshake_rounded,
-                              const Color(0xFF3B82F6),
-                              () {
-                                /* Member 2 Page */
-                              },
-                            ),
-                            _moduleCard(
+                            _                _moduleCard(
                               context,
                               "Lost & Found\nHub",
                               Icons.search_off_rounded,

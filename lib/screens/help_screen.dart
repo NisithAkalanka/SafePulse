@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../services/help_role_mode_service.dart';
+import '../services/community_requests_admin_service.dart';
 import '../widgets/main_bottom_navigation_bar.dart';
 import 'help_feed_screen.dart';
 import 'help_request_detail_screen.dart';
@@ -9,7 +12,7 @@ import 'your_requests_page.dart';
 import 'your_requests_screen.dart';
 
 /// Category grid for the **Request help** category list.
-const List<_HelpCategory> _kHelpCategories = [
+const List<_HelpCategory> _kDefaultHelpCategories = [
   _HelpCategory(
     asset: 'assets/images/resource_sharing.png',
     title: 'Resource Sharing',
@@ -57,11 +60,15 @@ class _HelpScreenState extends State<HelpScreen>
   int _selectedCategoryIndex = 0;
   bool _openedInitialCategory = false;
   late TabController _requesterTabController;
+  late List<_HelpCategory> _categories;
+  StreamSubscription<List<CommunityRequestCategory>>? _categoriesSub;
 
   @override
   void initState() {
     super.initState();
+    _categories = List<_HelpCategory>.from(_kDefaultHelpCategories);
     _requesterTabController = TabController(length: 2, vsync: this);
+    _listenAdminCategories();
     HelpRoleModeService.instance.load().then((_) {
       if (!mounted) return;
       _maybeOpenInitialCategory();
@@ -70,8 +77,78 @@ class _HelpScreenState extends State<HelpScreen>
 
   @override
   void dispose() {
+    _categoriesSub?.cancel();
     _requesterTabController.dispose();
     super.dispose();
+  }
+
+  void _listenAdminCategories() {
+    _categoriesSub = CommunityRequestsAdminService.instance
+        .watchActiveCategories()
+        .listen((data) {
+      if (!mounted) return;
+      final mapped = data
+          .map(
+            (c) => _HelpCategory(
+              asset: _assetForCategory(c.name),
+              title: _normalizeCategoryTitle(c.name),
+            ),
+          )
+          .where((c) => c.title.trim().isNotEmpty)
+          .toList();
+
+      final merged = List<_HelpCategory>.from(_kDefaultHelpCategories);
+      for (final item in mapped) {
+        final exists = merged.any(
+          (d) => d.title.toLowerCase() == item.title.toLowerCase(),
+        );
+        if (!exists) {
+          merged.add(item);
+        }
+      }
+
+      setState(() {
+        _categories = merged;
+        if (_selectedCategoryIndex >= _categories.length) {
+          _selectedCategoryIndex = 0;
+        }
+      });
+
+      _maybeOpenInitialCategory();
+    });
+  }
+
+  String _assetForCategory(String title) {
+    for (final c in _kDefaultHelpCategories) {
+      if (c.title.toLowerCase() == title.toLowerCase()) {
+        return c.asset;
+      }
+    }
+
+    final lower = title.toLowerCase();
+    if (lower.contains('transport')) return 'assets/images/safety_transport.png';
+    if (lower.contains('study')) return 'assets/images/study_support.png';
+    if (lower.contains('tech')) return 'assets/images/tech_support.png';
+    if (lower.contains('resource')) return 'assets/images/resource_sharing.png';
+    if (lower.contains('canteen')) return 'assets/images/canteen_runner.png';
+    if (lower.contains('cash')) return 'assets/images/cash_exchange.png';
+    if (lower.contains('logistics') || lower.contains('moving')) {
+      return 'assets/images/campus_logistics.png';
+    }
+
+    return 'assets/images/other.png';
+  }
+
+  String _normalizeCategoryTitle(String title) {
+    final t = title.trim();
+    if (t.isEmpty) return t;
+
+    final lower = t.toLowerCase();
+    if (lower == 'transport') return 'Safety Transport';
+    if (lower == 'study') return 'Study Support';
+    if (lower == 'tech') return 'Tech Support';
+
+    return t;
   }
 
   void _focusMyRequestsTab() {
@@ -105,7 +182,7 @@ class _HelpScreenState extends State<HelpScreen>
     if (_openedInitialCategory || widget.initialCategory == null) return;
     if (HelpRoleModeService.instance.isHelperMode.value) return;
 
-    final idx = _kHelpCategories.indexWhere(
+    final idx = _categories.indexWhere(
       (c) => c.title.toLowerCase() == widget.initialCategory!.toLowerCase(),
     );
     if (idx == -1) return;
@@ -117,7 +194,7 @@ class _HelpScreenState extends State<HelpScreen>
       final result = await Navigator.of(context, rootNavigator: true).push<bool>(
         MaterialPageRoute<bool>(
           builder: (_) => HelpRequestDetailScreen(
-            category: _kHelpCategories[idx].title,
+            category: _categories[idx].title,
             initialNote: '',
             onViewYourRequests: _onViewYourRequestsAfterSubmit,
           ),
@@ -136,7 +213,7 @@ class _HelpScreenState extends State<HelpScreen>
     final result = await Navigator.of(context, rootNavigator: true).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => HelpRequestDetailScreen(
-          category: _kHelpCategories[index].title,
+          category: _categories[index].title,
           initialNote: '',
           onViewYourRequests: _onViewYourRequestsAfterSubmit,
         ),
@@ -176,12 +253,20 @@ class _HelpScreenState extends State<HelpScreen>
               ),
             ),
             centerTitle: true,
+            automaticallyImplyLeading: false,
             actions: [
               IconButton(
+<<<<<<< Updated upstream
                 tooltip: 'Switch to Helper mode',
                 icon: const Icon(Icons.swap_horiz_rounded),
                 onPressed: () {
                   HelpRoleModeService.instance.toggle();
+=======
+                tooltip: 'Switch to Helper Mode',
+                icon: const Icon(Icons.published_with_changes_rounded),
+                onPressed: () {
+                  HelpRoleModeService.instance.setHelperMode(true);
+>>>>>>> Stashed changes
                 },
               ),
               IconButton(
@@ -268,7 +353,7 @@ class _HelpScreenState extends State<HelpScreen>
                           controller: _requesterTabController,
                           children: [
                             _RequestTabContent(
-                              categories: _kHelpCategories,
+                              categories: _categories,
                               selectedIndex: _selectedCategoryIndex,
                               onCategorySelected: _openRequestDetail,
                             ),
