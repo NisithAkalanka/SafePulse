@@ -14,7 +14,6 @@ class LostFoundNotificationService {
     return _db
         .collection(_notificationsCol)
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
@@ -55,6 +54,7 @@ class LostFoundNotificationService {
         .where((e) => e.trim().isNotEmpty)
         .toSet()
         .toList();
+
     if (uniqueIds.isEmpty) return;
 
     WriteBatch batch = _db.batch();
@@ -156,13 +156,20 @@ class LostFoundNotificationService {
   }
 
   String formatTime(dynamic timestamp) {
+    DateTime? dt;
+
     if (timestamp is Timestamp) {
-      final dt = timestamp.toDate();
-      final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-      final minute = dt.minute.toString().padLeft(2, '0');
-      final period = dt.hour >= 12 ? 'PM' : 'AM';
-      return '${dt.day}/${dt.month}/${dt.year}  $hour:$minute $period';
+      dt = timestamp.toDate();
+    } else if (timestamp is DateTime) {
+      dt = timestamp;
     }
-    return 'Just now';
+
+    if (dt == null) return 'Just now';
+
+    final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+
+    return '${dt.day}/${dt.month}/${dt.year}  $hour:$minute $period';
   }
 }
