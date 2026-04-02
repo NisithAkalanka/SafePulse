@@ -246,55 +246,8 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                         builder: (context, lfSnap) {
                           final rows = <Map<String, dynamic>>[];
 
-<<<<<<< Updated upstream
-                      for (final d in alerts) {
-                        final data = d.data() as Map<String, dynamic>;
-                        rows.add({
-                          'id': d.id,
-                          'isOffer': false,
-                          'title': (data['user_email'] ?? "Unknown User").toString(),
-                          'type': (data['type'] ?? 'N/A').toString(),
-                          'address': (data['address'] ?? 'No location').toString(),
-                          'time': data['time'],
-                        });
-                      }
-
-                      if (offerSnap.hasData) {
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
-                        for (final d in offerSnap.data!.docs) {
-                          final data = d.data() as Map<String, dynamic>;
-                          final String docId = d.id;
-
-                          // Trigger notification if my offer was accepted
-                          if (data['helperUid'] == uid &&
-                              data['accepted'] == true &&
-                              !_processedAlertIds.contains('accepted_$docId')) {
-                            
-                            // Using a post-frame callback to show the dialog
-                            // to avoid "setState() or markNeedsBuild() called during build" errors
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (!mounted) return;
-
-                              NotificationService.showHelpAcceptedNotification(
-                                id: docId.hashCode,
-                                category: (data['requestCategory'] ?? 'Help request').toString(),
-                                title: (data['requestTitle'] ?? '').toString(),
-                              );
-                            });
-                            
-                            _processedAlertIds.add('accepted_$docId');
-                          }
-
-                          // Show as notification if I'm the recipient (normal behavior)
-                          // OR if I am the helper (so I can see my sent offer here)
-                          final bool isRecipient = data['recipientUid'] == uid;
-                          final bool isHelper = data['helperUid'] == uid;
-
-                          if (isRecipient || isHelper) {
-=======
                           for (final d in alerts) {
                             final data = d.data() as Map<String, dynamic>;
->>>>>>> Stashed changes
                             rows.add({
                               'id': d.id,
                               'rowType': 'sos',
