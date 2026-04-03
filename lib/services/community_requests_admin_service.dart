@@ -106,7 +106,8 @@ class ModerationRequestItem {
       description: (data['description'] as String? ?? '').trim(),
       requesterName: (data['requesterName'] as String? ?? 'Unknown').trim(),
       createdAt: _parseDate(data['createdAt']) ?? DateTime.now(),
-      moderationStatus: (data['moderationStatus'] as String? ?? 'active').trim(),
+      moderationStatus: (data['moderationStatus'] as String? ?? 'active')
+          .trim(),
       flagReason: (data['moderationReason'] as String?)?.trim(),
     );
   }
@@ -140,16 +141,25 @@ class CommunityRequestsAdminService {
         .collection(_categoriesCollection)
         .orderBy('name')
         .snapshots()
-        .map((snap) => snap.docs.map(CommunityRequestCategory.fromDoc).toList());
+        .map(
+          (snap) => snap.docs.map(CommunityRequestCategory.fromDoc).toList(),
+        );
   }
 
   Stream<List<CommunityRequestCategory>> watchActiveCategories() {
     return _firestore
         .collection(_categoriesCollection)
         .where('isActive', isEqualTo: true)
-        .orderBy('name')
         .snapshots()
-        .map((snap) => snap.docs.map(CommunityRequestCategory.fromDoc).toList());
+        .map((snap) {
+          final items = snap.docs
+              .map(CommunityRequestCategory.fromDoc)
+              .toList();
+          items.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
+          return items;
+        });
   }
 
   Future<void> addCategory(String name) async {
