@@ -17,6 +17,11 @@ class SOSTrackingMap extends StatefulWidget {
 }
 
 class _SOSTrackingMapState extends State<SOSTrackingMap> {
+  String _maskPhoneNumber(String phone) {
+    if (phone.length < 7) return phone;
+    return "${phone.substring(0, 3)}****${phone.substring(phone.length - 3)}";
+  }
+
   // --- සැබෑ සිතියම් යෙදුම (Google/Apple Maps) විවෘත කරන Logic එක ---
   Future<void> _openMapNavigation(double lat, double lng) async {
     // Google Maps URL (Android/iOS දෙකටම)
@@ -111,6 +116,7 @@ class _SOSTrackingMapState extends State<SOSTrackingMap> {
           String type = data['type'] ?? "General Emergency";
           String victimPhone =
               data['user_phone'] ?? ""; // Alert එකේ Phone එක තියෙනවා නම්
+          String maskedPhone = _maskPhoneNumber(victimPhone);
           final String address = data['address'] ?? 'Tracking location...';
 
           return SingleChildScrollView(
@@ -387,6 +393,15 @@ class _SOSTrackingMapState extends State<SOSTrackingMap> {
                                     fontWeight: FontWeight.w700,
                                     color: textPrimary,
                                     height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  "Contact Identity: $maskedPhone",
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
                                   ),
                                 ),
                                 const SizedBox(height: 24),
