@@ -341,6 +341,14 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _sendToFirebase(String type) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
+      String phone = "";
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        phone = (userDoc.data()?['phone'] ?? '').toString();
+      }
       if (_currentPosition == null) await _getCurrentLocation();
 
       await _myAlertSub?.cancel();
@@ -350,6 +358,7 @@ class _HomeScreenState extends State<HomeScreen>
           await FirebaseFirestore.instance.collection('alerts').add({
             'type': type,
             'user_email': user?.email ?? "Guest Mode",
+            'user_phone': phone,
             'uid': user?.uid ?? "anonymous",
             'lat': _currentPosition?.latitude,
             'lng': _currentPosition?.longitude,
