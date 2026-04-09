@@ -116,4 +116,24 @@ class NotificationService {
       notificationDetails: details,
     );
   }
+
+  // Safe status notification (when user is marked safe)
+  static Future<void> showSafeNotification(String userName) async {
+    const NotificationDetails details = NotificationDetails(
+      iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      android: AndroidNotificationDetails(
+        'safe_channel',
+        'Safety Alerts',
+        importance: Importance.max,
+        priority: Priority.high,
+      ),
+    );
+
+    await _notificationsPlugin.show(
+      id: 1,
+      title: "✅ STATUS UPDATE",
+      body: "$userName is now Safe. Crisis resolved.",
+      notificationDetails: details,
+    );
+  }
 }
