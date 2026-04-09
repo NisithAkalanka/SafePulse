@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'home_screen.dart';
 import 'sos_tracking_map.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -10,6 +11,17 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  void _handleBackNavigation() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+  }
+
   // SOS එකක් විසඳුවා (Handled) කියලා සලකුණු කරන්න
   Future<void> _resolveAlert(String docId) async {
     await FirebaseFirestore.instance.collection('alerts').doc(docId).update({
@@ -28,6 +40,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _handleBackNavigation,
+          ),
           title: const Text(
             "Guardian Security Admin",
             style: TextStyle(fontWeight: FontWeight.bold),

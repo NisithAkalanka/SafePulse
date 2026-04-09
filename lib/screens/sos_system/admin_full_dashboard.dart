@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'sos_management_page.dart';
+import 'home_screen.dart';
 import '../marketPlace_system/market_admin_hub.dart';
 import '../lost_found_system/lost_found_admin_hub.dart';
 import '../community_requests_admin_screen.dart';
@@ -44,7 +45,21 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () async {
+            final navigator = Navigator.of(context);
+
+            if (navigator.canPop()) {
+              final bool popped = await navigator.maybePop();
+              if (popped) return;
+            }
+
+            if (!mounted) return;
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          },
         ),
         actions: [
           IconButton(
