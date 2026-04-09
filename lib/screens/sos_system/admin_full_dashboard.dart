@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// මීට කලින් ඔයා හදාගත්ත SOS මැනේජ් කරන ලොජික් එක මෙතනට ලින්ක් කරමු
 import 'sos_management_page.dart';
+import 'home_screen.dart';
+import '../marketPlace_system/market_admin_hub.dart';
+import '../lost_found_system/lost_found_admin_hub.dart';
+import '../community_requests_admin_screen.dart';
+
+// --- පියවර: ඔබේ Marketplace Admin පිටුව මෙතැනට Import කළා ---
 
 class AdminFullDashboard extends StatefulWidget {
   const AdminFullDashboard({super.key});
@@ -40,7 +45,21 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () async {
+            final navigator = Navigator.of(context);
+
+            if (navigator.canPop()) {
+              final bool popped = await navigator.maybePop();
+              if (popped) return;
+            }
+
+            if (!mounted) return;
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          },
         ),
         actions: [
           IconButton(
@@ -217,9 +236,13 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
                               "Community\nRequests",
                               Icons.handshake_rounded,
                               const Color(0xFF3B82F6),
-                              () {
-                                /* Member 2 Page */
-                              },
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (c) =>
+                                      const CommunityRequestsAdminScreen(),
+                                ),
+                              ),
                             ),
                             _moduleCard(
                               context,
@@ -227,7 +250,12 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
                               Icons.search_off_rounded,
                               const Color(0xFFF59E0B),
                               () {
-                                /* Member 3 Page */
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (c) => const LostFoundAdminHub(),
+                                  ),
+                                );
                               },
                             ),
                             _moduleCard(
@@ -236,7 +264,13 @@ class _AdminFullDashboardState extends State<AdminFullDashboard> {
                               Icons.shopping_bag_rounded,
                               const Color(0xFF22C55E),
                               () {
-                                /* Member 4 Page */
+                                // --- පියවර: ඔබගේ Marketplace Admin පිටුව මෙතැනින් Navigate වේ ---
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (c) => const MarketAdminHub(),
+                                  ),
+                                );
                               },
                             ),
                           ],
