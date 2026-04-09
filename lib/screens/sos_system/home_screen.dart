@@ -714,20 +714,25 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _markCurrentAlertSafe() async {
-    final String? alertId = _activeEmergencyAlertId;
-    if (alertId == null) {
-      if (!mounted) return;
-      setState(() {
-        _activeEmergency = false;
-      });
-      return;
-    }
+    final user = FirebaseAuth.instance.currentUser;
 
     try {
-      await FirebaseFirestore.instance.collection('alerts').doc(alertId).set({
-        'status': 'Resolved',
-        'resolved_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      final activeAlerts = await FirebaseFirestore.instance
+          .collection('alerts')
+          .where('uid', isEqualTo: user?.uid)
+          .where('status', isNotEqualTo: 'Resolved')
+          .get();
+
+      for (final doc in activeAlerts.docs) {
+        await doc.reference.update({
+          'status': 'Resolved',
+          'resolved_at': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await NotificationService.showSafeNotification(
+        user?.email?.split('@')[0] ?? 'User',
+      );
 
       if (!mounted) return;
       setState(() {
@@ -737,8 +742,8 @@ class _HomeScreenState extends State<HomeScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Alert cleared. Glad you're safe now."),
-          backgroundColor: Colors.blueAccent,
+          content: Text('Glad to hear you are safe!'),
+          backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
@@ -1576,7 +1581,56 @@ class _HomeScreenState extends State<HomeScreen>
                               child: SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: _markCurrentAlertSafe,
+                                  onPressed: () async {
+                                    final user =
+                                        FirebaseAuth.instance.currentUser;
+
+                                    try {
+                                      var allMyAlerts = await FirebaseFirestore
+                                          .instance
+                                          .collection('alerts')
+                                          .where('uid', isEqualTo: user?.uid)
+                                          .get();
+
+                                      final activeDocs = allMyAlerts.docs.where(
+                                        (doc) {
+                                          return doc.data()['status'] !=
+                                              'Resolved';
+                                        },
+                                      );
+
+                                      for (var doc in activeDocs) {
+                                        await doc.reference.update({
+                                          'status': 'Resolved',
+                                          'resolved_at':
+                                              FieldValue.serverTimestamp(),
+                                        });
+                                      }
+
+                                      await NotificationService.showSafeNotification(
+                                        user?.email?.split('@')[0] ?? "User",
+                                      );
+
+                                      if (!mounted) return;
+                                      setState(() {
+                                        _activeEmergency = false;
+                                        _activeEmergencyAlertId = null;
+                                      });
+
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Crisis resolved. Stay safe!",
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      debugPrint("Error clearing alert: $e");
+                                    }
+                                  },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blueAccent,
                                     foregroundColor: Colors.white,

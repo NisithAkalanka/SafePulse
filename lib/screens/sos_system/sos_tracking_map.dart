@@ -117,6 +117,7 @@ class _SOSTrackingMapState extends State<SOSTrackingMap> {
           String victimPhone =
               data['user_phone'] ?? ""; // Alert එකේ Phone එක තියෙනවා නම්
           String maskedPhone = _maskPhoneNumber(victimPhone);
+          bool isUserSafe = data['status'] == 'Resolved';
           final String address = data['address'] ?? 'Tracking location...';
 
           return SingleChildScrollView(
@@ -411,8 +412,22 @@ class _SOSTrackingMapState extends State<SOSTrackingMap> {
                                       child: _actionBtn(
                                         Icons.phone,
                                         "CALL",
-                                        Colors.green,
-                                        () => _makeEmergencyCall(victimPhone),
+                                        isUserSafe ? Colors.grey : Colors.green,
+                                        () {
+                                          if (isUserSafe) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  "The user is already safe. Calling is disabled.",
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            _makeEmergencyCall(victimPhone);
+                                          }
+                                        },
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -420,8 +435,24 @@ class _SOSTrackingMapState extends State<SOSTrackingMap> {
                                       child: _actionBtn(
                                         Icons.directions,
                                         "NAVIGATE",
-                                        const Color(0xFF1976D2),
-                                        () => _openMapNavigation(lat, lng),
+                                        isUserSafe
+                                            ? Colors.grey
+                                            : const Color(0xFF1976D2),
+                                        () {
+                                          if (isUserSafe) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  "Tracking expired. User is safe.",
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            _openMapNavigation(lat, lng);
+                                          }
+                                        },
                                       ),
                                     ),
                                   ],
