@@ -17,6 +17,7 @@ import 'admin_full_dashboard.dart';
 import 'fake_call_screen.dart';
 import '../help_private_chat_screen.dart';
 import '../../services/notification_service.dart';
+import '../../services/chat_notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -60,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    ChatNotificationService.instance.startListening();
     WidgetsBinding.instance.addObserver(this);
 
     _sosFlashController = AnimationController(

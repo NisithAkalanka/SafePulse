@@ -16,7 +16,10 @@ import 'services/help_offer_notification_service.dart';
 import 'screens/marketPlace_system/market_home.dart';
 import 'screens/marketPlace_system/create_listing.dart';
 import 'screens/marketPlace_system/item_details.dart';
+
 import 'screens/marketPlace_system/negotiation_chat.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +54,7 @@ class SafePulseApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'SafePulse',
       theme: ThemeData(
