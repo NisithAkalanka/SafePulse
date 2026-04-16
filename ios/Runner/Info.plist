@@ -43,6 +43,9 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>SafePulse needs access to your location for SOS services.</string>
 
+	<key>NSMicrophoneUsageDescription</key>
+<string>This app needs microphone access to send voice messages in safety chats.</string>
+
 	<!-- 🚀 URL Launching Schemes (Fixed: Added Maps support) -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>

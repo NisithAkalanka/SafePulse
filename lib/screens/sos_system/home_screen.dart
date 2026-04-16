@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,7 +15,9 @@ import 'guardian_mode_screen.dart';
 import 'alerts_hub_screen.dart';
 import 'admin_full_dashboard.dart';
 import 'fake_call_screen.dart';
+import '../help_private_chat_screen.dart';
 import '../../services/notification_service.dart';
+import '../../services/chat_notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,11 +27,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-<<<<<<< Updated upstream
-    with SingleTickerProviderStateMixin {
-=======
     with TickerProviderStateMixin, WidgetsBindingObserver {
->>>>>>> Stashed changes
   String _currentAddress = "Detecting location...";
   Position? _currentPosition;
   String _userRole = "student";
@@ -38,13 +35,10 @@ class _HomeScreenState extends State<HomeScreen>
   Timer? _locationSyncTimer;
   StreamSubscription<User?>? _authSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _myAlertSub;
-<<<<<<< Updated upstream
-=======
   String? _activeEmergencyAlertId;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _helpOfferSub;
   final Set<String> _seenHelpOfferNotifications = <String>{};
->>>>>>> Stashed changes
 
   late final AnimationController _sosFlashController;
   late final Animation<double> _sosFlashOpacity;
@@ -67,6 +61,8 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    ChatNotificationService.instance.startListening();
+    WidgetsBinding.instance.addObserver(this);
 
     _sosFlashController = AnimationController(
       vsync: this,
@@ -92,7 +88,9 @@ class _HomeScreenState extends State<HomeScreen>
 
     _getCurrentLocation();
     _listenForGlobalAlerts();
+    _listenForHelpOfferNotifications();
     _loadUserStatus();
+    _listenToUserSettings();
     _startLiveLocationSync();
 
     _initShakeDetection(); // ✅ start shake detection
@@ -100,10 +98,12 @@ class _HomeScreenState extends State<HomeScreen>
     _authSub = FirebaseAuth.instance.authStateChanges().listen((u) {
       if (!mounted) return;
       if (u == null) {
+        _userDocSub?.cancel();
+        _helpOfferSub?.cancel();
+        _helpOfferSub = null;
+        _seenHelpOfferNotifications.clear();
         setState(() {
           _userRole = 'student';
-<<<<<<< Updated upstream
-=======
           _shakeEnabled = true;
           _activeEmergency = false;
           _activeEmergencyAlertId = null;
@@ -112,10 +112,11 @@ class _HomeScreenState extends State<HomeScreen>
             "⚠️ Threat / Hazard": true,
             "💥 Accident / Crash": true,
           };
->>>>>>> Stashed changes
         });
       } else {
+        _listenForHelpOfferNotifications();
         _loadUserStatus();
+        _listenToUserSettings();
       }
     });
 
@@ -124,9 +125,6 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-<<<<<<< Updated upstream
-  // --- SNAP-STYLE MAP SYNC (සෑම තත්පර 30කට වරක් ලොකේෂන් Update කරයි) ---
-=======
   void _listenToUserSettings() {
     _userDocSub?.cancel();
 
@@ -160,7 +158,6 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
->>>>>>> Stashed changes
   void _startLiveLocationSync() {
     _locationSyncTimer = Timer.periodic(const Duration(seconds: 30), (
       timer,
@@ -472,21 +469,19 @@ class _HomeScreenState extends State<HomeScreen>
                         controller: scrollController,
                         padding: EdgeInsets.zero,
                         children: [
-                          ...activeTypes
-                              .map(
-                                (type) => ListTile(
-                                  leading: const Icon(
-                                    Icons.flash_on,
-                                    color: Colors.redAccent,
-                                  ),
-                                  title: Text(type),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    _sendToFirebase(type);
-                                  },
-                                ),
-                              )
-                              .toList(),
+                          ...activeTypes.map(
+                            (type) => ListTile(
+                              leading: const Icon(
+                                Icons.flash_on,
+                                color: Colors.redAccent,
+                              ),
+                              title: Text(type),
+                              onTap: () {
+                                Navigator.pop(context);
+                                _sendToFirebase(type);
+                              },
+                            ),
+                          ),
                           const SizedBox(height: 10),
                         ],
                       ),
@@ -513,7 +508,10 @@ class _HomeScreenState extends State<HomeScreen>
           for (final change in snapshot.docChanges) {
             if (change.type == DocumentChangeType.added) {
               final alertData = change.doc.data();
-              if (alertData?['uid'] != FirebaseAuth.instance.currentUser?.uid) {
+              final isMine =
+                  alertData?['uid'] == FirebaseAuth.instance.currentUser?.uid;
+              final isNew = (alertData?['status'] ?? 'New') == 'New';
+              if (!isMine && isNew) {
                 _showEmergencyAlert(
                   alertData?['type'] ?? 'Emergency',
                   alertData?['address'] ?? 'Nearby',
@@ -525,9 +523,6 @@ class _HomeScreenState extends State<HomeScreen>
         });
   }
 
-<<<<<<< Updated upstream
-  void _showEmergencyAlert(String type, String location) {
-=======
   void _listenForHelpOfferNotifications() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -625,7 +620,6 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showEmergencyAlert(String type, String location, String alertId) {
->>>>>>> Stashed changes
     if (!mounted) return;
     showDialog(
       context: context,
@@ -790,9 +784,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF1C2230)
-          : const Color(0xFFF6C9D1),
+      backgroundColor: isDark ? const Color(0xFF1C2230) : Colors.white,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -868,9 +860,9 @@ class _HomeScreenState extends State<HomeScreen>
                         Color(0xFF1A0005),
                       ]
                     : const [
-                        Color(0xFFFF5968),
-                        Color(0xFFF29AA8),
-                        Color(0xFFF4C2CB),
+                        Color(0xFFFF2A2A),
+                        Color(0xFFE00012),
+                        Color(0xFFFFFFFF),
                       ],
                 stops: isDark
                     ? const [0.0, 0.25, 0.55, 0.80, 1.0]
@@ -891,7 +883,7 @@ class _HomeScreenState extends State<HomeScreen>
                       (isDark
                               ? const Color(0xFFFF8A80)
                               : const Color(0xFFFFE3E8))
-                          .withOpacity(isDark ? 0.07 : 0.18),
+                          .withOpacity(isDark ? 0.07 : 0.26),
                 ),
               ),
             ),
@@ -908,8 +900,8 @@ class _HomeScreenState extends State<HomeScreen>
                   color:
                       (isDark
                               ? const Color(0xFF3D0008)
-                              : const Color(0xFFD96A78))
-                          .withOpacity(isDark ? 0.24 : 0.14),
+                              : const Color(0xFFD93131))
+                          .withOpacity(isDark ? 0.24 : 0.18),
                 ),
               ),
             ),
@@ -937,13 +929,13 @@ class _HomeScreenState extends State<HomeScreen>
                             Color(0x001A0005),
                           ]
                         : const [
-                            Color(0xFFFF5463),
-                            Color(0xFFFF8D99),
+                            Color(0xFFFF2A2A),
+                            Color(0xFFE00012),
                             Color(0x00FFFFFF),
                           ],
                     stops: isDark
                         ? const [0.0, 0.22, 0.65, 1.0]
-                        : const [0.0, 0.24, 1.0],
+                        : const [0.0, 0.34, 1.0],
                   ),
                 ),
               ),
@@ -1018,7 +1010,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
+                                      Text(
                                         "Current Location",
                                         style: TextStyle(
                                           color: Colors.white70,
@@ -1113,29 +1105,6 @@ class _HomeScreenState extends State<HomeScreen>
                                 HapticFeedback.vibrate();
                                 _showSOSOptions();
                               },
-<<<<<<< Updated upstream
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  _ripple(300, 0.05),
-                                  _ripple(255, 0.085),
-                                  _ripple(215, 0.12),
-                                  Container(
-                                    width: 176,
-                                    height: 176,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.22),
-                                        width: 2.2,
-                                      ),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0x33D3192A),
-                                          blurRadius: 28,
-                                          spreadRadius: 6,
-                                          offset: Offset(0, 12),
-=======
                               child: AnimatedBuilder(
                                 animation: Listenable.merge([
                                   _sosTapController,
@@ -1226,7 +1195,6 @@ class _HomeScreenState extends State<HomeScreen>
                                               ],
                                             ),
                                           ),
->>>>>>> Stashed changes
                                         ),
                                       ],
                                     ),
@@ -1391,8 +1359,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                                           100,
                                                                     ),
                                                                     () {
-                                                                      if (!mounted)
+                                                                      if (!mounted) {
                                                                         return;
+                                                                      }
                                                                       Navigator.push(
                                                                         context,
                                                                         MaterialPageRoute(
@@ -1405,8 +1374,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                                     },
                                                                   );
                                                                 } else {
-                                                                  if (!mounted)
+                                                                  if (!mounted) {
                                                                     return;
+                                                                  }
                                                                   ScaffoldMessenger.of(
                                                                     context,
                                                                   ).showSnackBar(
@@ -1541,8 +1511,8 @@ class _HomeScreenState extends State<HomeScreen>
                                         );
                                       }
 
-                                      return const Padding(
-                                        padding: EdgeInsets.symmetric(
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
                                           vertical: 10,
                                         ),
                                         child: Row(
@@ -1551,16 +1521,20 @@ class _HomeScreenState extends State<HomeScreen>
                                           children: [
                                             Icon(
                                               Icons.lock_outline,
-                                              color: Colors.white70,
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : Colors.black54,
                                               size: 16,
                                             ),
-                                            SizedBox(width: 8),
+                                            const SizedBox(width: 8),
                                             Flexible(
                                               child: Text(
                                                 "Login to enable Safe Walk & Guardians",
                                                 textAlign: TextAlign.center,
                                                 style: TextStyle(
-                                                  color: Colors.white70,
+                                                  color: isDark
+                                                      ? Colors.white70
+                                                      : Colors.black54,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                 ),
@@ -1692,14 +1666,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
-<<<<<<< Updated upstream
-    _shakeDetector?.stopListening(); // ✅ stop shake
-=======
     WidgetsBinding.instance.removeObserver(this);
     _userDocSub?.cancel();
     _shakeDetector?.stopListening();
->>>>>>> Stashed changes
     _globalAlertsSub?.cancel();
+    _helpOfferSub?.cancel();
     _locationSyncTimer?.cancel();
     _authSub?.cancel();
     _myAlertSub?.cancel();
@@ -1805,8 +1776,4 @@ class _SecurityLockDialogState extends State<SecurityLockDialog> {
       ],
     );
   }
-<<<<<<< Updated upstream
-} //orig
-=======
-} //ori
->>>>>>> Stashed changes
+}
