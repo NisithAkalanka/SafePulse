@@ -4,12 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'notification_service.dart';
 
 class ChatNotificationService {
+  // Singleton Pattern
   ChatNotificationService._internal();
   static final ChatNotificationService instance =
       ChatNotificationService._internal();
 
   final Map<String, StreamSubscription> _activeListeners = {};
-  DateTime appStartTime = DateTime.now();
+
+  // ඇප් එක පටන් ගන්නා වෙලාව (පරණ මැසේජ් වලට නොටිෆිකේෂන් එන එක නවත්වන්න)
+  DateTime _lastNotificationTime = DateTime.now();
 
   void startListening() {
     final user = FirebaseAuth.instance.currentUser;
@@ -18,25 +21,25 @@ class ChatNotificationService {
       return;
     }
 
-    print("🔔 [ChatNotif]: Listening for messages for user: ${user.email}");
+    print("🔔 [ChatNotif]: Listening for messages for: ${user.email}");
 
-    // 1. මම ඉන්න ගෲප් ලිස්ට් එක බලනවා
+    // 1. මම සාමාජිකයෙක් වෙලා ඉන්න හැම ගෲප් එකක්ම බලනවා
     FirebaseFirestore.instance
         .collection('groups')
         .where('members', arrayContains: user.uid)
         .snapshots()
         .listen((groupSnapshot) {
-          print("🔔 [ChatNotif]: Found ${groupSnapshot.docs.length} groups.");
-
           for (var groupDoc in groupSnapshot.docs) {
             String groupId = groupDoc.id;
-            String groupName = groupDoc.data()['groupName'] ?? "Safety Group";
+            String groupName =
+                groupDoc.data()['groupName'] ?? "Protection Circle";
 
+            // දැනටමත් මේ ගෲප් එකට සවන් දෙනවා නම් (Listener) ආයෙත් පටන් ගන්න එපා
             if (_activeListeners.containsKey(groupId)) continue;
 
-            print("🔔 [ChatNotif]: Subscribing to group: $groupName");
+            print("🔔 [ChatNotif]: New listener added for group: $groupName");
 
-            // 2. අදාළ ගෲප් එකේ මැසේජ් Listen කිරීම
+            // 2. ඒ ගෲප් එකේ අලුත්ම මැසේජ් එක විතරක් Listen කරනවා
             var sub = FirebaseFirestore.instance
                 .collection('groups')
                 .doc(groupId)
@@ -48,30 +51,27 @@ class ChatNotificationService {
                   if (messageSnapshot.docs.isNotEmpty) {
                     var msgData = messageSnapshot.docs.first.data();
                     String senderId = msgData['senderId'] ?? "";
-                    String senderName = msgData['senderName'] ?? "Someone";
+                    String senderName = msgData['senderName'] ?? "Guardian";
                     String text = msgData['text'] ?? "";
 
+                    // මැසේජ් එකේ වෙලාව පරීක්ෂා කිරීම
                     if (msgData['timestamp'] == null) return;
                     DateTime msgTime = (msgData['timestamp'] as Timestamp)
                         .toDate();
 
-                    // ලොග් එකක් දාමු මැසේජ් එකක් ආවම
-                    print(
-                      "📩 [ChatNotif]: New message detected in $groupName from $senderName",
-                    );
-
-                    // 3. කොන්දේසි පරීක්ෂාව
-                    // මැසේජ් එක මම යවපු එකක් නොවිය යුතුයි
-                    // මැසේජ් එකේ වෙලාව ඇප් එක පටන් ගත්ත වෙලාවට වඩා අලුත් විය යුතුයි (පරණ ඒවාට නොටිෆිකේෂන් එන එක නවත්වන්න)
-                    if (senderId != user.uid &&
-                        msgTime.isAfter(
-                          appStartTime.subtract(const Duration(seconds: 10)),
-                        )) {
-                      // පරීක්ෂා කිරීමේ පහසුවට තත්පර 10 ක පරතරයක් දෙමු
+                    // 3. කොන්දේසි පරීක්ෂාව (Conditions)
+                    // - මැසේජ් එක මම යවපු එකක් නොවිය යුතුයි (senderId != user.uid)
+                    // - මැසේජ් එකේ වෙලාව ඇප් එක පටන් ගත් වෙලාවට වඩා අලුත් විය යුතුයි
+                    if (senderId != user.uid) {
+                      // තත්පර 5ක සහනයක් (Buffer) සහිතව පරීක්ෂා කිරීම
                       if (msgTime.isAfter(
-                        appStartTime.subtract(const Duration(seconds: 1)),
+                        _lastNotificationTime.subtract(
+                          const Duration(seconds: 5),
+                        ),
                       )) {
-                        print("🚀 [ChatNotif]: Showing notification now!");
+                        print(
+                          "🚀 [ChatNotif]: Sending Notification for: $text",
+                        );
 
                         NotificationService.showChatNotification(
                           id: groupId.hashCode,
@@ -81,27 +81,25 @@ class ChatNotificationService {
                           groupId: groupId,
                         );
 
-                        // වෙලාව Update කරනවා එකම මැසේජ් එකට දෙපාරක් එන එක නවත්වන්න
-                        appStartTime = DateTime.now();
+                        // අවසන් වරට නොටිෆිකේෂන් එක එවූ වෙලාව Update කරනවා (Duplicate වැළැක්වීමට)
+                        _lastNotificationTime = msgTime;
                       } else {
-                        print(
-                          "⏳ [ChatNotif]: Message ignored because it is old.",
-                        );
+                        print("⏳ [ChatNotif]: Ignored old message.");
                       }
                     } else {
-                      print(
-                        "🚫 [ChatNotif]: Message ignored because sender is ME.",
-                      );
+                      print("🚫 [ChatNotif]: Ignored message from ME.");
                     }
                   }
                 });
 
+            // Listener එක save කරගන්නවා පස්සේ cancel කරන්න
             _activeListeners[groupId] = sub;
           }
         });
   }
 
   void stopListening() {
+    print("🔔 [ChatNotif]: Stopping all listeners.");
     for (var sub in _activeListeners.values) {
       sub.cancel();
     }

@@ -375,6 +375,7 @@ class _HomeScreenState extends State<HomeScreen>
       }
 
       NotificationService.showSOSNotification(type, _currentAddress);
+      await _sendSOSToAllGroups(type, _currentAddress);
 
       _myAlertSub = alertRef.snapshots().listen((snapshot) {
         if (!snapshot.exists) return;
@@ -1663,6 +1664,37 @@ class _HomeScreenState extends State<HomeScreen>
     ),
     child: Center(child: Icon(icon, color: const Color(0xFFD3192A), size: 28)),
   );
+
+  // SOS එක චැට් ගෲප් වලට යවන Function එක
+  Future<void> _sendSOSToAllGroups(String type, String address) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // 1. මම සාමාජිකයෙක් වෙලා ඉන්න හැම ගෲප් එකක්ම හොයාගන්නවා
+      var myGroups = await FirebaseFirestore.instance
+          .collection('groups')
+          .where('members', arrayContains: user.uid)
+          .get();
+
+      for (var doc in myGroups.docs) {
+        // 2. ඒ හැම ගෲප් එකකටම මැසේජ් එකක් දානවා
+        await FirebaseFirestore.instance
+            .collection('groups')
+            .doc(doc.id)
+            .collection('messages')
+            .add({
+              'text': "🆘 EMERGENCY: $type detected at $address. PLEASE HELP!",
+              'senderId': user.uid,
+              'senderName': "SYSTEM (SOS)",
+              'type': 'text',
+              'timestamp': FieldValue.serverTimestamp(),
+            });
+      }
+    } catch (e) {
+      debugPrint("SOS Chat Error: $e");
+    }
+  }
 
   @override
   void dispose() {
