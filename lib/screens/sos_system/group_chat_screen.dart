@@ -207,6 +207,265 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     }
   }
 
+  Future<void> _showAddMembersSheet() async {
+    if (user == null) return;
+
+    try {
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .get();
+
+      final currentUserData = currentUserDoc.data() ?? <String, dynamic>{};
+      final guardians = List<String>.from(
+        currentUserData['guardians'] ?? const <String>[],
+      );
+
+      final groupDoc = await FirebaseFirestore.instance
+          .collection('groups')
+          .doc(widget.groupId)
+          .get();
+      final groupData = groupDoc.data() ?? <String, dynamic>{};
+      final currentMembers = List<String>.from(
+        groupData['members'] ?? const <String>[],
+      );
+      final currentMemberEmails = List<String>.from(
+        groupData['memberEmails'] ?? const <String>[],
+      );
+
+      final guardianProfiles = <Map<String, dynamic>>[];
+
+      for (final guardianEmail in guardians) {
+        final cleanEmail = guardianEmail.trim().toLowerCase();
+        if (cleanEmail.isEmpty) continue;
+        if (currentMemberEmails.contains(cleanEmail)) continue;
+
+        final userQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('student_email', isEqualTo: cleanEmail)
+            .limit(1)
+            .get();
+
+        if (userQuery.docs.isEmpty) continue;
+
+        final guardianDoc = userQuery.docs.first;
+        final guardianData = guardianDoc.data();
+        final fullName =
+            (guardianData['full_name'] ??
+                    guardianData['name'] ??
+                    guardianData['student_email'] ??
+                    cleanEmail)
+                .toString();
+
+        if (currentMembers.contains(guardianDoc.id)) continue;
+
+        guardianProfiles.add({
+          'uid': guardianDoc.id,
+          'email': cleanEmail,
+          'shortName': _getShortName(fullName),
+          'online': _isOnlineFromLastSeen(guardianData['last_seen']),
+        });
+      }
+
+      if (!mounted) return;
+
+      if (guardianProfiles.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No new guardians available to add.')),
+        );
+        return;
+      }
+
+      final selectedUids = <String>{};
+      final selectedEmails = <String>{};
+
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: _isDark ? const Color(0xFF111B21) : Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (sheetContext) {
+          return StatefulBuilder(
+            builder: (context, setSheetState) {
+              return SafeArea(
+                child: FractionallySizedBox(
+                  heightFactor: 0.78,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Add Members',
+                                    style: TextStyle(
+                                      color: _textPrimary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Add more guardians to this group.',
+                                    style: TextStyle(
+                                      color: _subtleText,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFB31217),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              onPressed: selectedUids.isEmpty
+                                  ? null
+                                  : () async {
+                                      final selectedUidList = selectedUids
+                                          .toList();
+                                      final selectedEmailList = selectedEmails
+                                          .toList();
+
+                                      final groupRef = FirebaseFirestore
+                                          .instance
+                                          .collection('groups')
+                                          .doc(widget.groupId);
+
+                                      await groupRef.update({
+                                        'members': FieldValue.arrayUnion(
+                                          selectedUidList,
+                                        ),
+                                        'memberEmails': FieldValue.arrayUnion(
+                                          selectedEmailList,
+                                        ),
+                                        'updatedAt':
+                                            FieldValue.serverTimestamp(),
+                                      });
+
+                                      for (final profile in guardianProfiles) {
+                                        if (!selectedUids.contains(
+                                          profile['uid'],
+                                        ))
+                                          continue;
+
+                                        await groupRef.collection('messages').add({
+                                          'text':
+                                              '${profile['shortName']} joined the protection circle',
+                                          'type': 'system',
+                                          'timestamp':
+                                              FieldValue.serverTimestamp(),
+                                          'senderId': profile['uid'],
+                                          'senderName': profile['shortName'],
+                                          'readBy': [user!.uid],
+                                          'hiddenFor': <String>[],
+                                          'edited': false,
+                                        });
+                                      }
+
+                                      if (sheetContext.mounted) {
+                                        Navigator.pop(sheetContext);
+                                      }
+
+                                      if (!mounted) return;
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            '${selectedUidList.length} member(s) added to the group.',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              icon: const Icon(Icons.person_add_alt_1_rounded),
+                              label: const Text('Add'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: guardianProfiles.length,
+                            itemBuilder: (context, index) {
+                              final member = guardianProfiles[index];
+                              final uid = member['uid'].toString();
+                              final email = member['email'].toString();
+                              final isOnline = member['online'] == true;
+                              final isSelected = selectedUids.contains(uid);
+
+                              return CheckboxListTile(
+                                value: isSelected,
+                                activeColor: const Color(0xFFB31217),
+                                contentPadding: EdgeInsets.zero,
+                                controlAffinity:
+                                    ListTileControlAffinity.trailing,
+                                secondary: CircleAvatar(
+                                  backgroundColor: isOnline
+                                      ? Colors.green.withOpacity(0.16)
+                                      : Colors.grey.withOpacity(0.16),
+                                  child: Icon(
+                                    Icons.person,
+                                    color: isOnline
+                                        ? Colors.green
+                                        : Colors.grey,
+                                  ),
+                                ),
+                                title: Text(
+                                  member['shortName'].toString(),
+                                  style: TextStyle(
+                                    color: _textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  email,
+                                  style: TextStyle(color: _subtleText),
+                                ),
+                                onChanged: (value) {
+                                  setSheetState(() {
+                                    if (value == true) {
+                                      selectedUids.add(uid);
+                                      selectedEmails.add(email);
+                                    } else {
+                                      selectedUids.remove(uid);
+                                      selectedEmails.remove(email);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load guardians: $e')));
+    }
+  }
+
   Future<void> _showMembersSheet() async {
     final groupDoc = await FirebaseFirestore.instance
         .collection('groups')
@@ -220,71 +479,107 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: _isDark ? const Color(0xFF111B21) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Group Members (${profiles.length})',
-                  style: TextStyle(
-                    color: _textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+          child: FractionallySizedBox(
+            heightFactor: 0.72,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Group Members (${profiles.length})',
+                              style: TextStyle(
+                                color: _textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '$onlineCount online now',
+                              style: TextStyle(
+                                color: _subtleText,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB31217),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showAddMembersSheet();
+                        },
+                        icon: const Icon(Icons.person_add_alt_1_rounded),
+                        label: const Text('Add'),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '$onlineCount online now',
-                  style: TextStyle(
-                    color: _subtleText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: profiles.length,
+                      itemBuilder: (context, index) {
+                        final member = profiles[index];
+                        final isOnline = member['online'] == true;
+
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: isOnline
+                                ? Colors.green.withOpacity(0.16)
+                                : Colors.grey.withOpacity(0.16),
+                            child: Icon(
+                              Icons.person,
+                              color: isOnline ? Colors.green : Colors.grey,
+                            ),
+                          ),
+                          title: Text(
+                            member['shortName'].toString(),
+                            style: TextStyle(
+                              color: _textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          subtitle: Text(
+                            member['email'].toString(),
+                            style: TextStyle(color: _subtleText),
+                          ),
+                          trailing: Text(
+                            isOnline ? 'Online' : 'Offline',
+                            style: TextStyle(
+                              color: isOnline ? Colors.green : _subtleText,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                ...profiles.map((member) {
-                  final isOnline = member['online'] == true;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor: isOnline
-                          ? Colors.green.withOpacity(0.16)
-                          : Colors.grey.withOpacity(0.16),
-                      child: Icon(
-                        Icons.person,
-                        color: isOnline ? Colors.green : Colors.grey,
-                      ),
-                    ),
-                    title: Text(
-                      member['shortName'].toString(),
-                      style: TextStyle(
-                        color: _textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      member['email'].toString(),
-                      style: TextStyle(color: _subtleText),
-                    ),
-                    trailing: Text(
-                      isOnline ? 'Online' : 'Offline',
-                      style: TextStyle(
-                        color: isOnline ? Colors.green : _subtleText,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                  );
-                }),
-              ],
+                ],
+              ),
             ),
           ),
         );
