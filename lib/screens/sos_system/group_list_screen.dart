@@ -7,6 +7,24 @@ import 'package:flutter/material.dart';
 import 'create_group_screen.dart';
 import 'group_chat_screen.dart';
 
+String _buildLastMessagePreview(Map<String, dynamic> lastMsg) {
+  final String sender = (lastMsg['senderName'] ?? '').toString().trim();
+  final String text = (lastMsg['text'] ?? '').toString().trim();
+  final String type = (lastMsg['type'] ?? 'text').toString();
+
+  String previewText = text;
+  if (type == 'image') previewText = '📷 Photo';
+  if (type == 'voice') previewText = '🎤 Voice Message';
+  if (type == 'system')
+    return previewText.isEmpty ? 'System update' : previewText;
+
+  if (sender.isEmpty) {
+    return previewText.isEmpty ? 'No messages yet' : previewText;
+  }
+
+  return previewText.isEmpty ? sender : '$sender: $previewText';
+}
+
 class GroupListScreen extends StatelessWidget {
   const GroupListScreen({super.key});
 
@@ -190,6 +208,13 @@ class GroupListScreen extends StatelessWidget {
                     final groupImage = data['groupImage'];
                     final adminEmail = (data['adminEmail'] ?? 'Unknown admin')
                         .toString();
+                    final lastMessageStream = FirebaseFirestore.instance
+                        .collection('groups')
+                        .doc(groupId)
+                        .collection('messages')
+                        .orderBy('timestamp', descending: true)
+                        .limit(1)
+                        .snapshots();
 
                     return GestureDetector(
                       onTap: () => Navigator.push(
@@ -258,6 +283,43 @@ class GroupListScreen extends StatelessWidget {
                                       fontWeight: FontWeight.w900,
                                       fontSize: 22,
                                     ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  StreamBuilder<QuerySnapshot>(
+                                    stream: lastMessageStream,
+                                    builder: (context, msgSnapshot) {
+                                      if (!msgSnapshot.hasData ||
+                                          msgSnapshot.data!.docs.isEmpty) {
+                                        return Text(
+                                          'No messages yet',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: textSecondary,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        );
+                                      }
+
+                                      final lastMsg =
+                                          msgSnapshot.data!.docs.first.data()
+                                              as Map<String, dynamic>;
+                                      final preview = _buildLastMessagePreview(
+                                        lastMsg,
+                                      );
+
+                                      return Text(
+                                        preview,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: textSecondary,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      );
+                                    },
                                   ),
                                   const SizedBox(height: 10),
                                   Container(

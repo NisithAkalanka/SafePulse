@@ -9,7 +9,7 @@ class NotificationService {
 
   // 1. Notification පද්ධතිය සූදානම් කිරීම (Initialization)
   static Future<void> initNotification() async {
-    // --- Android 13+ සඳහා Permission ඉල්ලීමේ කොටස (FIX) ---
+    // Android 13+ සඳහා Permission ඉල්ලීම
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -19,6 +19,7 @@ class NotificationService {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
+    // iOS/Darwin සඳහා විශේෂ සැකසුම්
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
           requestAlertPermission: true,
@@ -31,13 +32,13 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    // Initialize කරද්දීම Click එක handle කරන logic එක ඇතුළත් කරනවා
+    // --- මෙන්න මෙතන තමයි වැරැද්ද නිවැරදි කළේ (settings: ලෙස ලබා දිය යුතුයි) ---
     await _notificationsPlugin.initialize(
-      settings: initSettings,
+      settings: initSettings, // 'settings:' යන්න අනිවාර්ය වේ
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         // නොටිෆිකේෂන් එක ක්ලික් කළාම මේ කොටස වැඩ කරයි
         if (response.payload != null && response.payload!.isNotEmpty) {
-          // Payload එකේ තියෙන්නේ groupId එකයි. ඒක අරන් Chat එකට යනවා
+          // Payload එකේ තියෙන groupId එක අරන් Chat එකට යනවා
           navigatorKey.currentState?.push(
             MaterialPageRoute(
               builder: (context) => GroupChatScreen(groupId: response.payload!),
@@ -48,7 +49,7 @@ class NotificationService {
     );
   }
 
-  // --- අලුතින් එකතු කළ කොටස: ගෲප් චැට් මැසේජ් පෙන්වීමට (FIXED VERSION) ---
+  // --- 2. ගෲප් චැට් මැසේජ් පෙන්වීමට ---
   static Future<void> showChatNotification({
     required int id,
     required String groupName,
@@ -61,10 +62,10 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
-        subtitle: 'New Group Message',
+        interruptionLevel: InterruptionLevel.active,
       ),
       android: AndroidNotificationDetails(
-        'chat_v3', // වඩාත් ස්ථාවර Channel ID එකක්
+        'chat_v3',
         'Group Messages',
         channelDescription: 'Notifications for protection circle messages',
         importance: Importance.max,
@@ -82,8 +83,7 @@ class NotificationService {
     );
   }
 
-  // --- ඔයාගේ කලින් තිබුණු පරණ Methods (පොඩ්ඩක්වත් වෙනස් කර නැත) ---
-
+  // --- 3. SOS Notification (කලින් තිබූ කේතයම වේ) ---
   static Future<void> showSOSNotification(String type, String address) async {
     const NotificationDetails details = NotificationDetails(
       iOS: DarwinNotificationDetails(
@@ -110,6 +110,7 @@ class NotificationService {
     );
   }
 
+  // --- 4. Help Offer Notification (කලින් තිබූ කේතයම වේ) ---
   static Future<void> showHelpOfferNotification({
     required int id,
     required String helperName,
@@ -140,6 +141,7 @@ class NotificationService {
     );
   }
 
+  // --- 5. Help Accepted Notification (කලින් තිබූ කේතයම වේ) ---
   static Future<void> showHelpAcceptedNotification({
     required int id,
     required String category,
@@ -169,6 +171,7 @@ class NotificationService {
     );
   }
 
+  // --- 6. Safe Status Notification (කලින් තිබූ කේතයම වේ) ---
   static Future<void> showSafeNotification(String userName) async {
     const NotificationDetails details = NotificationDetails(
       iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
