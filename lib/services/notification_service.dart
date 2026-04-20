@@ -62,6 +62,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        subtitle: 'New Message',
         interruptionLevel: InterruptionLevel.active,
       ),
       android: AndroidNotificationDetails(

@@ -10,19 +10,13 @@ class ChatNotificationService {
 
   final Map<String, StreamSubscription> _activeListeners = {};
 
-  // අවසන් වරට නොටිෆිකේෂන් එකක් පෙන්වූ මැසේජ් එකේ ID එක (Duplicate වැළැක්වීමට)
-  String? _lastProcessedMessageId;
-
   void startListening() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      print("🔔 [ChatNotif]: No user logged in.");
-      return;
-    }
+    if (user == null) return;
 
-    print("🔔 [ChatNotif]: Listening for messages for: ${user.email}");
+    print("🔔 [ChatNotif]: Listener Started for ${user.email}");
 
-    // 1. මම සාමාජිකයෙක් වී සිටින සියලුම ගෲප් ලබා ගැනීම
+    // 1. මම ඉන්න ගෲප් ලිස්ට් එක බලනවා
     FirebaseFirestore.instance
         .collection('groups')
         .where('members', arrayContains: user.uid)
@@ -30,81 +24,45 @@ class ChatNotificationService {
         .listen((groupSnapshot) {
           for (var groupDoc in groupSnapshot.docs) {
             String groupId = groupDoc.id;
-            String groupName =
-                groupDoc.data()['groupName'] ?? "Protection Circle";
+            String groupName = groupDoc.data()['groupName'] ?? "SafePlus Group";
 
             if (_activeListeners.containsKey(groupId)) continue;
 
-            print("🔔 [ChatNotif]: Monitoring group: $groupName");
-
-            // 2. අදාළ ගෲප් එකේ අලුත්ම මැසේජ් එක Listen කිරීම (iOS Metadata සමඟ)
+            // 2. අලුත්ම මැසේජ් එක විතරක් බලනවා
             var sub = FirebaseFirestore.instance
                 .collection('groups')
                 .doc(groupId)
                 .collection('messages')
                 .orderBy('timestamp', descending: true)
                 .limit(1)
-                .snapshots(includeMetadataChanges: true)
+                .snapshots()
                 .listen((messageSnapshot) {
                   if (messageSnapshot.docs.isNotEmpty) {
-                    var messageDoc = messageSnapshot.docs.first;
-                    var msgData = messageDoc.data();
-                    String messageId = messageDoc.id;
-
-                    // සර්වර් එකේ මැසේජ් එක හරියටම Save වුණාම විතරක් (Not Pending) වැඩේ පටන් ගන්නවා
-                    if (messageSnapshot.metadata.hasPendingWrites) return;
-
-                    // දැනටමත් මේ මැසේජ් එකට නොටිෆිකේෂන් එකක් දුන්නා නම් නවත්වන්න
-                    if (_lastProcessedMessageId == messageId) return;
-
+                    var msgData =
+                        messageSnapshot.docs.first.data()
+                            as Map<String, dynamic>;
                     String senderId = msgData['senderId'] ?? "";
                     String senderName = msgData['senderName'] ?? "Guardian";
                     String text = msgData['text'] ?? "";
 
-                    if (msgData['timestamp'] == null) return;
-                    DateTime msgTime = (msgData['timestamp'] as Timestamp)
-                        .toDate();
-
-                    // 3. iPhone (iOS) සඳහා වන විශේෂ කොන්දේසි පරීක්ෂාව
-                    // - මැසේජ් එක මම යවපු එකක් නොවිය යුතුයි
-                    // - මැසේජ් එකේ වෙලාව දැනට විනාඩියකට වඩා පරණ නොවිය යුතුයි (iOS Time Sync Fix)
+                    // 🛑 වැදගත්ම දේ:
+                    // 1. යැව්වේ මම නෙවෙයි නම්
+                    // 2. මැසේජ් එක පරණ එකක් වුණත් කමක් නැහැ, දැනට ටෙස්ට් කරන්න පෙන්වන්න
                     if (senderId != user.uid) {
-                      DateTime now = DateTime.now();
-                      if (msgTime.isAfter(
-                        now.subtract(const Duration(minutes: 1)),
-                      )) {
-                        print(
-                          "🚀 [ChatNotif]: New Message in $groupName: $text",
-                        );
+                      print("🚀 [ChatNotif]: TRIGGERING NOTIFICATION: $text");
 
-                        NotificationService.showChatNotification(
-                          id: groupId.hashCode,
-                          groupName: groupName,
-                          senderName: senderName,
-                          message: text.isEmpty
-                              ? "Sent an attachment 📎"
-                              : text,
-                          groupId: groupId,
-                        );
-
-                        _lastProcessedMessageId = messageId;
-                      } else {
-                        print("⏳ [ChatNotif]: Ignored old message.");
-                      }
+                      NotificationService.showChatNotification(
+                        id: groupId.hashCode,
+                        groupName: groupName,
+                        senderName: senderName,
+                        message: text,
+                        groupId: groupId,
+                      );
                     }
                   }
                 });
-
             _activeListeners[groupId] = sub;
           }
         });
-  }
-
-  void stopListening() {
-    print("🔔 [ChatNotif]: Stopping all listeners.");
-    for (var sub in _activeListeners.values) {
-      sub.cancel();
-    }
-    _activeListeners.clear();
   }
 }
