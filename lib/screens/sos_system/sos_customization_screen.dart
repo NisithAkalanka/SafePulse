@@ -127,12 +127,8 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
     final Color pageBg = isDark
         ? const Color(0xFF121217)
         : const Color(0xFFF6F7FB);
-    final Color cardBg = isDark
-        ? const Color(0xFF1B1B22)
-        : Colors.white;
-    final Color textPrimary = isDark
-        ? Colors.white
-        : const Color(0xFF1B1B22);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
     final Color textSecondary = isDark
         ? const Color(0xFFB7BBC6)
         : const Color(0xFF747A86);
@@ -352,9 +348,7 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                 decoration: BoxDecoration(
                                   color: softBg,
                                   borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: borderColor,
-                                  ),
+                                  border: Border.all(color: borderColor),
                                 ),
                                 child: SwitchListTile(
                                   title: Text(
@@ -423,9 +417,7 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                 decoration: BoxDecoration(
                                   color: softBg,
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: borderColor,
-                                  ),
+                                  border: Border.all(color: borderColor),
                                 ),
                                 child: Row(
                                   children: [
@@ -457,9 +449,7 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
                                 decoration: BoxDecoration(
                                   color: softBg,
                                   borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: borderColor,
-                                  ),
+                                  border: Border.all(color: borderColor),
                                 ),
                                 child: Column(
                                   children: sosTypes.keys.map((String key) {
@@ -586,3 +576,4 @@ class _SOSCustomizationScreenState extends State<SOSCustomizationScreen> {
     super.dispose();
   }
 }
+//orig
