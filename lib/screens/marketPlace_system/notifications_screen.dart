@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'negotiation_chat.dart';
 import 'package:intl/intl.dart';
+
+import 'negotiation_chat.dart';
+import 'rating_screen.dart';
 
 class MarketNotificationsScreen extends StatefulWidget {
   const MarketNotificationsScreen({super.key});
@@ -77,10 +79,19 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+<<<<<<< Updated upstream
     final Color pageBg = isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB);
     final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
     final Color textPrimary = isDark ? Colors.white : Colors.black87;
     final Color borderColor = isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0);
+=======
+    final Color pageBg =
+        isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB);
+    final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
+    final Color textPrimary = isDark ? Colors.white : Colors.black87;
+    final Color borderColor =
+        isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0);
+>>>>>>> Stashed changes
 
     final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
@@ -273,20 +284,21 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
               stream: FirebaseFirestore.instance
                   .collection('market_notifications')
                   .where('userId', isEqualTo: currentUserId)
+<<<<<<< Updated upstream
                  //.orderBy('createdAt', descending: true)//
+=======
+>>>>>>> Stashed changes
                   .snapshots(),
               builder: (context, snapshot) {
-                // --- අලුතින් එක් කළ Error handling (Index ප්‍රශ්නය දැනගැනීමට) ---
                 if (snapshot.hasError) {
                   debugPrint("Notification Stream Error: ${snapshot.error}");
-                  // මෙතැන Index error එක පෙන්වයි. දත්ත මැකී යෑම නවතී.
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
                       child: Text(
-                        "Connecting to notification server...\n(Make sure the Firestore Index is created)",
+                        "Failed to load notifications",
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: textPrimary.withOpacity(0.5)),
+                        style: TextStyle(color: textPrimary.withOpacity(0.6)),
                       ),
                     ),
                   );
@@ -296,7 +308,23 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
                   return const Center(child: CircularProgressIndicator(color: gRedMid));
                 }
 
-                final docs = snapshot.data?.docs ?? [];
+                final rawDocs = snapshot.data?.docs ?? [];
+
+                final docs = [...rawDocs];
+                docs.sort((a, b) {
+                  final aData = a.data() as Map<String, dynamic>;
+                  final bData = b.data() as Map<String, dynamic>;
+
+                  final aTime = aData['createdAt'];
+                  final bTime = bData['createdAt'];
+
+                  if (aTime is Timestamp && bTime is Timestamp) {
+                    return bTime.compareTo(aTime);
+                  }
+                  if (aTime is Timestamp) return -1;
+                  if (bTime is Timestamp) return 1;
+                  return 0;
+                });
 
                 if (docs.isEmpty) {
                   return Center(
@@ -318,16 +346,35 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
+<<<<<<< Updated upstream
                     var data = docs[index].data() as Map<String, dynamic>;
                     String notificationId = docs[index].id;
                     bool isRead = data['isRead'] ?? false;
                     
                     // Time parsing safety
+=======
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final String notificationId = docs[index].id;
+                    final bool isRead = data['isRead'] ?? false;
+                    final String messageType = data['messageType'] ?? 'chat';
+
+>>>>>>> Stashed changes
                     DateTime time;
                     if(data['createdAt'] is Timestamp) {
                       time = (data['createdAt'] as Timestamp).toDate();
                     } else {
                       time = DateTime.now();
+                    }
+
+                    IconData leadingIcon;
+                    if (messageType == 'rate_seller') {
+                      leadingIcon = Icons.star_rounded;
+                    } else if (messageType == 'image') {
+                      leadingIcon = Icons.image_rounded;
+                    } else if (messageType == 'audio') {
+                      leadingIcon = Icons.mic_rounded;
+                    } else {
+                      leadingIcon = Icons.chat_bubble_rounded;
                     }
 
                     return Dismissible(
@@ -342,9 +389,33 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
                         child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
                       ),
                       child: GestureDetector(
-                        onTap: () {
-                          _markAsSeen(notificationId);
-                          _navigateToChat(context, data['itemId']);
+                        onTap: () async {
+                          await _markAsSeen(notificationId);
+
+                          if ((data['messageType'] ?? '') == 'rate_seller') {
+                            if (context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RatingScreen(
+                                    docId: data['itemId'] ?? '',
+                                    sellerId: data['sellerId'] ?? '',
+                                    itemName: data['itemName'] ?? 'Item',
+                                    itemImage: data['itemImage'] ?? '',
+                                  ),
+                                ),
+                              );
+                            }
+                          } else {
+                            await _navigateToChat(
+                              context,
+                              itemId: data['itemId'],
+                              itemName: data['itemName'],
+                              itemImage: data['itemImage'],
+                              sellerId: data['sellerId'],
+                              buyerId: data['buyerId'],
+                            );
+                          }
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 15),
@@ -362,7 +433,15 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
                               CircleAvatar(
                                 backgroundColor: isRead ? Colors.grey.withOpacity(0.1) : gRedMid.withOpacity(0.12),
                                 radius: 25,
+<<<<<<< Updated upstream
                                 child: Icon(Icons.chat_bubble_rounded, color: isRead ? Colors.grey : gRedMid, size: 22),
+=======
+                                child: Icon(
+                                  leadingIcon,
+                                  color: isRead ? Colors.grey : gRedMid,
+                                  size: 22,
+                                ),
+>>>>>>> Stashed changes
                               ),
                               const SizedBox(width: 15),
                               Expanded(
@@ -372,10 +451,25 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
+<<<<<<< Updated upstream
                                         Text(
                                           data['title'] ?? "Inquiry Update",
                                           style: TextStyle(color: textPrimary, fontWeight: isRead ? FontWeight.w600 : FontWeight.w900, fontSize: 14.5),
+=======
+                                        Expanded(
+                                          child: Text(
+                                            data['title'] ?? "Inquiry Update",
+                                            style: TextStyle(
+                                              color: textPrimary,
+                                              fontWeight: isRead
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w900,
+                                              fontSize: 14.5,
+                                            ),
+                                          ),
+>>>>>>> Stashed changes
                                         ),
+                                        const SizedBox(width: 8),
                                         Text(
                                           DateFormat('hh:mm a').format(time),
                                           style: const TextStyle(color: Colors.grey, fontSize: 10),
@@ -383,6 +477,21 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 5),
+                                    if ((data['senderName'] ?? '')
+                                        .toString()
+                                        .isNotEmpty)
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 4),
+                                        child: Text(
+                                          "From: ${data['senderName']}",
+                                          style: TextStyle(
+                                            color: textPrimary.withOpacity(0.55),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
                                     Text(
                                       data['message'] ?? "",
                                       maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -391,10 +500,21 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
                                   ],
                                 ),
                               ),
+<<<<<<< Updated upstream
                               if(!isRead) Padding(
                                 padding: const EdgeInsets.only(left: 8.0),
                                 child: CircleAvatar(radius: 4, backgroundColor: gRedStart),
                               ),
+=======
+                              if (!isRead)
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 8.0),
+                                  child: CircleAvatar(
+                                    radius: 4,
+                                    backgroundColor: gRedStart,
+                                  ),
+                                ),
+>>>>>>> Stashed changes
                             ],
                           ),
                         ),
@@ -410,17 +530,41 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
 <<<<<<< Updated upstream
 =======
 
+<<<<<<< Updated upstream
   void _markAsSeen(String notifId) {
     FirebaseFirestore.instance.collection('market_notifications').doc(notifId).update({'isRead': true});
   }
 
   void _deleteNotification(String notifId) {
     FirebaseFirestore.instance.collection('market_notifications').doc(notifId).delete();
+=======
+  Future<void> _markAsSeen(String notifId) async {
+    await FirebaseFirestore.instance
+        .collection('market_notifications')
+        .doc(notifId)
+        .update({'isRead': true});
   }
 
-  void _navigateToChat(BuildContext context, String? itemId) async {
-    if (itemId == null) return;
+  Future<void> _deleteNotification(String notifId) async {
+    await FirebaseFirestore.instance
+        .collection('market_notifications')
+        .doc(notifId)
+        .delete();
+>>>>>>> Stashed changes
+  }
+
+  Future<void> _navigateToChat(
+    BuildContext context, {
+    required String? itemId,
+    required String? itemName,
+    required String? itemImage,
+    required String? sellerId,
+    required String? buyerId,
+  }) async {
+    if (itemId == null || itemId.isEmpty) return;
+
     try {
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
       var doc = await FirebaseFirestore.instance.collection('listings').doc(itemId).get();
       if (doc.exists) {
@@ -451,13 +595,54 @@ class _MarketNotificationsScreenState extends State<MarketNotificationsScreen> {
 >>>>>>> Stashed changes
             ),
           ));
+=======
+      String resolvedItemName = itemName ?? 'Item';
+      String resolvedItemImage = itemImage ?? '';
+      String resolvedSellerId = sellerId ?? '';
+      String resolvedBuyerId = buyerId ?? '';
+      String resolvedItemPrice = '0';
+
+      final itemDoc = await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(itemId)
+          .get();
+
+      if (itemDoc.exists) {
+        final item = itemDoc.data() as Map<String, dynamic>;
+        resolvedItemName = item['name'] ?? resolvedItemName;
+        resolvedItemImage = item['image'] ?? resolvedItemImage;
+        resolvedSellerId = item['sellerId'] ?? resolvedSellerId;
+        resolvedItemPrice = item['price']?.toString() ?? '0';
+
+        if (resolvedBuyerId.isEmpty) {
+          resolvedBuyerId = item['buyerId'] ?? '';
+>>>>>>> Stashed changes
         }
+      }
+
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (c) => NegotiationChat(
+              docId: itemId,
+              itemName: resolvedItemName,
+              itemPrice: resolvedItemPrice,
+              itemImage: resolvedItemImage,
+              sellerId: resolvedSellerId,
+              buyerId: resolvedBuyerId,
+            ),
+          ),
+        );
       }
     } catch (e) {
       debugPrint("Nav Failed: $e");
     }
   }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes

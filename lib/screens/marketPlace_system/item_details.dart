@@ -1,8 +1,9 @@
-import 'dart:convert'; 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'negotiation_chat.dart';
+import 'seller_reviews_screen.dart';
 
 class ItemDetails extends StatefulWidget {
   final String? docId;
@@ -31,7 +32,7 @@ class ItemDetails extends StatefulWidget {
 class _ItemDetailsState extends State<ItemDetails> {
   bool isFav = false;
   bool isSaved = false;
-  bool isReported = false; 
+  bool isReported = false;
   String sellerName = "Loading...";
 
   static const Color gRedStart = Color(0xFFFF4B4B);
@@ -51,11 +52,15 @@ class _ItemDetailsState extends State<ItemDetails> {
       return;
     }
     try {
-      var userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.sellerId).get();
+      var userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.sellerId)
+          .get();
       if (userDoc.exists) {
         final data = userDoc.data();
         setState(() {
-          sellerName = data?['username'] ?? data?['first_name'] ?? "Campus Member";
+          sellerName =
+              data?['username'] ?? data?['first_name'] ?? "Campus Member";
         });
       } else {
         setState(() => sellerName = "Verified Student");
@@ -70,23 +75,34 @@ class _ItemDetailsState extends State<ItemDetails> {
     if (uid == null || widget.docId == null) return;
     final docPath = "${uid}_${widget.docId}";
 
-    var favDoc = await FirebaseFirestore.instance.collection('user_favourites').doc(docPath).get();
+    var favDoc = await FirebaseFirestore.instance
+        .collection('user_favourites')
+        .doc(docPath)
+        .get();
     if (favDoc.exists) setState(() => isFav = true);
 
-    var savedDoc = await FirebaseFirestore.instance.collection('user_saved').doc(docPath).get();
+    var savedDoc = await FirebaseFirestore.instance
+        .collection('user_saved')
+        .doc(docPath)
+        .get();
     if (savedDoc.exists) setState(() => isSaved = true);
-    
-    var itemDoc = await FirebaseFirestore.instance.collection('listings').doc(widget.docId).get();
+
+    var itemDoc = await FirebaseFirestore.instance
+        .collection('listings')
+        .doc(widget.docId)
+        .get();
     if (itemDoc.exists && itemDoc.data()?['reported'] == true) {
       setState(() => isReported = true);
     }
   }
 
-  // පියවර 1: Admin Hub එකට සජීවීව දත්ත ලැබෙන සේ Report කිරීම
   void _reportItemAction() async {
     if (widget.docId == null || isReported) return;
     try {
-      await FirebaseFirestore.instance.collection('listings').doc(widget.docId).update({
+      await FirebaseFirestore.instance
+          .collection('listings')
+          .doc(widget.docId)
+          .update({
         'reported': true,
       });
       setState(() => isReported = true);
@@ -96,14 +112,21 @@ class _ItemDetailsState extends State<ItemDetails> {
     }
   }
 
-  void _toggleCollection(String colName, bool currentStatus, Function(bool) updater) async {
+  void _toggleCollection(
+    String colName,
+    bool currentStatus,
+    Function(bool) updater,
+  ) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null || widget.docId == null) return;
     final docPath = "${uid}_${widget.docId}";
 
     try {
       if (currentStatus) {
-        await FirebaseFirestore.instance.collection(colName).doc(docPath).delete();
+        await FirebaseFirestore.instance
+            .collection(colName)
+            .doc(docPath)
+            .delete();
         setState(() => updater(false));
         _snack("Removed!");
       } else {
@@ -125,19 +148,29 @@ class _ItemDetailsState extends State<ItemDetails> {
   }
 
   void _snack(String m) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), duration: const Duration(milliseconds: 700)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(m),
+        duration: const Duration(milliseconds: 700),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color pageBg = isDark ? const Color(0xFF0F0F13) : const Color(0xFFF6F7FB);
+    final Color pageBg = isDark
+        ? const Color(0xFF0F0F13)
+        : const Color(0xFFF6F7FB);
     final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
     final Color textPrimary = isDark ? Colors.white : const Color(0xFF1B1B22);
-    final Color textSecondary = isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86);
-    final Color borderColor = isDark ? const Color(0xFF34343F) : const Color(0xFFE8EAF0);
+    final Color textSecondary = isDark
+        ? const Color(0xFFB7BBC6)
+        : const Color(0xFF747A86);
+    final Color borderColor = isDark
+        ? const Color(0xFF34343F)
+        : const Color(0xFFE8EAF0);
 
-    // පියවර 2: සෙලර් පරීක්ෂාව
     final String? currentUid = FirebaseAuth.instance.currentUser?.uid;
     final bool isMyPost = currentUid != null && currentUid == widget.sellerId;
 
@@ -147,108 +180,288 @@ class _ItemDetailsState extends State<ItemDetails> {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            // PREMIUM GRADIENT HEADER (Exact teammate style radius 34)
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [gRedStart, gRedMid, gDarkEnd],
-                  begin: Alignment.topCenter, end: Alignment.bottomCenter, stops: [0.0, 0.62, 1.0],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.0, 0.62, 1.0],
                 ),
-                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(34), bottomRight: Radius.circular(34)),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(34),
+                  bottomRight: Radius.circular(34),
+                ),
               ),
-              child: Column(children: [
+              child: Column(
+                children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                    child: Row(children: [
-                        IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22), onPressed: () => Navigator.pop(context)),
-                        const Expanded(child: Center(child: Text("Product Specifications", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)))),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              "Product Specifications",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                        ),
                         const SizedBox(width: 48),
-                    ]),
+                      ],
+                    ),
                   ),
-                  // Image Area (Base64 hack)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(30, 10, 30, 40),
                     child: Hero(
                       tag: widget.docId ?? "img",
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(22),
-                        child: (widget.itemImage != null && widget.itemImage!.length > 100)
-                            ? Image.memory(base64Decode(widget.itemImage!), height: 250, width: double.infinity, fit: BoxFit.cover)
-                            : Container(height: 250, color: Colors.white12, child: const Icon(Icons.image, color: Colors.white24, size: 60)),
+                        child: (widget.itemImage != null &&
+                                widget.itemImage!.length > 100)
+                            ? Image.memory(
+                                base64Decode(widget.itemImage!),
+                                height: 250,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                height: 250,
+                                color: Colors.white12,
+                                child: const Icon(
+                                  Icons.image,
+                                  color: Colors.white24,
+                                  size: 60,
+                                ),
+                              ),
                       ),
                     ),
                   ),
-              ]),
+                ],
+              ),
             ),
-
             Padding(
               padding: const EdgeInsets.all(22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.itemName ?? "Campus Gear", style: TextStyle(color: textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
+                  Text(
+                    widget.itemName ?? "Campus Gear",
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 5),
-                  Text("Rs. ${widget.itemPrice ?? "0"}", style: const TextStyle(color: gRedStart, fontSize: 28, fontWeight: FontWeight.w900)),
-
+                  Text(
+                    "Rs. ${widget.itemPrice ?? "0"}",
+                    style: const TextStyle(
+                      color: gRedStart,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 25),
-
-                  // Message Bar (Conditional Display for Sellers)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isMyPost ? Colors.grey.withOpacity(0.08) : (isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFFFF4F4)),
+                      color: isMyPost
+                          ? Colors.grey.withOpacity(0.08)
+                          : (isDark
+                                ? Colors.white.withOpacity(0.05)
+                                : const Color(0xFFFFF4F4)),
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: borderColor),
                     ),
-                    child: Row(children: [
-                      Expanded(
-                        child: Text(
-                          isMyPost ? "Viewing your own listing" : "Hi, is this still available?", 
-                          style: TextStyle(color: textSecondary, fontWeight: FontWeight.w600, fontSize: 13.5)
-                        )
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            isMyPost
+                                ? "Viewing your own listing"
+                                : "Hi, is this still available?",
+                            style: TextStyle(
+                              color: textSecondary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isMyPost ? Colors.blueGrey : gRedMid,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: isMyPost
+                              ? null
+                              : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (c) => NegotiationChat(
+                                      docId: widget.docId,
+                                      itemName: widget.itemName,
+                                      itemImage: widget.itemImage,
+                                      itemPrice: widget.itemPrice,
+                                      sellerId: widget.sellerId,
+                                      initialMessage:
+                                          "Hello, is this still available?",
+                                    ),
+                                  ),
+                                ),
+                          child: Text(
+                            isMyPost ? "MY POST" : "CHAT",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 35),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildAction(
+                        isReported
+                            ? Icons.report_gmailerrorred_rounded
+                            : Icons.report_gmailerrorred_outlined,
+                        "Report",
+                        isReported,
+                        _reportItemAction,
+                        isDark,
+                        cardBg,
+                        borderColor,
                       ),
-                      ElevatedButton(
+                      _buildAction(
+                        Icons.favorite_rounded,
+                        "Fav",
+                        isFav,
+                        () => _toggleCollection(
+                          'user_favourites',
+                          isFav,
+                          (val) => isFav = val,
+                        ),
+                        isDark,
+                        cardBg,
+                        borderColor,
+                      ),
+                      _buildAction(
+                        Icons.bookmark_added_rounded,
+                        "Save",
+                        isSaved,
+                        () => _toggleCollection(
+                          'user_saved',
+                          isSaved,
+                          (val) => isSaved = val,
+                        ),
+                        isDark,
+                        cardBg,
+                        borderColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+                  Text(
+                    "Item Description",
+                    style: TextStyle(
+                      color: gRedStart,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    widget.itemDescription ??
+                        "Verified student gear available for campus trade inside the university safe network.",
+                    style: TextStyle(
+                      color: textSecondary,
+                      fontSize: 15,
+                      height: 1.6,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Divider(height: 60, thickness: 0.8),
+                  _buildSpecRow(
+                    "Condition",
+                    widget.itemCondition ?? "Clean Checked",
+                    textSecondary,
+                    textPrimary,
+                  ),
+                  _buildSpecRow(
+                    "Seller Information",
+                    sellerName,
+                    textSecondary,
+                    textPrimary,
+                  ),
+                  const SizedBox(height: 12),
+                  if (!isMyPost && widget.sellerId != null && widget.sellerId!.isNotEmpty)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SellerReviewsScreen(
+                                sellerId: widget.sellerId!,
+                                sellerName: sellerName,
+                              ),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isMyPost ? Colors.blueGrey : gRedMid,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          backgroundColor: gRedMid,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           elevation: 0,
                         ),
-                        // පෝස්ට් එක මගේ නම් චැට් වැඩ කරන්නේ නැත
-                        onPressed: isMyPost ? null : () => Navigator.push(context, MaterialPageRoute(builder: (c) => NegotiationChat(
-                          docId: widget.docId, itemName: widget.itemName, itemImage: widget.itemImage, itemPrice: widget.itemPrice, sellerId: widget.sellerId, initialMessage: "Hello, is this still available?"
-                        ))),
-                        child: Text(isMyPost ? "MY POST" : "CHAT", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                      )
-                    ]),
-                  ),
-
-                  const SizedBox(height: 35),
-
-                  // Action Circles (With Report replacement)
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                      _buildAction(
-                        isReported ? Icons.report_gmailerrorred_rounded : Icons.report_gmailerrorred_outlined, 
-                        "Report", isReported, _reportItemAction, isDark, cardBg, borderColor
+                        icon: const Icon(Icons.star_rounded),
+                        label: const Text(
+                          "View Reviews",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
-                      _buildAction(Icons.favorite_rounded, "Fav", isFav, () => _toggleCollection('user_favourites', isFav, (val) => isFav = val), isDark, cardBg, borderColor),
-                      _buildAction(Icons.bookmark_added_rounded, "Save", isSaved, () => _toggleCollection('user_saved', isSaved, (val) => isSaved = val), isDark, cardBg, borderColor),
-                  ]),
-                  
-                 
-
-                  const SizedBox(height: 40),
-
-                  Text("Item Description", style: TextStyle(color: gRedStart, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Text(widget.itemDescription ?? "Verified student gear available for campus trade inside the university safe network.", style: TextStyle(color: textSecondary, fontSize: 15, height: 1.6, fontWeight: FontWeight.w500)),
-                  
-                  const Divider(height: 60, thickness: 0.8),
-
-                  _buildSpecRow("Condition", widget.itemCondition ?? "Clean Checked", textSecondary, textPrimary),
-                  _buildSpecRow("Seller Information", sellerName, textSecondary, textPrimary),
-                  _buildSpecRow("Item Trace ID", widget.docId != null ? "#${widget.docId!.substring(0, 5)}" : "#99042", textSecondary, textPrimary),
+                    ),
+                  if (!isMyPost && widget.sellerId != null && widget.sellerId!.isNotEmpty)
+                    const SizedBox(height: 18),
+                  _buildSpecRow(
+                    "Item Trace ID",
+                    widget.docId != null
+                        ? "#${widget.docId!.substring(0, 5)}"
+                        : "#99042",
+                    textSecondary,
+                    textPrimary,
+                  ),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -259,16 +472,69 @@ class _ItemDetailsState extends State<ItemDetails> {
     );
   }
 
-  // Action Icon Builder (Using the shared teammate style)
-  Widget _buildAction(IconData i, String l, bool a, VoidCallback t, bool isDark, Color cb, Color bc) {
-    return GestureDetector(onTap: t, child: Column(children: [
-        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: a ? gRedStart.withOpacity(0.12) : cb, shape: BoxShape.circle, border: Border.all(color: a ? gRedStart : bc)), child: Icon(i, color: a ? gRedStart : Colors.grey, size: 24)),
-        const SizedBox(height: 8), Text(l, style: TextStyle(color: a ? gRedStart : Colors.grey, fontSize: 11, fontWeight: FontWeight.bold))
-    ]));
+  Widget _buildAction(
+    IconData i,
+    String l,
+    bool a,
+    VoidCallback t,
+    bool isDark,
+    Color cb,
+    Color bc,
+  ) {
+    return GestureDetector(
+      onTap: t,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: a ? gRedStart.withOpacity(0.12) : cb,
+              shape: BoxShape.circle,
+              border: Border.all(color: a ? gRedStart : bc),
+            ),
+            child: Icon(i, color: a ? gRedStart : Colors.grey, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l,
+            style: TextStyle(
+              color: a ? gRedStart : Colors.grey,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  // Information Table Row Builder
   Widget _buildSpecRow(String l, String r, Color s, Color p) {
-    return Padding(padding: const EdgeInsets.only(bottom: 18), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l, style: TextStyle(color: s, fontWeight: FontWeight.w600, fontSize: 14)), Flexible(child: Text(r, textAlign: TextAlign.right, style: TextStyle(color: p, fontWeight: FontWeight.w900, fontSize: 14)))]));
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            l,
+            style: TextStyle(
+              color: s,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              r,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: p,
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
