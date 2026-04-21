@@ -29,7 +29,8 @@ class MockChatScreen extends StatefulWidget {
   State<MockChatScreen> createState() => _MockChatScreenState();
 }
 
-class _MockChatScreenState extends State<MockChatScreen> {
+class _MockChatScreenState extends State<MockChatScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _msgController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
@@ -37,6 +38,7 @@ class _MockChatScreenState extends State<MockChatScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   static const Color spRed = Color(0xFFE53935);
+  static const Color waBlue = Color(0xFF53BDEB);
 
   bool _isSendingImage = false;
   bool _isRecording = false;
@@ -48,12 +50,29 @@ class _MockChatScreenState extends State<MockChatScreen> {
   String? _playingMessageId;
   PlayerState _playerState = PlayerState.stopped;
 
+  Timer? _presenceTimer;
+
   String get _myUid => FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
 
   String get _myName =>
       FirebaseAuth.instance.currentUser?.email?.split('@')[0] ?? 'Student';
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  Color get _pageBg =>
+      _isDark ? const Color(0xFF0B141A) : const Color(0xFFECE5DD);
+
+  Color get _headerBg =>
+      _isDark ? const Color(0xFF1F2C34) : const Color(0xFFB31217);
+
+  Color get _inputBg => _isDark ? const Color(0xFF202C33) : Colors.white;
+  Color get _cardBg => _isDark ? const Color(0xFF202C33) : Colors.white;
+  Color get _myBubbleBg =>
+      _isDark ? const Color(0xFF005C4B) : const Color(0xFFDCF8C6);
+  Color get _otherBubbleBg => _isDark ? const Color(0xFF202C33) : Colors.white;
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF111B21);
+  Color get _textSecondary =>
+      _isDark ? const Color(0xFF9FB3C8) : const Color(0xFF667781);
 
   bool _canAccessChat(LostItem? item) {
     if (item == null) return false;
@@ -65,6 +84,8 @@ class _MockChatScreenState extends State<MockChatScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startPresenceUpdates();
 
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (!mounted) return;
@@ -74,6 +95,37 @@ class _MockChatScreenState extends State<MockChatScreen> {
           _playingMessageId = null;
         }
       });
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _updateMyPresence(true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _updateMyPresence(false);
+    }
+  }
+
+  Future<void> _updateMyPresence(bool online) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'is_online': online,
+        'last_seen': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {}
+  }
+
+  void _startPresenceUpdates() {
+    _updateMyPresence(true);
+    _presenceTimer?.cancel();
+    _presenceTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _updateMyPresence(true);
     });
   }
 
@@ -127,6 +179,30 @@ class _MockChatScreenState extends State<MockChatScreen> {
     }
 
     return _posterDisplayName(item);
+  }
+
+  String _otherUserId(LostItem? item) {
+    if (item == null) return '';
+    if (item.userId == _myUid) {
+      return item.requesterId ?? '';
+    }
+    return item.userId;
+  }
+
+  bool _isOnlineFromData(Map<String, dynamic>? data) {
+    if (data == null) return false;
+    if (data['is_online'] == true) return true;
+
+    final lastSeen = data['last_seen'];
+    if (lastSeen is Timestamp) {
+      final diff = DateTime.now().difference(lastSeen.toDate()).inMinutes;
+      return diff <= 2;
+    }
+    return false;
+  }
+
+  String _onlineTextOnly(Map<String, dynamic>? data) {
+    return _isOnlineFromData(data) ? 'Online' : '';
   }
 
   Future<void> _sendTextMessage() async {
@@ -326,51 +402,199 @@ class _MockChatScreenState extends State<MockChatScreen> {
     });
   }
 
-  Widget _buildDoubleTick(bool isMe, Color color) {
-    if (!isMe) return const SizedBox.shrink();
+  bool _isSeenByOther(Map<String, dynamic> data) {
+    final List<dynamic> readBy = List<dynamic>.from(data['readBy'] ?? const []);
+    return readBy.any((id) => id.toString() != _myUid);
+  }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.done, size: 14, color: color),
-        Transform.translate(
-          offset: const Offset(-4, 0),
-          child: Icon(Icons.done, size: 14, color: color),
-        ),
-      ],
+  Future<void> _markMessagesAsSeen(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) async {
+    await LostFoundService().markMessagesAsSeen(
+      itemId: widget.itemId,
+      currentUserId: _myUid,
+      docs: docs,
     );
   }
 
-  Widget _buildChatHeader(String headerName) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: _isDark
-            ? const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF3B3B),
-                  Color(0xFFE10613),
-                  Color(0xFFB30012),
-                  Color(0xFF140910),
-                ],
-                stops: [0.0, 0.35, 0.72, 1.0],
-              )
-            : const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF4B4B),
-                  Color(0xFFB31217),
-                  Color(0xFF1B1B1B),
-                ],
-                stops: [0.0, 0.62, 1.0],
+  Future<void> _showMessageActions({
+    required String messageId,
+    required Map<String, dynamic> data,
+  }) async {
+    final bool isMine = (data['senderId'] ?? '').toString() == _myUid;
+    final String type = (data['type'] ?? 'text').toString();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              if (isMine && type == 'text')
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Edit message'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _showEditMessageDialog(messageId, data);
+                  },
+                ),
+              if (isMine)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: const Text('Delete for me'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await LostFoundService().deleteMessageForMe(
+                      itemId: widget.itemId,
+                      messageId: messageId,
+                      currentUserId: _myUid,
+                    );
+                  },
+                ),
+              if (isMine)
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete_forever_outlined,
+                    color: Colors.red,
+                  ),
+                  title: const Text(
+                    'Delete for everyone',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await LostFoundService().deleteMessageForEveryone(
+                      itemId: widget.itemId,
+                      messageId: messageId,
+                    );
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showEditMessageDialog(
+    String messageId,
+    Map<String, dynamic> data,
+  ) async {
+    final controller = TextEditingController(
+      text: (data['text'] ?? '').toString(),
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: _cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Edit message',
+            style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w700),
+          ),
+          content: TextField(
+            controller: controller,
+            maxLines: 4,
+            style: TextStyle(color: _textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Type updated message',
+              hintStyle: TextStyle(color: _textSecondary),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: _isDark
+                      ? const Color(0xFF34414A)
+                      : const Color(0xFFD8DDE3),
+                ),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: waBlue),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: _textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: spRed),
+              onPressed: () async {
+                final updatedText = controller.text.trim();
+                if (updatedText.isEmpty) return;
+                await LostFoundService().editTextMessage(
+                  itemId: widget.itemId,
+                  messageId: messageId,
+                  updatedText: updatedText,
+                );
+                if (!mounted) return;
+                Navigator.pop(context);
+              },
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDoubleTick(bool seen) {
+    final Color tickColor = seen ? waBlue : _textSecondary;
+
+    return SizedBox(
+      width: 18,
+      height: 12,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Icon(Icons.done_rounded, size: 13.5, color: tickColor),
+          ),
+          Positioned(
+            left: 5.2,
+            top: 0,
+            child: Icon(Icons.done_rounded, size: 13.5, color: tickColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatHeader({
+    required String headerName,
+    required String subtitle,
+    required bool online,
+  }) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFFF3B3B),
+            Color(0xFFE10613),
+            Color(0xFFB30012),
+            Color(0xFF140910),
+          ],
+          stops: [0.0, 0.35, 0.72, 1.0],
+        ),
       ),
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: kToolbarHeight + 14,
+          height: kToolbarHeight + 18,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             children: [
@@ -379,26 +603,61 @@ class _MockChatScreenState extends State<MockChatScreen> {
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
               ),
               Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.14),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.16)),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.18),
+                    width: 1,
+                  ),
                 ),
                 child: const Icon(Icons.person_outline, color: Colors.white),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  headerName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      headerName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (online) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF25D366),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -411,90 +670,72 @@ class _MockChatScreenState extends State<MockChatScreen> {
   Widget _buildTextBubble({
     required bool isMe,
     required String text,
-    required String senderName,
     required String time,
-    required double bubbleMaxWidth,
-    required Color cardBg,
-    required Color textPrimary,
-    required Color textSecondary,
-    required Color myBubbleText,
-    required Color otherBubbleText,
-    required Color myTickColor,
+    required bool seen,
+    required bool edited,
   }) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: isMe ? spRed : cardBg,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(18),
-              topRight: const Radius.circular(18),
-              bottomLeft: isMe
-                  ? const Radius.circular(18)
-                  : const Radius.circular(4),
-              bottomRight: isMe
-                  ? const Radius.circular(4)
-                  : const Radius.circular(18),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.76,
+        ),
+        decoration: BoxDecoration(
+          color: isMe ? _myBubbleBg : _otherBubbleBg,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: isMe
+                ? const Radius.circular(18)
+                : const Radius.circular(4),
+            bottomRight: isMe
+                ? const Radius.circular(4)
+                : const Radius.circular(18),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 9, 12, 7),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                text,
+                style: TextStyle(
+                  color: _textPrimary,
+                  fontSize: 15,
+                  height: 1.35,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (edited)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 5),
+                      child: Text(
+                        'edited',
+                        style: TextStyle(color: _textSecondary, fontSize: 10),
+                      ),
+                    ),
+                  Text(
+                    time,
+                    style: TextStyle(color: _textSecondary, fontSize: 11),
+                  ),
+                  if (isMe) const SizedBox(width: 4),
+                  if (isMe) _buildDoubleTick(seen),
+                ],
               ),
             ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
-            child: Column(
-              crossAxisAlignment: isMe
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                if (!isMe)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 3),
-                    child: Text(
-                      senderName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: isMe ? myBubbleText : otherBubbleText,
-                    fontSize: 15,
-                    height: 1.35,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      time,
-                      style: TextStyle(
-                        color: isMe
-                            ? Colors.white.withOpacity(0.88)
-                            : textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (isMe) const SizedBox(width: 4),
-                    if (isMe) _buildDoubleTick(isMe, myTickColor),
-                  ],
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -503,104 +744,79 @@ class _MockChatScreenState extends State<MockChatScreen> {
 
   Widget _buildImageBubble({
     required bool isMe,
-    required String? imageBase64,
-    required String senderName,
+    required String imageBase64,
     required String time,
-    required double bubbleMaxWidth,
-    required Color cardBg,
-    required Color textSecondary,
-    required Color myTickColor,
+    required bool seen,
+    required bool edited,
   }) {
-    Uint8List? imageBytes;
+    Uint8List? bytes;
     try {
-      if (imageBase64 != null && imageBase64.isNotEmpty) {
-        imageBytes = base64Decode(imageBase64);
-      }
+      bytes = base64Decode(imageBase64);
     } catch (_) {}
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: isMe ? spRed : cardBg,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(18),
-              topRight: const Radius.circular(18),
-              bottomLeft: isMe
-                  ? const Radius.circular(18)
-                  : const Radius.circular(4),
-              bottomRight: isMe
-                  ? const Radius.circular(4)
-                  : const Radius.circular(18),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.76,
+        ),
+        decoration: BoxDecoration(
+          color: isMe ? _myBubbleBg : _otherBubbleBg,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: isMe
+                ? const Radius.circular(18)
+                : const Radius.circular(4),
+            bottomRight: isMe
+                ? const Radius.circular(4)
+                : const Radius.circular(18),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: bytes != null
+                    ? Image.memory(
+                        bytes,
+                        fit: BoxFit.cover,
+                        width: 230,
+                        height: 250,
+                      )
+                    : Container(
+                        width: 230,
+                        height: 250,
+                        color: Colors.black12,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image_outlined),
+                      ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (edited)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 5),
+                      child: Text(
+                        'edited',
+                        style: TextStyle(color: _textSecondary, fontSize: 10),
+                      ),
+                    ),
+                  Text(
+                    time,
+                    style: TextStyle(color: _textSecondary, fontSize: 11),
+                  ),
+                  if (isMe) const SizedBox(width: 4),
+                  if (isMe) _buildDoubleTick(seen),
+                ],
               ),
             ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-            child: Column(
-              crossAxisAlignment: isMe
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                if (!isMe)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 6),
-                    child: Text(
-                      senderName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: imageBytes != null
-                      ? Image.memory(
-                          imageBytes,
-                          fit: BoxFit.cover,
-                          width: bubbleMaxWidth * 0.88,
-                          height: 220,
-                        )
-                      : Container(
-                          width: bubbleMaxWidth * 0.88,
-                          height: 220,
-                          color: Colors.black12,
-                          child: const Center(
-                            child: Icon(Icons.broken_image_outlined, size: 34),
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      time,
-                      style: TextStyle(
-                        color: isMe
-                            ? Colors.white.withOpacity(0.88)
-                            : textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (isMe) const SizedBox(width: 4),
-                    if (isMe) _buildDoubleTick(isMe, myTickColor),
-                  ],
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -608,143 +824,121 @@ class _MockChatScreenState extends State<MockChatScreen> {
   }
 
   Widget _buildAudioBubble({
-    required String messageId,
     required bool isMe,
-    required String? audioBase64,
+    required String messageId,
+    required String audioBase64,
     required dynamic audioDurationMs,
-    required String senderName,
     required String time,
-    required double bubbleMaxWidth,
-    required Color cardBg,
-    required Color textSecondary,
-    required Color myTickColor,
+    required bool seen,
+    required bool edited,
   }) {
-    final isPlayingThis =
+    final isPlaying =
         _playingMessageId == messageId && _playerState == PlayerState.playing;
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: isMe ? spRed : cardBg,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(18),
-              topRight: const Radius.circular(18),
-              bottomLeft: isMe
-                  ? const Radius.circular(18)
-                  : const Radius.circular(4),
-              bottomRight: isMe
-                  ? const Radius.circular(4)
-                  : const Radius.circular(18),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.76,
+        ),
+        decoration: BoxDecoration(
+          color: isMe ? _myBubbleBg : _otherBubbleBg,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: isMe
+                ? const Radius.circular(18)
+                : const Radius.circular(4),
+            bottomRight: isMe
+                ? const Radius.circular(4)
+                : const Radius.circular(18),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-            child: Column(
-              crossAxisAlignment: isMe
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                if (!isMe)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(
-                      senderName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: textSecondary,
-                        fontWeight: FontWeight.w600,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: () => _playOrStopAudio(
+                      messageId: messageId,
+                      audioBase64: audioBase64,
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(isMe ? 0.18 : 0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isPlaying ? Icons.stop : Icons.play_arrow_rounded,
+                        color: isMe ? Colors.white : waBlue,
                       ),
                     ),
                   ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: () => _playOrStopAudio(
-                        messageId: messageId,
-                        audioBase64: audioBase64,
-                      ),
-                      borderRadius: BorderRadius.circular(22),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(isMe ? 0.18 : 0.10),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isPlayingThis ? Icons.stop : Icons.play_arrow_rounded,
-                          color: Colors.white,
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Voice message',
+                        style: TextStyle(
+                          color: _textPrimary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Voice message',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatAudioDurationMs(audioDurationMs),
+                        style: TextStyle(
+                          color: _textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _formatAudioDurationMs(audioDurationMs),
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.88),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      time,
-                      style: TextStyle(
-                        color: isMe
-                            ? Colors.white.withOpacity(0.88)
-                            : textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (edited)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 5),
+                      child: Text(
+                        'edited',
+                        style: TextStyle(color: _textSecondary, fontSize: 10),
                       ),
                     ),
-                    if (isMe) const SizedBox(width: 4),
-                    if (isMe) _buildDoubleTick(isMe, myTickColor),
-                  ],
-                ),
-              ],
-            ),
+                  Text(
+                    time,
+                    style: TextStyle(color: _textSecondary, fontSize: 11),
+                  ),
+                  if (isMe) const SizedBox(width: 4),
+                  if (isMe) _buildDoubleTick(seen),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildInputBar(Color inputBg, Color textPrimary, Color textSecondary) {
+  Widget _buildInputBar() {
     return SafeArea(
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-        color: _isDark ? const Color(0xFF121217) : const Color(0xFFF6F6F7),
+        color: Colors.transparent,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -757,12 +951,12 @@ class _MockChatScreenState extends State<MockChatScreen> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: inputBg,
-                  borderRadius: BorderRadius.circular(18),
+                  color: _inputBg,
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _isDark
-                        ? const Color(0xFF34343F)
-                        : const Color(0xFFE3E4E8),
+                        ? const Color(0xFF34414A)
+                        : const Color(0xFFD8DDE3),
                   ),
                 ),
                 child: Row(
@@ -773,18 +967,14 @@ class _MockChatScreenState extends State<MockChatScreen> {
                       child: Text(
                         'Recording... ${_formatDurationSeconds(_recordSeconds)}',
                         style: TextStyle(
-                          color: textPrimary,
+                          color: _textPrimary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     Text(
                       'Tap mic again to send',
-                      style: TextStyle(
-                        color: textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: TextStyle(color: _textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
@@ -799,25 +989,24 @@ class _MockChatScreenState extends State<MockChatScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: inputBg,
+                      color: _inputBg,
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: _isDark
-                            ? const Color(0xFF34343F)
-                            : const Color(0xFFE3E4E8),
-                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         IconButton(
                           onPressed: _isSendingImage ? null : _pickAndSendImage,
-                          splashRadius: 22,
                           icon: Icon(
-                            _isSendingImage
-                                ? Icons.hourglass_top_rounded
-                                : Icons.add_photo_alternate_outlined,
-                            color: textSecondary,
+                            Icons.add_photo_alternate_outlined,
+                            color: _textSecondary,
                           ),
                         ),
                         Expanded(
@@ -827,15 +1016,12 @@ class _MockChatScreenState extends State<MockChatScreen> {
                             minLines: 1,
                             maxLines: 4,
                             style: TextStyle(
-                              color: textPrimary,
+                              color: _textPrimary,
                               fontWeight: FontWeight.w500,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'Type message...',
-                              hintStyle: TextStyle(
-                                color: textSecondary,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              hintText: 'Message',
+                              hintStyle: TextStyle(color: _textSecondary),
                               border: InputBorder.none,
                               counterText: '',
                             ),
@@ -843,14 +1029,13 @@ class _MockChatScreenState extends State<MockChatScreen> {
                         ),
                         IconButton(
                           onPressed: _isSendingAudio ? null : _toggleRecording,
-                          splashRadius: 22,
                           icon: Icon(
                             _isRecording
                                 ? Icons.stop_circle_outlined
                                 : Icons.mic_none_rounded,
                             color: _isRecording
                                 ? Colors.redAccent
-                                : textSecondary,
+                                : _textSecondary,
                           ),
                         ),
                       ],
@@ -859,8 +1044,8 @@ class _MockChatScreenState extends State<MockChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  width: 56,
-                  height: 56,
+                  width: 54,
+                  height: 54,
                   decoration: BoxDecoration(
                     color: spRed,
                     shape: BoxShape.circle,
@@ -894,7 +1079,7 @@ class _MockChatScreenState extends State<MockChatScreen> {
   ) {
     return Column(
       children: [
-        _buildChatHeader(headerName),
+        _buildChatHeader(headerName: headerName, subtitle: '', online: false),
         Expanded(
           child: Center(
             child: Padding(
@@ -949,7 +1134,10 @@ class _MockChatScreenState extends State<MockChatScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _recordTimer?.cancel();
+    _presenceTimer?.cancel();
+    _updateMyPresence(false);
     _msgController.dispose();
     _scrollController.dispose();
     _recorder.dispose();
@@ -959,157 +1147,183 @@ class _MockChatScreenState extends State<MockChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double bubbleMaxWidth = MediaQuery.of(context).size.width * 0.76;
+    final Color pageBg = _pageBg;
+    final Color cardBg = _cardBg;
+    final Color textPrimary = _textPrimary;
+    final Color textSecondary = _textSecondary;
 
-    final Color pageBg = _isDark
-        ? const Color(0xFF121217)
-        : const Color(0xFFF6F6F7);
-    final Color cardBg = _isDark ? const Color(0xFF1B1B22) : Colors.white;
-    final Color textPrimary = _isDark ? Colors.white : Colors.black;
-    final Color textSecondary = _isDark
-        ? const Color(0xFFB7BBC6)
-        : Colors.grey.shade600;
-    final Color inputBg = _isDark
-        ? const Color(0xFF23232B)
-        : const Color(0xFFF3F3F3);
-    final Color myBubbleText = Colors.white;
-    final Color otherBubbleText = textPrimary;
-    final Color myTickColor = Colors.white.withOpacity(0.95);
+    return StreamBuilder<LostItem?>(
+      stream: LostFoundService().getItemStream(widget.itemId),
+      builder: (context, itemSnap) {
+        final LostItem? item = itemSnap.data;
+        final String headerName = _headerName(item);
+        final bool canAccess = _canAccessChat(item);
+        final String otherUserId = _otherUserId(item);
 
-    return Scaffold(
-      backgroundColor: pageBg,
-      body: StreamBuilder<LostItem?>(
-        stream: LostFoundService().getItemStream(widget.itemId),
-        builder: (context, itemSnapshot) {
-          final item = itemSnapshot.data;
-          final headerName = _headerName(item);
+        return Scaffold(
+          resizeToAvoidBottomInset: true,
+          backgroundColor: pageBg,
+          body: !canAccess
+              ? _buildAccessDeniedScreen(
+                  headerName,
+                  pageBg,
+                  cardBg,
+                  textPrimary,
+                  textSecondary,
+                )
+              : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  stream: otherUserId.isEmpty
+                      ? null
+                      : FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(otherUserId)
+                            .snapshots(),
+                  builder: (context, userSnap) {
+                    final otherUserData = userSnap.data?.data();
+                    final bool online = _isOnlineFromData(otherUserData);
+                    final String subtitle = _onlineTextOnly(otherUserData);
 
-          if (!_canAccessChat(item)) {
-            return _buildAccessDeniedScreen(
-              headerName,
-              pageBg,
-              cardBg,
-              textPrimary,
-              textSecondary,
-            );
-          }
+                    return Column(
+                      children: [
+                        _buildChatHeader(
+                          headerName: headerName,
+                          subtitle: subtitle,
+                          online: online,
+                        ),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(color: pageBg),
+                            child:
+                                StreamBuilder<
+                                  QuerySnapshot<Map<String, dynamic>>
+                                >(
+                                  stream: LostFoundService().getMessagesStream(
+                                    widget.itemId,
+                                  ),
+                                  builder: (context, snapshot) {
+                                    if (!snapshot.hasData) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    }
 
-          return Column(
-            children: [
-              _buildChatHeader(headerName),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: LostFoundService().getMessagesStream(widget.itemId),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                                    final docs = snapshot.data!.docs.where((
+                                      doc,
+                                    ) {
+                                      final data = doc.data();
+                                      final hiddenFor = List<String>.from(
+                                        data['hiddenFor'] ?? const [],
+                                      );
+                                      return !hiddenFor.contains(_myUid);
+                                    }).toList();
 
-                    final docs = snapshot.data!.docs;
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                          _markMessagesAsSeen(docs);
+                                          _scrollToBottomSoon();
+                                        });
 
-                    if (docs.isEmpty) {
-                      return Center(
-                        child: Container(
-                          margin: const EdgeInsets.all(20),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            'Private chat opened for return coordination.',
-                            style: TextStyle(
-                              color: textSecondary,
-                              fontStyle: FontStyle.italic,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                    if (docs.isEmpty) {
+                                      return Center(
+                                        child: Text(
+                                          'No messages yet.',
+                                          style: TextStyle(
+                                            color: textSecondary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return ListView.builder(
+                                      controller: _scrollController,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        12,
+                                        12,
+                                        12,
+                                        8,
+                                      ),
+                                      itemCount: docs.length,
+                                      itemBuilder: (context, index) {
+                                        final doc = docs[index];
+                                        final data = doc.data();
+                                        final bool isMe =
+                                            (data['senderId'] ?? '') == _myUid;
+                                        final String type =
+                                            (data['type'] ?? 'text').toString();
+                                        final String time = _formatTime(
+                                          data['timestamp'],
+                                        );
+                                        final bool seen =
+                                            isMe && _isSeenByOther(data);
+                                        final bool edited =
+                                            data['edited'] == true;
+                                        final bool deletedForEveryone =
+                                            data['deletedForEveryone'] == true;
+
+                                        return GestureDetector(
+                                          onLongPress: isMe
+                                              ? () => _showMessageActions(
+                                                  messageId: doc.id,
+                                                  data: data,
+                                                )
+                                              : null,
+                                          child: deletedForEveryone
+                                              ? _buildTextBubble(
+                                                  isMe: isMe,
+                                                  text:
+                                                      (data['text'] ??
+                                                              'This message was deleted')
+                                                          .toString(),
+                                                  time: time,
+                                                  seen: seen,
+                                                  edited: false,
+                                                )
+                                              : type == 'image'
+                                              ? _buildImageBubble(
+                                                  isMe: isMe,
+                                                  imageBase64:
+                                                      (data['image_data'] ?? '')
+                                                          .toString(),
+                                                  time: time,
+                                                  seen: seen,
+                                                  edited: edited,
+                                                )
+                                              : type == 'audio'
+                                              ? _buildAudioBubble(
+                                                  isMe: isMe,
+                                                  messageId: doc.id,
+                                                  audioBase64:
+                                                      (data['audio_data'] ?? '')
+                                                          .toString(),
+                                                  audioDurationMs:
+                                                      data['audio_duration_ms'],
+                                                  time: time,
+                                                  seen: seen,
+                                                  edited: edited,
+                                                )
+                                              : _buildTextBubble(
+                                                  isMe: isMe,
+                                                  text: (data['text'] ?? '')
+                                                      .toString(),
+                                                  time: time,
+                                                  seen: seen,
+                                                  edited: edited,
+                                                ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
                           ),
                         ),
-                      );
-                    }
-
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _scrollToBottomSoon();
-                    });
-
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final doc = docs[index];
-                        final msg = doc.data();
-                        final isMe = msg['senderId'] == _myUid;
-                        final text = (msg['text'] ?? '').toString();
-                        final senderName = (msg['senderName'] ?? '').toString();
-                        final ts = msg['timestamp'];
-                        final time = _formatTime(ts);
-                        final type = (msg['type'] ?? 'text').toString();
-                        final imageBase64 = msg['image_data'] as String?;
-                        final audioBase64 = msg['audio_data'] as String?;
-                        final audioDurationMs = msg['audio_duration_ms'];
-
-                        if (type == 'image') {
-                          return _buildImageBubble(
-                            isMe: isMe,
-                            imageBase64: imageBase64,
-                            senderName: senderName,
-                            time: time,
-                            bubbleMaxWidth: bubbleMaxWidth,
-                            cardBg: cardBg,
-                            textSecondary: textSecondary,
-                            myTickColor: myTickColor,
-                          );
-                        }
-
-                        if (type == 'audio') {
-                          return _buildAudioBubble(
-                            messageId: doc.id,
-                            isMe: isMe,
-                            audioBase64: audioBase64,
-                            audioDurationMs: audioDurationMs,
-                            senderName: senderName,
-                            time: time,
-                            bubbleMaxWidth: bubbleMaxWidth,
-                            cardBg: cardBg,
-                            textSecondary: textSecondary,
-                            myTickColor: myTickColor,
-                          );
-                        }
-
-                        return _buildTextBubble(
-                          isMe: isMe,
-                          text: text,
-                          senderName: senderName,
-                          time: time,
-                          bubbleMaxWidth: bubbleMaxWidth,
-                          cardBg: cardBg,
-                          textPrimary: textPrimary,
-                          textSecondary: textSecondary,
-                          myBubbleText: myBubbleText,
-                          otherBubbleText: otherBubbleText,
-                          myTickColor: myTickColor,
-                        );
-                      },
+                        _buildInputBar(),
+                      ],
                     );
                   },
                 ),
-              ),
-              _buildInputBar(inputBg, textPrimary, textSecondary),
-            ],
-          );
-        },
-      ),
+        );
+      },
     );
   }
 }

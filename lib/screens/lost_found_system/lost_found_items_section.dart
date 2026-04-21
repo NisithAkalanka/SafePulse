@@ -30,7 +30,7 @@ class LostFoundItemsSection extends StatelessWidget {
     this.categoryChipOnTap,
   });
 
-  bool _matchFilters(LostItem i, String? currentUid) {
+  bool _matchFilters(LostItem i, String? currentUid, String? currentUserName) {
     final q = query.toLowerCase();
     final loc = locationFilter.toLowerCase();
 
@@ -41,8 +41,19 @@ class LostFoundItemsSection extends StatelessWidget {
         i.category.toLowerCase().contains(q) ||
         i.location.toLowerCase().contains(q);
     final matchLoc = loc.isEmpty || i.location.toLowerCase().contains(loc);
-    final matchMine =
-        !showOnlyMyPosts || (currentUid != null && i.userId == currentUid);
+
+    final itemUserId = i.userId.trim();
+    final itemUserName = i.userName.trim().toLowerCase();
+    final safeCurrentUid = (currentUid ?? '').trim();
+    final safeCurrentUserName = (currentUserName ?? '').trim().toLowerCase();
+
+    final isMyPostByUid =
+        safeCurrentUid.isNotEmpty && itemUserId == safeCurrentUid;
+
+    final isMyPostByUserName =
+        safeCurrentUserName.isNotEmpty && itemUserName == safeCurrentUserName;
+
+    final matchMine = !showOnlyMyPosts || isMyPostByUid || isMyPostByUserName;
 
     return matchCategory && matchSearch && matchLoc && matchMine;
   }
@@ -56,7 +67,10 @@ class LostFoundItemsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUid = currentUser?.uid;
+    final currentUserName = currentUser?.email?.split('@')[0].trim();
+
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color cardBg = isDark ? const Color(0xFF1B1B22) : Colors.white;
     final Color textPrimary = isDark ? Colors.white : lfTextPrimary;
@@ -91,8 +105,9 @@ class LostFoundItemsSection extends StatelessWidget {
         }
 
         final filtered = snapshot.data!
-            .where((i) => _matchFilters(i, currentUid))
+            .where((i) => _matchFilters(i, currentUid, currentUserName))
             .toList();
+
         final todayPosts = filtered
             .where((i) => _isToday(i.timestamp))
             .toList();
@@ -299,6 +314,11 @@ class _ItemCardState extends State<_ItemCard> {
     if (widget.item.status == 'Chat Enabled' && !_isConversationParticipant) {
       return 'Verification in progress';
     }
+
+    if (widget.item.status == 'Owner Requested Chat Approval') {
+      return 'Chat Requested';
+    }
+
     return widget.item.status;
   }
 
@@ -315,6 +335,7 @@ class _ItemCardState extends State<_ItemCard> {
       case 'Claim Pending':
       case 'Verification Pending':
       case 'Chat Request Pending':
+      case 'Requested for chat approval':
       case 'Return Pending':
         return (bg: const Color(0xFFFFF4DB), text: const Color(0xFFB26A00));
       case 'Returned':

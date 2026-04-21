@@ -533,17 +533,17 @@ class LostFoundService {
 
   Future<String> getVerificationAnswer(String itemId) async {
     final ds = await _db.collection(_col).doc(itemId).get();
-    if (!ds.exists) return "No details provided.";
+    if (!ds.exists) return 'No details provided.';
     final data = ds.data();
-    return (data?['verificationAnswer'] as String?) ?? "No details provided.";
+    return (data?['verificationAnswer'] as String?) ?? 'No details provided.';
   }
 
   Future<String> getVerificationQuestion(String itemId) async {
     final ds = await _db.collection(_col).doc(itemId).get();
-    if (!ds.exists) return "No question provided.";
+    if (!ds.exists) return 'No question provided.';
     final data = ds.data();
     return (data?['verificationQuestion'] as String?) ??
-        "No question provided.";
+        'No question provided.';
   }
 
   Future<void> enablePrivateChat(String itemId) async {
@@ -726,6 +726,10 @@ class LostFoundService {
       'audio_data': audioBase64,
       'audio_duration_ms': audioDurationMs,
       'timestamp': FieldValue.serverTimestamp(),
+      'readBy': [senderId],
+      'hiddenFor': <String>[],
+      'edited': false,
+      'deletedForEveryone': false,
     });
   }
 
@@ -788,5 +792,81 @@ class LostFoundService {
       audioBase64: base64Audio,
       audioDurationMs: audioDurationMs,
     );
+  }
+
+  Future<void> markMessagesAsSeen({
+    required String itemId,
+    required String currentUserId,
+    required List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  }) async {
+    for (final doc in docs) {
+      final data = doc.data();
+      final senderId = (data['senderId'] ?? '').toString();
+      final readBy = List<String>.from(data['readBy'] ?? const <String>[]);
+      final hiddenFor = List<String>.from(
+        data['hiddenFor'] ?? const <String>[],
+      );
+
+      if (hiddenFor.contains(currentUserId)) continue;
+      if (senderId == currentUserId) continue;
+      if (readBy.contains(currentUserId)) continue;
+
+      await doc.reference.update({
+        'readBy': FieldValue.arrayUnion([currentUserId]),
+      });
+    }
+  }
+
+  Future<void> editTextMessage({
+    required String itemId,
+    required String messageId,
+    required String updatedText,
+  }) async {
+    await _db
+        .collection(_col)
+        .doc(itemId)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+          'text': updatedText.trim(),
+          'edited': true,
+          'editedAt': FieldValue.serverTimestamp(),
+        });
+  }
+
+  Future<void> deleteMessageForMe({
+    required String itemId,
+    required String messageId,
+    required String currentUserId,
+  }) async {
+    await _db
+        .collection(_col)
+        .doc(itemId)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+          'hiddenFor': FieldValue.arrayUnion([currentUserId]),
+        });
+  }
+
+  Future<void> deleteMessageForEveryone({
+    required String itemId,
+    required String messageId,
+  }) async {
+    await _db
+        .collection(_col)
+        .doc(itemId)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+          'deletedForEveryone': true,
+          'type': 'text',
+          'text': 'This message was deleted',
+          'image_data': null,
+          'audio_data': null,
+          'audio_duration_ms': null,
+          'edited': false,
+          'editedAt': null,
+        });
   }
 }
