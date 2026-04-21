@@ -10,6 +10,7 @@ import 'lost_found_notification_service.dart';
 import 'lost_found_service.dart';
 import 'lost_item_model.dart';
 import 'mock_chat_screen.dart';
+import 'lost_found_user_badge.dart';
 
 const Color lfRed = Color(0xFFE53935);
 const Color lfBg = Color(0xFFF6F6F7);
@@ -2827,6 +2828,54 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
   String? _previousStatus;
   bool _ratingTriggered = false;
 
+  Widget _detailNameBadgeSection({
+    required String title,
+    required String name,
+    required String userId,
+    required IconData icon,
+  }) {
+    return _panel(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, color: lfRed),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      name.isEmpty ? '-' : name,
+                      style: TextStyle(
+                        color: textSecondary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14.5,
+                      ),
+                    ),
+                    LostFoundUserBadge(userId: userId),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLoadedScreen(LostItem item) {
     // Detect when status becomes "Returned" for the first time in this session
     if (item.status == 'Returned' &&
@@ -2848,10 +2897,11 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
             child: Column(
               children: <Widget>[
-                _detailSection(
-                  'Posted by',
-                  _posterDisplayName(item),
-                  Icons.person_outline,
+                _detailNameBadgeSection(
+                  title: 'Posted by',
+                  name: _posterDisplayName(item),
+                  userId: item.userId,
+                  icon: Icons.person_outline,
                 ),
                 const SizedBox(height: 14),
                 _detailsTopCard(item),
