@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'lost_found_rating_service.dart';
+import 'lost_found_notification_service.dart';
 import 'lost_found_service.dart';
 import 'lost_item_model.dart';
 import 'mock_chat_screen.dart';
@@ -97,7 +99,363 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     return _isOwner(item) || _isRequester(item);
   }
 
+  bool _canCurrentUserRate(LostItem item) {
+    if (item.status != 'Returned') return false;
+
+    // Lost post: only the original poster can rate the finder.
+    if (item.type == 'Lost') {
+      return _isOwner(item) && (item.requesterId ?? '').trim().isNotEmpty;
+    }
+
+    // Found post: only the real owner / requester can rate the poster.
+    if (item.type == 'Found') {
+      return _isRequester(item) && item.userId.trim().isNotEmpty;
+    }
+
+    return false;
+  }
+
   bool _isActiveStatus(LostItem item) => item.status == 'Active';
+
+  // ─── Rating popup ────────────────────────────────────────────────────────────
+
+  /// Show the star-rating popup.
+  /// [ratedUserId] is the person being rated.
+  /// [ratedUserName] is their display name.
+  Future<void> _showRatingDialog({
+    required LostItem item,
+    required String ratedUserId,
+    required String ratedUserName,
+  }) async {
+    // Don't show if already rated
+    final alreadyRated = await LostFoundRatingService().hasRated(
+      itemId: item.id,
+      raterId: currentUid,
+    );
+    if (alreadyRated) return;
+    if (!mounted) return;
+
+    int selectedStars = 0;
+
+    await showGeneralDialog(
+      context: context,
+      barrierLabel: 'Rate user',
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.40),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Material(
+          color: Colors.transparent,
+          child: Stack(
+            children: <Widget>[
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                child: Container(color: Colors.transparent),
+              ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: StatefulBuilder(
+                    builder: (ctx, setLocalState) {
+                      return Container(
+                        width: double.infinity,
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: <BoxShadow>[
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.18),
+                              blurRadius: 30,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Container(
+                                width: 58,
+                                height: 58,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF8DC),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFFFD700),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.star_rounded,
+                                  color: Color(0xFFFFD700),
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                'Rate this user',
+                                style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w900,
+                                  color: textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'How was your experience with $ratedUserName?',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  color: textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.35,
+                                ),
+                              ),
+                              const SizedBox(height: 22),
+                              // Star row
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(5, (index) {
+                                  final starIndex = index + 1;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setLocalState(() {
+                                        selectedStars = starIndex;
+                                      });
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                      ),
+                                      child: AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 150,
+                                        ),
+                                        child: Icon(
+                                          starIndex <= selectedStars
+                                              ? Icons.star_rounded
+                                              : Icons.star_outline_rounded,
+                                          key: ValueKey(
+                                            starIndex <= selectedStars,
+                                          ),
+                                          color: starIndex <= selectedStars
+                                              ? const Color(0xFFFFD700)
+                                              : (isDark
+                                                    ? const Color(0xFF5A6072)
+                                                    : Colors.grey.shade400),
+                                          size: 40,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                              const SizedBox(height: 8),
+                              if (selectedStars > 0)
+                                Text(
+                                  _starLabel(selectedStars),
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFD700),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              const SizedBox(height: 22),
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        side: BorderSide(color: borderColor),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Skip',
+                                        style: TextStyle(
+                                          color: textSecondary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: selectedStars == 0
+                                          ? null
+                                          : () async {
+                                              Navigator.pop(context);
+                                              await _submitRating(
+                                                item: item,
+                                                ratedUserId: ratedUserId,
+                                                ratedUserName: ratedUserName,
+                                                stars: selectedStars,
+                                              );
+                                            },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: selectedStars == 0
+                                            ? (isDark
+                                                  ? const Color(0xFF34343F)
+                                                  : Colors.grey.shade300)
+                                            : lfRed,
+                                        disabledBackgroundColor: isDark
+                                            ? const Color(0xFF34343F)
+                                            : Colors.grey.shade300,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Done',
+                                        style: TextStyle(
+                                          color: selectedStars == 0
+                                              ? textSecondary
+                                              : Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.90, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  String _starLabel(int stars) {
+    switch (stars) {
+      case 1:
+        return 'Poor';
+      case 2:
+        return 'Fair';
+      case 3:
+        return 'Good';
+      case 4:
+        return 'Great';
+      case 5:
+        return 'Excellent!';
+      default:
+        return '';
+    }
+  }
+
+  Future<void> _submitRating({
+    required LostItem item,
+    required String ratedUserId,
+    required String ratedUserName,
+    required int stars,
+  }) async {
+    try {
+      await LostFoundRatingService().submitRating(
+        itemId: item.id,
+        raterId: currentUid,
+        raterName: currentName,
+        ratedUserId: ratedUserId,
+        stars: stars,
+      );
+
+      await LostFoundNotificationService().notifyRatingSubmitted(
+        raterUserId: currentUid,
+        ratedUserId: ratedUserId,
+        itemId: item.id,
+        itemType: item.type,
+        itemTitle: item.title,
+        stars: stars,
+        raterName: currentName,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'You rated $ratedUserName $stars star${stars == 1 ? '' : 's'}!',
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Rating failed: $e')));
+    }
+  }
+
+  // ─── Rating trigger after both parties confirm ────────────────────────────
+
+  /// Decides who rates whom and shows the popup.
+  /// Called whenever item status flips to "Returned".
+  void _triggerRatingIfNeeded(LostItem item) {
+    if (!_canCurrentUserRate(item)) return;
+
+    String ratedUserId = '';
+    String ratedUserName = 'the other user';
+
+    // Lost post: only the poster rates the finder.
+    if (item.type == 'Lost' && _isOwner(item)) {
+      ratedUserId = item.requesterId ?? '';
+      ratedUserName = (item.requesterName ?? '').trim().isEmpty
+          ? 'the finder'
+          : item.requesterName!.trim();
+    }
+
+    // Found post: only the real owner / requester rates the poster.
+    if (item.type == 'Found' && _isRequester(item)) {
+      ratedUserId = item.userId;
+      ratedUserName = _posterDisplayName(item);
+    }
+
+    if (ratedUserId.isEmpty || ratedUserId == currentUid) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _showRatingDialog(
+        item: item,
+        ratedUserId: ratedUserId,
+        ratedUserName: ratedUserName,
+      );
+    });
+  }
+
+  // ─── Existing helpers (unchanged) ────────────────────────────────────────
 
   Widget _panel({required Widget child}) {
     return Container(
@@ -2465,7 +2823,21 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     return cards;
   }
 
+  // ─── Track previous status to detect Returned transition ─────────────────
+  String? _previousStatus;
+  bool _ratingTriggered = false;
+
   Widget _buildLoadedScreen(LostItem item) {
+    // Detect when status becomes "Returned" for the first time in this session
+    if (item.status == 'Returned' &&
+        _previousStatus != 'Returned' &&
+        !_ratingTriggered &&
+        _canCurrentUserRate(item)) {
+      _ratingTriggered = true;
+      _triggerRatingIfNeeded(item);
+    }
+    _previousStatus = item.status;
+
     final List<Widget> workflowCards = _buildWorkflowCards(item);
 
     return SingleChildScrollView(

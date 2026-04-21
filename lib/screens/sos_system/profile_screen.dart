@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,13 +21,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String studentEmail = "Not Logged In";
   String studentName = "SafePulse Member";
   String sliitId = "---";
-  String userRole = "student"; // Default role එක ශිෂ්‍යයෙක් ලෙස තබා ගනිමු
+  String userRole = "student";
   String? _profilePhotoBase64;
   String degree = "N/A";
   String batch = "N/A";
 
   double completionPercentage = 0.0;
   bool isSetupComplete = false;
+
+  double _lfRatingAvg = 0.0;
+  int _lfRatingCount = 0;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
 
   @override
   void initState() {
@@ -36,10 +41,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       studentEmail = user?.email ?? "Guest";
       _loadUserData();
       _calculateCompletion();
+      _listenToLostFoundRating();
     }
   }
 
-  // Firestore එකෙන් දත්ත සහ User Role එක කියවීම
+  @override
+  void dispose() {
+    _userDocSub?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadUserData() async {
     if (user != null) {
       try {
@@ -47,24 +58,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .collection('users')
             .doc(user!.uid)
             .get();
+
         if (ds.exists) {
+          final data = ds.data() ?? {};
+
           setState(() {
-            // පළමු සහ අවසාන නම තිබේදැයි බලමු
-            String fname = ds.data()?['first_name'] ?? "";
-            String lname = ds.data()?['last_name'] ?? "";
-            sliitId = ds.data()?['sliit_id'] ?? "No ID Found";
+            String fname = data['first_name'] ?? "";
+            String lname = data['last_name'] ?? "";
+            sliitId = data['sliit_id'] ?? "No ID Found";
             studentName = (fname.isEmpty && lname.isEmpty)
                 ? sliitId
                 : "$fname $lname";
 
-            studentEmail = ds.data()?['student_email'] ?? user?.email ?? "";
-            degree = ds.data()?['degree'] ?? "N/A";
-            batch = ds.data()?['join_year'] ?? "N/A";
+            studentEmail = data['student_email'] ?? user?.email ?? "";
+            degree = data['degree'] ?? "N/A";
+            batch = data['join_year'] ?? "N/A";
+            userRole = data['role'] ?? "student";
+            _profilePhotoBase64 = data['profile_photo_base64'];
 
-            // --- මෙන්න අලුතින් එක් කළ කොටස: Role එක ලබා ගැනීම ---
-            userRole = ds.data()?['role'] ?? "student";
+            _lfRatingAvg = _safeDouble(data['lf_rating_avg']);
+            _lfRatingCount = _safeInt(data['lf_rating_count']);
 
-            _profilePhotoBase64 = ds.data()?['profile_photo_base64'];
             _calculateCompletion();
           });
         }
@@ -72,6 +86,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
         debugPrint("Error loading profile: $e");
       }
     }
+  }
+
+  void _listenToLostFoundRating() {
+    if (user == null) return;
+
+    _userDocSub?.cancel();
+    _userDocSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .snapshots()
+        .listen((doc) {
+          if (!doc.exists) return;
+          final data = doc.data() ?? {};
+          if (!mounted) return;
+
+          setState(() {
+            _lfRatingAvg = _safeDouble(data['lf_rating_avg']);
+            _lfRatingCount = _safeInt(data['lf_rating_count']);
+          });
+        });
+  }
+
+  int _safeInt(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  double _safeDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  String _lfBadgeLabel(double avg, int count) {
+    if (count == 0) return 'Bronze';
+    if (avg >= 4.5) return 'Gold';
+    if (avg >= 3.0) return 'Silver';
+    return 'Bronze';
+  }
+
+  Color _lfBadgeColor(String label) {
+    switch (label) {
+      case 'Gold':
+        return const Color(0xFFFFD700);
+      case 'Silver':
+        return const Color(0xFFB0BEC5);
+      case 'Bronze':
+        return const Color(0xFFCD7F32);
+      default:
+        return const Color(0xFFB0BEC5);
+    }
+  }
+
+  String _lfRatingDisplay() {
+    if (_lfRatingCount <= 0) return '0.0★';
+    return '${_lfRatingAvg.toStringAsFixed(1)}★';
+  }
+
+  String _lfRatingSubtitle() {
+    final badge = _lfBadgeLabel(_lfRatingAvg, _lfRatingCount);
+    if (_lfRatingCount <= 0) {
+      return 'Lost & Found\n$badge badge';
+    }
+    return 'Lost & Found\n$badge • $_lfRatingCount rating${_lfRatingCount == 1 ? '' : 's'}';
   }
 
   Future<void> _calculateCompletion() async {
@@ -127,7 +208,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final Color textSecondary = isDark
         ? const Color(0xFFB7BBC6)
         : const Color(0xFF747A86);
-    final Color appBarFg = isDark ? Colors.white : Colors.white;
+    final Color appBarFg = Colors.white;
+
+    final String lfBadge = _lfBadgeLabel(_lfRatingAvg, _lfRatingCount);
+    final Color lfBadgeColor = _lfBadgeColor(lfBadge);
+
     return Scaffold(
       backgroundColor: pageBg,
       extendBodyBehindAppBar: true,
@@ -380,10 +465,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: _statItem(
-                                  "High",
-                                  "Trust",
-                                  const Color(0xFFFFC107),
+                                child: _ratingStatItem(
+                                  value: _lfRatingDisplay(),
+                                  label: "Lost & Found",
+                                  badge: lfBadge,
+                                  badgeColor: lfBadgeColor,
+                                  subtitle: _lfRatingCount <= 0
+                                      ? "No ratings yet"
+                                      : "$_lfRatingCount rating${_lfRatingCount == 1 ? '' : 's'}",
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -567,7 +656,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Helper vs Requester mode — saved app-wide (see [HelpRoleModeService]).
   Widget _buildHelpRoleModeCard() {
     const red = Color(0xFFB31217);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -814,6 +902,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (value.trim().isNotEmpty) const SizedBox(height: 4),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
               color: isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86),
@@ -835,6 +924,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: inner,
+      ),
+    );
+  }
+
+  Widget _ratingStatItem({
+    required String value,
+    required String label,
+    required String badge,
+    required Color badgeColor,
+    required String subtitle,
+  }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1B1B22) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: badgeColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: badgeColor.withOpacity(0.14),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: badgeColor.withOpacity(0.40)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.workspace_premium_rounded,
+                  size: 14,
+                  color: badgeColor,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    badge,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: badgeColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10.5,
+              color: isDark ? const Color(0xFFB7BBC6) : const Color(0xFF747A86),
+              fontWeight: FontWeight.w600,
+              height: 1.25,
+            ),
+          ),
+        ],
       ),
     );
   }

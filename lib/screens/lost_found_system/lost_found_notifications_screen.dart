@@ -36,6 +36,10 @@ class LostFoundNotificationsScreen extends StatelessWidget {
         return Icons.assignment_turned_in_outlined;
       case 'received':
         return Icons.inventory_2_outlined;
+      case 'lf_rating_received':
+        return Icons.star_rounded;
+      case 'lf_rating_sent':
+        return Icons.star_outline_rounded;
       default:
         return Icons.notifications_none_rounded;
     }
@@ -135,6 +139,21 @@ class LostFoundNotificationsScreen extends StatelessWidget {
                     final isRead = data['isRead'] == true;
                     final createdAt = data['createdAt'];
 
+                    // Choose icon colour — gold for rating notifications
+                    final bool isRatingNotif =
+                        actionType == 'lf_rating_received' ||
+                        actionType == 'lf_rating_sent';
+                    final Color iconColor = isRatingNotif
+                        ? const Color(0xFFFFD700)
+                        : lfRed;
+                    final Color iconBg = isRatingNotif
+                        ? (isRead
+                              ? const Color(0xFFFFF8DC).withOpacity(0.6)
+                              : const Color(0xFFFFF8DC))
+                        : (isRead
+                              ? Colors.grey.withOpacity(0.12)
+                              : lfRed.withOpacity(0.12));
+
                     return InkWell(
                       borderRadius: BorderRadius.circular(18),
                       onTap: () async {
@@ -150,7 +169,11 @@ class LostFoundNotificationsScreen extends StatelessWidget {
                           border: Border.all(
                             color: isRead
                                 ? Colors.grey.withOpacity(0.18)
-                                : lfRed.withOpacity(0.35),
+                                : (isRatingNotif
+                                      ? const Color(
+                                          0xFFFFD700,
+                                        ).withOpacity(0.45)
+                                      : lfRed.withOpacity(0.35)),
                             width: isRead ? 1 : 1.3,
                           ),
                           boxShadow: [
@@ -168,14 +191,12 @@ class LostFoundNotificationsScreen extends StatelessWidget {
                               width: 42,
                               height: 42,
                               decoration: BoxDecoration(
-                                color: isRead
-                                    ? Colors.grey.withOpacity(0.12)
-                                    : lfRed.withOpacity(0.12),
+                                color: iconBg,
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Icon(
                                 _iconForAction(actionType),
-                                color: lfRed,
+                                color: iconColor,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -201,8 +222,10 @@ class LostFoundNotificationsScreen extends StatelessWidget {
                                         Container(
                                           width: 9,
                                           height: 9,
-                                          decoration: const BoxDecoration(
-                                            color: lfRed,
+                                          decoration: BoxDecoration(
+                                            color: isRatingNotif
+                                                ? const Color(0xFFFFD700)
+                                                : lfRed,
                                             shape: BoxShape.circle,
                                           ),
                                         ),
@@ -240,4 +263,3 @@ class LostFoundNotificationsScreen extends StatelessWidget {
     );
   }
 }
-

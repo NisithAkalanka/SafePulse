@@ -144,6 +144,41 @@ class LostFoundNotificationService {
     );
   }
 
+  /// Notify both users when a rating has been submitted.
+  Future<void> notifyRatingSubmitted({
+    required String raterUserId,
+    required String ratedUserId,
+    required String itemId,
+    required String itemType,
+    required String itemTitle,
+    required int stars,
+    required String raterName,
+  }) async {
+    // Notify the person who was rated
+    await sendToUser(
+      userId: ratedUserId,
+      title: 'You received a rating!',
+      body:
+          '$raterName rated you $stars star${stars == 1 ? '' : 's'} for the item "$itemTitle". Check your profile to see your Lost & Found rating.',
+      itemId: itemId,
+      itemType: itemType,
+      actionType: 'lf_rating_received',
+      extraData: {'stars': stars, 'raterName': raterName},
+    );
+
+    // Notify the rater confirming submission
+    await sendToUser(
+      userId: raterUserId,
+      title: 'Rating submitted',
+      body:
+          'You gave $stars star${stars == 1 ? '' : 's'} for "$itemTitle". Thank you for your feedback!',
+      itemId: itemId,
+      itemType: itemType,
+      actionType: 'lf_rating_sent',
+      extraData: {'stars': stars},
+    );
+  }
+
   Future<void> markAsRead(String notificationId) async {
     await _db.collection(_notificationsCol).doc(notificationId).update({
       'isRead': true,
