@@ -156,250 +156,6 @@ class _ItemDetailsState extends State<ItemDetails> {
     );
   }
 
-  Widget _buildSellerRatingPreview(
-    bool isDark,
-    Color cardBg,
-    Color borderColor,
-    Color textPrimary,
-    Color textSecondary,
-    bool isMyPost,
-  ) {
-    if (widget.sellerId == null || widget.sellerId!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('marketplace_reviews')
-          .where('sellerId', isEqualTo: widget.sellerId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: borderColor),
-            ),
-            child: const Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final docs = snapshot.data!.docs;
-
-        double total = 0;
-        for (final doc in docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          total += (data['rating'] ?? 0).toDouble();
-        }
-
-        final double average = docs.isEmpty ? 0 : total / docs.length;
-
-        final sortedDocs = [...docs];
-        sortedDocs.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
-
-          final aTime = aData['createdAt'];
-          final bTime = bData['createdAt'];
-
-          if (aTime is Timestamp && bTime is Timestamp) {
-            return bTime.compareTo(aTime);
-          }
-          if (aTime is Timestamp) return -1;
-          if (bTime is Timestamp) return 1;
-          return 0;
-        });
-
-        final recentReviews = sortedDocs.take(2).toList();
-
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: borderColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Seller Ratings & Reviews",
-                style: TextStyle(
-                  color: gRedStart,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  const Icon(Icons.star_rounded, color: Colors.amber, size: 28),
-                  const SizedBox(width: 8),
-                  Text(
-                    average.toStringAsFixed(1),
-                    style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    "${docs.length} review${docs.length == 1 ? '' : 's'}",
-                    style: TextStyle(
-                      color: textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              if (recentReviews.isEmpty)
-                Text(
-                  "No reviews yet for this seller",
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              if (recentReviews.isNotEmpty)
-                ...recentReviews.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  DateTime? time;
-                  if (data['createdAt'] is Timestamp) {
-                    time = (data['createdAt'] as Timestamp).toDate();
-                  }
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withOpacity(0.04)
-                          : const Color(0xFFF8F9FD),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 16,
-                              backgroundColor: gRedStart.withOpacity(0.12),
-                              child: const Icon(
-                                Icons.person,
-                                color: gRedMid,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                data['buyerName'] ?? "Buyer",
-                                style: TextStyle(
-                                  color: textPrimary,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            if (time != null)
-                              Text(
-                                "${time.day}/${time.month}/${time.year}",
-                                style: TextStyle(
-                                  color: textSecondary,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: List.generate(
-                            5,
-                            (i) => Icon(
-                              i < (data['rating'] ?? 0)
-                                  ? Icons.star_rounded
-                                  : Icons.star_border_rounded,
-                              color: Colors.amber,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          data['reviewText'] ?? "",
-                          style: TextStyle(
-                            color: textSecondary,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w500,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          "Item: ${data['itemName'] ?? ''}",
-                          style: TextStyle(
-                            color: textSecondary.withOpacity(0.9),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              if (!isMyPost &&
-                  widget.sellerId != null &&
-                  widget.sellerId!.isNotEmpty) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SellerReviewsScreen(
-                            sellerId: widget.sellerId!,
-                            sellerName: sellerName,
-                          ),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: gRedMid,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Icons.star_rounded),
-                    label: const Text(
-                      "View All Reviews",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -662,18 +418,47 @@ class _ItemDetailsState extends State<ItemDetails> {
                     textSecondary,
                     textPrimary,
                   ),
-                  const SizedBox(height: 18),
-                  if (!isMyPost) ...[
-                    _buildSellerRatingPreview(
-                      isDark,
-                      cardBg,
-                      borderColor,
-                      textPrimary,
-                      textSecondary,
-                      isMyPost,
+                  const SizedBox(height: 12),
+                  if (!isMyPost &&
+                      widget.sellerId != null &&
+                      widget.sellerId!.isNotEmpty)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SellerReviewsScreen(
+                                sellerId: widget.sellerId!,
+                                sellerName: sellerName,
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: gRedMid,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.star_rounded),
+                        label: const Text(
+                          "View All Reviews",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     ),
+                  if (!isMyPost &&
+                      widget.sellerId != null &&
+                      widget.sellerId!.isNotEmpty)
                     const SizedBox(height: 18),
-                  ],
                   _buildSpecRow(
                     "Item Trace ID",
                     widget.docId != null
