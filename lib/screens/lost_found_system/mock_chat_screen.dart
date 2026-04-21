@@ -12,6 +12,7 @@ import 'package:record/record.dart';
 
 import 'lost_found_service.dart';
 import 'lost_item_model.dart';
+import 'lost_found_user_badge.dart';
 
 class MockChatScreen extends StatefulWidget {
   final String itemId;
@@ -572,8 +573,42 @@ class _MockChatScreenState extends State<MockChatScreen>
     );
   }
 
+  Widget _buildHeaderTitleWithBadge({
+    required String headerName,
+    required String badgeUserId,
+  }) {
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            headerName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        if (badgeUserId.trim().isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Flexible(
+            child: LostFoundUserBadge(
+              userId: badgeUserId,
+              fontSize: 10.5,
+              iconSize: 13,
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildChatHeader({
     required String headerName,
+    required String badgeUserId,
     required String subtitle,
     required bool online,
   }) {
@@ -621,15 +656,9 @@ class _MockChatScreenState extends State<MockChatScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      headerName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    _buildHeaderTitleWithBadge(
+                      headerName: headerName,
+                      badgeUserId: badgeUserId,
                     ),
                     if (online) ...[
                       const SizedBox(height: 2),
@@ -1079,7 +1108,12 @@ class _MockChatScreenState extends State<MockChatScreen>
   ) {
     return Column(
       children: [
-        _buildChatHeader(headerName: headerName, subtitle: '', online: false),
+        _buildChatHeader(
+          headerName: headerName,
+          badgeUserId: '',
+          subtitle: '',
+          online: false,
+        ),
         Expanded(
           child: Center(
             child: Padding(
@@ -1187,6 +1221,7 @@ class _MockChatScreenState extends State<MockChatScreen>
                       children: [
                         _buildChatHeader(
                           headerName: headerName,
+                          badgeUserId: otherUserId,
                           subtitle: subtitle,
                           online: online,
                         ),
