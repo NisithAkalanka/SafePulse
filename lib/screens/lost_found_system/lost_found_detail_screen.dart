@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'lost_found_service.dart';
 import 'lost_item_model.dart';
@@ -57,6 +58,24 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     'Keys',
     'Books',
     'Others',
+  ];
+
+  static const List<String> _editLocations = <String>[
+    'Main Gate',
+    'Library',
+    'Auditorium',
+    'Canteen',
+    'Car Park',
+    'Main Building',
+    'New Building/Block',
+    'New Building/G Block',
+    'Engineering Building',
+    'Business School',
+    'Juice Bar',
+    'Playground',
+    'Bird Nest',
+    'William Angliss',
+    'Other',
   ];
 
   String get currentUid => FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
@@ -161,6 +180,17 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     return null;
   }
 
+  String? _validateLettersAndNumbersOnly(String? value, String label) {
+    final String v = value?.trim() ?? '';
+    if (v.isEmpty) return '$label is required';
+
+    final RegExp reg = RegExp(r'^[a-zA-Z0-9\s]+$');
+    if (!reg.hasMatch(v)) {
+      return '$label can contain letters and numbers only';
+    }
+    return null;
+  }
+
   String _formatPostedDate(DateTime date) {
     const List<String> months = <String>[
       '',
@@ -244,16 +274,24 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     final TextEditingController titleController = TextEditingController(
       text: item.title,
     );
-    final TextEditingController locationController = TextEditingController(
-      text: item.location,
-    );
     final TextEditingController descriptionController = TextEditingController(
       text: item.description,
+    );
+
+    final bool itemLocationIsCustom =
+        item.location.isNotEmpty && !_editLocations.contains(item.location);
+
+    final TextEditingController otherLocationController = TextEditingController(
+      text: itemLocationIsCustom ? item.location : '',
     );
 
     String selectedCategory = item.category.isNotEmpty
         ? item.category
         : _editCategories.first;
+
+    String selectedLocation = itemLocationIsCustom
+        ? 'Other'
+        : (item.location.isNotEmpty ? item.location : _editLocations.first);
 
     await showGeneralDialog(
       context: context,
@@ -360,8 +398,16 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                       color: textPrimary,
                                       fontWeight: FontWeight.w600,
                                     ),
+                                    inputFormatters: <TextInputFormatter>[
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'[a-zA-Z0-9\s]'),
+                                      ),
+                                    ],
                                     validator: (v) =>
-                                        _requiredField(v, 'Title'),
+                                        _validateLettersAndNumbersOnly(
+                                          v,
+                                          'Title',
+                                        ),
                                     decoration: _dialogFieldDecoration(
                                       'Title',
                                       label: 'Title',
@@ -406,19 +452,75 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                     },
                                   ),
                                   const SizedBox(height: 14),
-                                  TextFormField(
-                                    controller: locationController,
+                                  DropdownButtonFormField<String>(
+                                    dropdownColor: cardBg,
+                                    value:
+                                        _editLocations.contains(
+                                          selectedLocation,
+                                        )
+                                        ? selectedLocation
+                                        : _editLocations.first,
                                     style: TextStyle(
                                       color: textPrimary,
                                       fontWeight: FontWeight.w600,
                                     ),
+                                    icon: Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: textSecondary,
+                                    ),
                                     validator: (v) =>
                                         _requiredField(v, 'Location'),
                                     decoration: _dialogFieldDecoration(
-                                      'Location',
+                                      '',
                                       label: 'Location',
                                     ),
+                                    items: _editLocations
+                                        .map(
+                                          (String location) =>
+                                              DropdownMenuItem<String>(
+                                                value: location,
+                                                child: Text(location),
+                                              ),
+                                        )
+                                        .toList(),
+                                    onChanged: (String? value) {
+                                      if (value != null) {
+                                        setLocalState(() {
+                                          selectedLocation = value;
+                                          if (selectedLocation != 'Other') {
+                                            otherLocationController.clear();
+                                          }
+                                        });
+                                      }
+                                    },
                                   ),
+                                  if (selectedLocation == 'Other') ...<Widget>[
+                                    const SizedBox(height: 14),
+                                    TextFormField(
+                                      controller: otherLocationController,
+                                      style: TextStyle(
+                                        color: textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      inputFormatters: <TextInputFormatter>[
+                                        FilteringTextInputFormatter.allow(
+                                          RegExp(r'[a-zA-Z0-9\s]'),
+                                        ),
+                                      ],
+                                      validator: (v) {
+                                        if (selectedLocation != 'Other')
+                                          return null;
+                                        return _validateLettersAndNumbersOnly(
+                                          v,
+                                          'Other location',
+                                        );
+                                      },
+                                      decoration: _dialogFieldDecoration(
+                                        'Type other location',
+                                        label: 'Other location',
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 14),
                                   TextFormField(
                                     controller: descriptionController,
@@ -494,9 +596,12 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
                                                 description:
                                                     descriptionController.text
                                                         .trim(),
-                                                location: locationController
-                                                    .text
-                                                    .trim(),
+                                                location:
+                                                    selectedLocation == 'Other'
+                                                    ? otherLocationController
+                                                          .text
+                                                          .trim()
+                                                    : selectedLocation.trim(),
                                               );
 
                                               if (!mounted) return;
@@ -1620,6 +1725,72 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     );
   }
 
+  Widget _foundRequesterConfirmReceivedCard(LostItem item) {
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Returned item confirmation',
+            style: TextStyle(
+              color: textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${_posterDisplayName(item)} marked the item as returned. Did you receive the item safely?',
+            style: TextStyle(
+              color: textSecondary,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _greenActionButton(
+            text: 'YES, RECEIVED SAFELY',
+            icon: Icons.check_circle_outline,
+            onTap: () => _markReceivedByOwner(item),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _foundOwnerFinalReturnCard(LostItem item) {
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Return confirmation',
+            style: TextStyle(
+              color: textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${item.requesterName ?? 'The other user'} marked the item as received. Tap the green button to confirm and complete the return.',
+            style: TextStyle(
+              color: textSecondary,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _greenActionButton(
+            text: 'CONFIRM RETURN',
+            icon: Icons.check,
+            onTap: () => _markReturnedByRequester(item),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _chatCard(LostItem item) {
     final bool isFoundItem = item.type == 'Found';
 
@@ -1795,7 +1966,7 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Found request received',
+            'Request received',
             style: TextStyle(
               color: textPrimary,
               fontWeight: FontWeight.w800,
@@ -2127,27 +2298,51 @@ class _LostFoundDetailScreenState extends State<LostFoundDetailScreen> {
     }
 
     if (item.status == 'Return Pending') {
-      if (isOwner) {
-        cards.add(_ownerConfirmReceivedCard(item));
-      } else if (isRequester) {
-        cards.add(
-          _requesterWaitingCard(
-            'You marked the item as returned. Please wait for the owner to confirm safe receipt.',
-          ),
-        );
+      if (item.type == 'Found') {
+        if (isRequester) {
+          cards.add(_foundRequesterConfirmReceivedCard(item));
+        } else if (isOwner) {
+          cards.add(
+            _requesterWaitingCard(
+              'You marked the item as returned. Please wait for the other user to confirm safe receipt.',
+            ),
+          );
+        }
+      } else {
+        if (isOwner) {
+          cards.add(_ownerConfirmReceivedCard(item));
+        } else if (isRequester) {
+          cards.add(
+            _requesterWaitingCard(
+              'You marked the item as returned. Please wait for the owner to confirm safe receipt.',
+            ),
+          );
+        }
       }
       return cards;
     }
 
     if (item.status == 'Receive Pending') {
-      if (isRequester) {
-        cards.add(_requesterFinalThanksCard(item));
-      } else if (isOwner) {
-        cards.add(
-          _requesterWaitingCard(
-            'You marked the item as received. Please wait for the other user to confirm the return.',
-          ),
-        );
+      if (item.type == 'Found') {
+        if (isOwner) {
+          cards.add(_foundOwnerFinalReturnCard(item));
+        } else if (isRequester) {
+          cards.add(
+            _requesterWaitingCard(
+              'You marked the item as received. Please wait for the poster to confirm the return.',
+            ),
+          );
+        }
+      } else {
+        if (isRequester) {
+          cards.add(_requesterFinalThanksCard(item));
+        } else if (isOwner) {
+          cards.add(
+            _requesterWaitingCard(
+              'You marked the item as received. Please wait for the other user to confirm the return.',
+            ),
+          );
+        }
       }
       return cards;
     }

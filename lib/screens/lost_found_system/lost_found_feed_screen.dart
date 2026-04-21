@@ -40,6 +40,24 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
     "Others",
   ];
 
+  final List<String> _locations = const [
+    "All",
+    "Main Gate",
+    "Library",
+    "Auditorium",
+    "Canteen",
+    "Car Park",
+    "Main Building",
+    "New Building/Block",
+    "New Building/G Block",
+    "Engineering Building",
+    "Business School",
+    "Juice Bar",
+    "Playground",
+    "Bird Nest",
+    "William Angliss",
+  ];
+
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
   Color get _pageBg => _isDark ? const Color(0xFF121217) : lfBg;
   Color get _cardBg => _isDark ? const Color(0xFF171822) : Colors.white;
@@ -152,15 +170,11 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
   }
 
   Future<void> _openLocationFilterDialog() async {
-    final TextEditingController c = TextEditingController(
-      text: _locationFilter,
-    );
-
     await showGeneralDialog(
       context: context,
-      barrierLabel: 'Location Filter',
+      barrierLabel: "Location Picker",
       barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.22),
+      barrierColor: Colors.black.withOpacity(0.20),
       transitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (context, animation, secondaryAnimation) {
         return Material(
@@ -171,35 +185,34 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
                 filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
                 child: Container(color: Colors.transparent),
               ),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: SafeArea(
+                  top: false,
                   child: Container(
                     width: double.infinity,
-                    constraints: const BoxConstraints(maxWidth: 420),
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.74,
+                    ),
                     decoration: BoxDecoration(
                       color: _cardBg,
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(30),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.14),
+                          color: Colors.black.withOpacity(0.16),
                           blurRadius: 24,
-                          offset: const Offset(0, 10),
-                        ),
-                        BoxShadow(
-                          color: lfRed.withOpacity(0.08),
-                          blurRadius: 18,
-                          offset: const Offset(0, 4),
+                          offset: const Offset(0, -4),
                         ),
                       ],
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 48,
+                            width: 46,
                             height: 5,
                             decoration: BoxDecoration(
                               color: _isDark
@@ -208,12 +221,12 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                           Row(
                             children: [
                               Container(
-                                width: 44,
-                                height: 44,
+                                width: 42,
+                                height: 42,
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [
@@ -221,7 +234,7 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
                                       Color(0xFFE53935),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(15),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: const Icon(
                                   Icons.place_outlined,
@@ -231,95 +244,152 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  "Filter by location",
+                                  "Choose location",
                                   style: TextStyle(
-                                    color: _textPrimary,
-                                    fontSize: 17,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w800,
+                                    color: _textPrimary,
                                   ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  color: _textSecondary,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 4),
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              "Enter a place to filter your posts quickly.",
+                              "Select one location to filter the items.",
                               style: TextStyle(
-                                color: _isDark
-                                    ? const Color(0xFFD6DBE6)
-                                    : _textMuted,
+                                color: _textMuted,
                                 fontSize: 12.8,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: c,
-                            style: TextStyle(
-                              color: _textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            decoration: _dialogInputDecoration(
-                              "e.g. Main Gate, Library, Canteen...",
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _outlinedGlowCancelButton(
-                                  () => Navigator.pop(context),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Container(
-                                  height: 52,
+                          const SizedBox(height: 14),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: _locations.length,
+                              itemBuilder: (context, index) {
+                                final location = _locations[index];
+                                final selected =
+                                    _locationFilter == location ||
+                                    (_locationFilter.isEmpty &&
+                                        location == "All");
+
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  margin: const EdgeInsets.only(bottom: 10),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFFF5A5A),
-                                        Color(0xFFE53935),
-                                      ],
+                                    color: selected
+                                        ? (_isDark
+                                              ? const Color(0xFF1F2130)
+                                              : const Color(0xFFFFF7F7))
+                                        : (_isDark
+                                              ? const Color(0xFF1B1D2A)
+                                              : Colors.white),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: selected ? lfRed : _borderColor,
+                                      width: selected ? 1.4 : 1,
                                     ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: lfRed.withOpacity(0.28),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ],
+                                    boxShadow: selected
+                                        ? [
+                                            BoxShadow(
+                                              color: lfRed.withOpacity(0.12),
+                                              blurRadius: 14,
+                                              offset: const Offset(0, 5),
+                                            ),
+                                          ]
+                                        : [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                _isDark ? 0.10 : 0.04,
+                                              ),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
                                   ),
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _locationFilter = c.text.trim();
-                                      });
-                                      Navigator.pop(context);
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      "Apply",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(18),
+                                      onTap: () {
+                                        setState(() {
+                                          _locationFilter = location == "All"
+                                              ? ""
+                                              : location;
+                                        });
+                                        Navigator.pop(context);
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 14,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 42,
+                                              height: 42,
+                                              decoration: BoxDecoration(
+                                                color: selected
+                                                    ? lfRed.withOpacity(0.10)
+                                                    : (_isDark
+                                                          ? const Color(
+                                                              0xFF252838,
+                                                            )
+                                                          : const Color(
+                                                              0xFFF8F8F9,
+                                                            )),
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
+                                              ),
+                                              child: Icon(
+                                                location == "All"
+                                                    ? Icons.grid_view_rounded
+                                                    : Icons.place_outlined,
+                                                color: lfRed,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                location,
+                                                style: TextStyle(
+                                                  color: _textPrimary,
+                                                  fontSize: 15.5,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                            AnimatedOpacity(
+                                              duration: const Duration(
+                                                milliseconds: 180,
+                                              ),
+                                              opacity: selected ? 1 : 0,
+                                              child: const Icon(
+                                                Icons.check_rounded,
+                                                color: lfRed,
+                                                size: 22,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ],
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -334,10 +404,17 @@ class _LostFoundFeedScreenState extends State<LostFoundFeedScreen>
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(
           opacity: animation,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.95, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            ),
+          child: SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.08),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
             child: child,
           ),
         );
