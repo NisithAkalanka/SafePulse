@@ -42,12 +42,12 @@ class HelpOfferNotificationService {
         .where('recipientUid', isEqualTo: user.uid)
         .snapshots()
         .listen(
-      _onIncomingSnapshot,
-      onError: (Object e, StackTrace st) {
-        debugPrint('HelpOfferNotificationService.listen error: $e');
-        debugPrint('$st');
-      },
-    );
+          _onIncomingSnapshot,
+          onError: (Object e, StackTrace st) {
+            debugPrint('HelpOfferNotificationService.listen error: $e');
+            debugPrint('$st');
+          },
+        );
   }
 
   Future<void> _onIncomingSnapshot(
@@ -118,7 +118,9 @@ class HelpOfferNotificationService {
   Future<bool> notifyRequesterAboutOffer(HelpRequest request) async {
     final helper = _auth.currentUser;
     final requesterUid = request.creatorUid;
-    debugPrint('SafePulse: Offering help for Request[${request.id}] from Creator[$requesterUid]');
+    debugPrint(
+      'SafePulse: Offering help for Request[${request.id}] from Creator[$requesterUid]',
+    );
 
     if (helper == null) {
       debugPrint('SafePulse: Offer failed - No helper logged in');
@@ -136,7 +138,9 @@ class HelpOfferNotificationService {
     try {
       final helperName = _bestEffortHelperName(helper);
       final helperBadge = await _resolveHelperBadge(helper.uid);
-      debugPrint('SafePulse: Sending help_offer from ${helper.uid} to $requesterUid');
+      debugPrint(
+        'SafePulse: Sending help_offer from ${helper.uid} to $requesterUid',
+      );
 
       // 1. Create the offer notification record
       await _firestore.collection(_collection).add(<String, dynamic>{
@@ -163,40 +167,13 @@ class HelpOfferNotificationService {
           'helperName': helperName,
         });
       } catch (e) {
-        debugPrint('SafePulse: Failed to update request status (non-blocking): $e');
+        debugPrint(
+          'SafePulse: Failed to update request status (non-blocking): $e',
+        );
       }
 
-      // 3. Best-effort mirror to `alerts` (do not fail the core notification write).
-      try {
-        String requesterEmail = 'Unknown User';
-        final requesterDoc =
-            await _firestore.collection('users').doc(requesterUid).get();
-        final data = requesterDoc.data();
-        final e1 = data?['student_email']?.toString().trim();
-        final e2 = data?['email']?.toString().trim();
-        requesterEmail = (e1 != null && e1.isNotEmpty)
-            ? e1
-            : ((e2 != null && e2.isNotEmpty) ? e2 : requesterEmail);
-
-        await _firestore.collection('alerts').add(<String, dynamic>{
-          'type': request.category,
-          'user_email': requesterEmail,
-          'uid': requesterUid,
-          'lat': request.lat,
-          'lng': request.lng,
-          'address': request.locationName,
-          'time': FieldValue.serverTimestamp(),
-          'status': 'HelpOffer',
-          'helper_uid': helper.uid,
-          'helper_name': helperName,
-          'acceptedBy': helperName,
-          'requestId': request.id,
-          'requestTitle': request.title,
-          'source': 'help_offer',
-        });
-      } catch (e) {
-        debugPrint('alerts mirror failed (non-blocking): $e');
-      }
+      // Do not mirror help offers into `alerts`; they are handled via
+      // `help_offer_notifications` to avoid duplicate SOS-style entries.
       return true;
     } catch (e, st) {
       debugPrint('notifyRequesterAboutOffer failed: $e');

@@ -46,6 +46,7 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
   }
 
   void _showHelpAcceptedDialog({
+    required String notificationDocId,
     required String requestId,
     required String category,
     required String requestTitle,
@@ -195,7 +196,9 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                         decoration: BoxDecoration(
                           color: badgeColor.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: badgeColor.withOpacity(0.28)),
+                          border: Border.all(
+                            color: badgeColor.withOpacity(0.28),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -236,8 +239,22 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                     ),
                     const Spacer(),
                     ElevatedButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.pop(dialogContext);
+                        try {
+                          await FirebaseFirestore.instance
+                              .collection('help_offer_notifications')
+                              .doc(notificationDocId)
+                              .set(<String, dynamic>{
+                                'helperAcceptedDialogOpened': true,
+                                'helperAcceptedDialogOpenedAt':
+                                    FieldValue.serverTimestamp(),
+                              }, SetOptions(merge: true));
+                        } catch (e) {
+                          debugPrint(
+                            'Failed to persist helper accepted dialog state: $e',
+                          );
+                        }
                         if (requestId.isEmpty) return;
                         Navigator.push(
                           context,
@@ -262,7 +279,10 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
-                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                      icon: const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 18,
+                      ),
                       label: const Text(
                         'CONTACT',
                         style: TextStyle(fontWeight: FontWeight.w800),
@@ -477,6 +497,11 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
 
                   for (final doc in alerts) {
                     final data = doc.data() as Map<String, dynamic>;
+                    final source = (data['source'] ?? '').toString();
+                    final status = (data['status'] ?? '').toString();
+                    if (source == 'help_offer' || status == 'HelpOffer') {
+                      continue;
+                    }
                     final alertId = doc.id;
                     if (_processedAlertIds.contains(alertId)) continue;
 
@@ -516,6 +541,12 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
 
                           for (final d in alerts) {
                             final data = d.data() as Map<String, dynamic>;
+                            final source = (data['source'] ?? '').toString();
+                            final status = (data['status'] ?? '').toString();
+                            if (source == 'help_offer' ||
+                                status == 'HelpOffer') {
+                              continue;
+                            }
                             rows.add({
                               'id': d.id,
                               'rowType': 'sos',
@@ -534,11 +565,18 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                             for (final d in offerSnap.data!.docs) {
                               final data = d.data() as Map<String, dynamic>;
                               final String docId = d.id;
+                              final bool isRecipient =
+                                  data['recipientUid'] == uid;
+                              final bool isHelper = data['helperUid'] == uid;
+                              final bool isAccepted = data['accepted'] == true;
+                              final bool helperAcceptedDialogOpened =
+                                  data['helperAcceptedDialogOpened'] == true;
 
-                              if (data['helperUid'] == uid &&
-                                  data['accepted'] == true &&
+                              if (isHelper &&
+                                  isAccepted &&
+                                  !helperAcceptedDialogOpened &&
                                   !_processedAlertIds.contains(
-                                    'accepted_$docId',
+                                    'offer_accepted_$docId',
                                   )) {
                                 WidgetsBinding.instance.addPostFrameCallback((
                                   _,
@@ -550,14 +588,14 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                                               'Help request')
                                           .toString();
                                   final requestTitle =
-                                      (data['requestTitle'] ?? '')
-                                          .toString();
-                                  final helperBadge =
-                                      data['helperBadge']?.toString();
+                                      (data['requestTitle'] ?? '').toString();
+                                  final helperBadge = data['helperBadge']
+                                      ?.toString();
                                   final requestLocation =
                                       (data['requestLocationName'] ?? 'Nearby')
                                           .toString();
                                   _showHelpAcceptedDialog(
+                                    notificationDocId: docId,
                                     requestId: (data['requestId'] ?? '')
                                         .toString(),
                                     category: requestCategory,
@@ -567,14 +605,9 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                                   );
                                 });
 
-                                _processedAlertIds.add('accepted_$docId');
+                                _processedAlertIds.add('offer_accepted_$docId');
                               }
 
-                              final bool isRecipient =
-                                  data['recipientUid'] == uid;
-                              final bool isHelper = data['helperUid'] == uid;
-                              final bool isAccepted =
-                                  data['accepted'] == true;
                               final String helperBadge =
                                   (data['helperBadge'] ?? '')
                                       .toString()
@@ -584,11 +617,10 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                                   (data['requestTitle'] ?? '').toString();
                               final String acceptedBody =
                                   requestTitle.isNotEmpty
-                                  ? 'Your help offer for $requestTitle has been accepted.'
-                                  : 'Your help offer has been accepted.';
-                              final String badgeBody =
-                                  helperBadge.isNotEmpty
-                                  ? ' Your helper has a $helperBadge badge.'
+                                  ? 'The requester accepted your help offer for $requestTitle.'
+                                  : 'The requester accepted your help offer.';
+                              final String badgeBody = helperBadge.isNotEmpty
+                                  ? ' Your helper badge is $helperBadge.'
                                   : '';
 
                               if (isRecipient || isHelper) {
@@ -598,7 +630,7 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                                   'requestId': data['requestId'],
                                   'requestTitle': requestTitle,
                                   'title': isHelper && isAccepted
-                                      ? 'Help Accepted'
+                                      ? 'Offer Accepted'
                                       : isHelper
                                       ? "You offered help to ${data['requestCategory'] ?? 'someone'}"
                                       : (data['helperName'] ?? "A helper")

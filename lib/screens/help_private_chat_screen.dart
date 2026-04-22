@@ -138,16 +138,16 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
         .doc(widget.requestId)
         .snapshots()
         .listen((reqSnap) {
-      if (!mounted) return;
-      final data = reqSnap.data();
-      if (data != null) {
-        setState(() {
-          _chatProceeded = data['chatProceeded'] == true;
-          _requestCreatorUid = data['creatorUid'] as String?;
-          _requestHelperUid = data['helperUid'] as String?;
+          if (!mounted) return;
+          final data = reqSnap.data();
+          if (data != null) {
+            setState(() {
+              _chatProceeded = data['chatProceeded'] == true;
+              _requestCreatorUid = data['creatorUid'] as String?;
+              _requestHelperUid = data['helperUid'] as String?;
+            });
+          }
         });
-      }
-    });
 
     _chatSub = FirebaseFirestore.instance
         .collection('help_requests')
@@ -156,39 +156,41 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snap) {
-      if (!mounted) return;
-      final List<_ChatMessage> updated = snap.docs.map((doc) {
-        final data = doc.data();
-        final senderUid = data['senderUid'] as String?;
-        final createdAt = data['createdAt'];
-        DateTime time;
-        if (createdAt is Timestamp) {
-          time = createdAt.toDate();
-        } else if (createdAt is int) {
-          time = DateTime.fromMillisecondsSinceEpoch(createdAt);
-        } else {
-          time = DateTime.now();
-        }
+          if (!mounted) return;
+          final List<_ChatMessage> updated = snap.docs.map((doc) {
+            final data = doc.data();
+            final senderUid = data['senderUid'] as String?;
+            final createdAt = data['createdAt'];
+            DateTime time;
+            if (createdAt is Timestamp) {
+              time = createdAt.toDate();
+            } else if (createdAt is int) {
+              time = DateTime.fromMillisecondsSinceEpoch(createdAt);
+            } else {
+              time = DateTime.now();
+            }
 
-        return _ChatMessage(
-          fromMe: senderUid == uid,
-          text: data['text'] as String?,
-          imagePath: data['imagePath'] as String?,
-          audioPath: data['audioPath'] as String?,
-          audioDuration: data['audioDuration'] != null
-              ? Duration(milliseconds: data['audioDuration'] as int)
-              : null,
-          time: time,
-          status: senderUid == uid ? MessageStatus.read : MessageStatus.delivered,
-        );
-      }).toList();
+            return _ChatMessage(
+              fromMe: senderUid == uid,
+              text: data['text'] as String?,
+              imagePath: data['imagePath'] as String?,
+              audioPath: data['audioPath'] as String?,
+              audioDuration: data['audioDuration'] != null
+                  ? Duration(milliseconds: data['audioDuration'] as int)
+                  : null,
+              time: time,
+              status: senderUid == uid
+                  ? MessageStatus.read
+                  : MessageStatus.delivered,
+            );
+          }).toList();
 
-      setState(() {
-        _messages.clear();
-        _messages.addAll(updated.reversed);
-      });
-      _scrollToBottom();
-    });
+          setState(() {
+            _messages.clear();
+            _messages.addAll(updated.reversed);
+          });
+          _scrollToBottom();
+        });
   }
 
   Future<void> _proceedChat() async {
@@ -219,22 +221,26 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
   Future<void> _submitRating(int rating) async {
     final messenger = ScaffoldMessenger.of(context);
     final helperUid = _requestHelperUid;
-    
+
     if (helperUid != null) {
       try {
-        final helperRef = FirebaseFirestore.instance.collection('users').doc(helperUid);
+        final helperRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(helperUid);
         await FirebaseFirestore.instance.runTransaction((transaction) async {
           final snapshot = await transaction.get(helperRef);
           if (snapshot.exists) {
             final data = snapshot.data();
             if (data == null) return;
-            
-            final currentCount = (data['helper_rating_count'] as num?)?.toInt() ?? 0;
-            final currentAvg = (data['helper_rating_avg'] as num?)?.toDouble() ?? 0.0;
-            
+
+            final currentCount =
+                (data['helper_rating_count'] as num?)?.toInt() ?? 0;
+            final currentAvg =
+                (data['helper_rating_avg'] as num?)?.toDouble() ?? 0.0;
+
             final newCount = currentCount + 1;
             final newAvg = ((currentAvg * currentCount) + rating) / newCount;
-            
+
             String? newBadge;
             if (newAvg >= 4.5 && newCount >= 15) {
               newBadge = 'Gold';
@@ -243,15 +249,15 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
             } else if (newAvg >= 3.5 && newCount >= 3) {
               newBadge = 'Bronze';
             }
-            
+
             final updates = <String, dynamic>{
               'helper_rating_count': newCount,
               'helper_rating_avg': newAvg,
             };
             if (newBadge != null) {
-               updates['helper_badge'] = newBadge;
+              updates['helper_badge'] = newBadge;
             } else {
-               updates['helper_badge'] = FieldValue.delete();
+              updates['helper_badge'] = FieldValue.delete();
             }
 
             transaction.update(helperRef, updates);
@@ -269,9 +275,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     });
 
     messenger.showSnackBar(
-      SnackBar(
-        content: Text('Thanks! Session resolved. Rating: $rating/5'),
-      ),
+      SnackBar(content: Text('Thanks! Session resolved. Rating: $rating/5')),
     );
   }
 
@@ -394,6 +398,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
         .collection('messages')
         .add(msg);
   }
+
   Future<void> _showAttachmentSheet() async {
     if (_isResolved || _isRecording) return;
     if (!_canCurrentUserSend) return;
@@ -505,7 +510,11 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     if (!hasPermission) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microphone permission is required for voice messages.')),
+        const SnackBar(
+          content: Text(
+            'Microphone permission is required for voice messages.',
+          ),
+        ),
       );
       return;
     }
@@ -674,123 +683,144 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                 );
               },
             ),
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: Center(
-              child: Tooltip(
-                message: 'Mark resolved & rate helper',
-                child: InkWell(
-                  onTap: () async {
-              if (_isResolved) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Session already resolved.')),
-                );
-                return;
-              }
+          if (_isRequester)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Center(
+                child: Tooltip(
+                  message: 'Rate the helper',
+                  child: InkWell(
+                    onTap: () async {
+                      if (_isResolved) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Session already resolved.'),
+                          ),
+                        );
+                        return;
+                      }
 
-              final messenger = ScaffoldMessenger.of(context);
-              int rating = 5;
-              await showDialog<void>(
-                context: context,
-                barrierDismissible: false,
-                builder: (ctx) {
-                  final dg = GuardianTheme.of(ctx);
-                  return StatefulBuilder(
-                    builder: (ctx, setStateDialog) {
-                      return AlertDialog(
-                        backgroundColor: dg.panelBg,
-                        title: Text(
-                          'Rate the helper',
-                          style: TextStyle(
-                            color: dg.textPrimary,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'How was the study support?',
-                              style: TextStyle(color: dg.textSecondary),
-                            ),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              alignment: WrapAlignment.center,
-                              children: List.generate(5, (i) {
-                                final idx = i + 1;
-                                final selected = idx <= rating;
-                                return IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 34,
-                                    minHeight: 34,
+                      final messenger = ScaffoldMessenger.of(context);
+                      int rating = 5;
+                      await showDialog<void>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (ctx) {
+                          final dg = GuardianTheme.of(ctx);
+                          return StatefulBuilder(
+                            builder: (ctx, setStateDialog) {
+                              return AlertDialog(
+                                backgroundColor: dg.panelBg,
+                                title: Text(
+                                  'Rate the helper',
+                                  style: TextStyle(
+                                    color: dg.textPrimary,
+                                    fontWeight: FontWeight.w800,
                                   ),
-                                  icon: Icon(
-                                    selected
-                                        ? Icons.star_rounded
-                                        : Icons.star_border_rounded,
-                                    color: selected
-                                        ? Colors.amber
-                                        : dg.starEmpty,
-                                    size: 28,
+                                ),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'How was the study support?',
+                                      style: TextStyle(color: dg.textSecondary),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      alignment: WrapAlignment.center,
+                                      children: List.generate(5, (i) {
+                                        final idx = i + 1;
+                                        final selected = idx <= rating;
+                                        return IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                            minWidth: 34,
+                                            minHeight: 34,
+                                          ),
+                                          icon: Icon(
+                                            selected
+                                                ? Icons.star_rounded
+                                                : Icons.star_border_rounded,
+                                            color: selected
+                                                ? Colors.amber
+                                                : dg.starEmpty,
+                                            size: 28,
+                                          ),
+                                          onPressed: () {
+                                            setStateDialog(() => rating = idx);
+                                          },
+                                        );
+                                      }),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                    child: Text(
+                                      'Cancel',
+                                      style: TextStyle(color: dg.textSecondary),
+                                    ),
                                   ),
-                                  onPressed: () {
-                                    setStateDialog(() => rating = idx);
-                                  },
-                                );
-                              }),
-                            ),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: Text(
-                              'Cancel',
-                              style: TextStyle(color: dg.textSecondary),
-                            ),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _kOutgoingBubble,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.of(ctx).pop();
-                              _submitRating(rating);
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _kOutgoingBubble,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(ctx).pop();
+                                      _submitRating(rating);
+                                    },
+                                    child: Text('Submit ($rating)'),
+                                  ),
+                                ],
+                              );
                             },
-                            child: Text('Submit ($rating)'),
-                          ),
-                        ],
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              );
-            },
-            customBorder: const CircleBorder(),
-            child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: g.isDark
-                          ? GuardianUi.redPrimary
-                          : const Color(0xFF1B1B22),
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 18,
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(999),
+                        color: g.isDark
+                            ? const Color(0xFF8D1218)
+                            : GuardianUi.redPrimary,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.star_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Rate Helper',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
           IconButton(
             tooltip: 'Report / Info',
             icon: Icon(Icons.error_outline_rounded, color: g.textPrimary),
@@ -806,8 +836,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
       ),
       body: Column(
         children: [
-          if (!_chatProceeded && _isRequester)
-            _buildProceedPrompt(g),
+          if (!_chatProceeded && _isRequester) _buildProceedPrompt(g),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -819,10 +848,8 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                 final alignment = m.fromMe
                     ? Alignment.centerRight
                     : Alignment.centerLeft;
-                final color =
-                    m.fromMe ? _kOutgoingBubble : g.panelBg;
-                final textColor =
-                    m.fromMe ? Colors.white : g.textPrimary;
+                final color = m.fromMe ? _kOutgoingBubble : g.panelBg;
+                final textColor = m.fromMe ? Colors.white : g.textPrimary;
 
                 return Align(
                   alignment: alignment,
@@ -1015,7 +1042,11 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                         spacing: 8,
                         runSpacing: 6,
                         children: [
-                          _quickChip(g, 'Can you explain more?', 'explain_more'),
+                          _quickChip(
+                            g,
+                            'Can you explain more?',
+                            'explain_more',
+                          ),
                           _quickChip(g, "I’m stuck on this part.", 'stuck'),
                           _quickChip(g, 'Understood, thank you!', 'thanks'),
                           _quickChip(g, 'Send me the solution.', 'solution'),
@@ -1070,9 +1101,9 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                             if (!_isRecording) _send();
                           },
                           decoration: InputDecoration(
-                            hintText: _canCurrentUserSend 
-                              ? 'Type a message...' 
-                              : 'Chat request pending...',
+                            hintText: _canCurrentUserSend
+                                ? 'Type a message...'
+                                : 'Chat request pending...',
                             hintStyle: TextStyle(
                               color: g.textSecondary,
                               fontWeight: FontWeight.w500,
@@ -1095,11 +1126,11 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                       Material(
                         color: (_canSend && !_isRecording)
                             ? (g.isDark
-                                ? GuardianUi.redPrimary
-                                : const Color(0xFF9E9E9E))
+                                  ? GuardianUi.redPrimary
+                                  : const Color(0xFF9E9E9E))
                             : (g.isDark
-                                ? const Color(0xFF3A3A45)
-                                : const Color(0xFFE0E0E0)),
+                                  ? const Color(0xFF3A3A45)
+                                  : const Color(0xFFE0E0E0)),
                         shape: const CircleBorder(),
                         child: InkWell(
                           customBorder: const CircleBorder(),
@@ -1113,8 +1144,8 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                               color: (_canSend && !_isRecording)
                                   ? Colors.white
                                   : (g.isDark
-                                      ? const Color(0xFF6A6A75)
-                                      : const Color(0xFFBDBDBD)),
+                                        ? const Color(0xFF6A6A75)
+                                        : const Color(0xFFBDBDBD)),
                             ),
                           ),
                         ),
@@ -1147,9 +1178,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
         decoration: BoxDecoration(
           color: g.listItemBg,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: _kOutgoingBubble.withOpacity(0.28),
-          ),
+          border: Border.all(color: _kOutgoingBubble.withOpacity(0.28)),
           boxShadow: g.cardShadow,
         ),
         child: Text(
@@ -1193,8 +1222,11 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
       ),
       child: Column(
         children: [
-          const Icon(Icons.chat_bubble_outline_rounded,
-              color: _kOutgoingBubble, size: 32),
+          const Icon(
+            Icons.chat_bubble_outline_rounded,
+            color: _kOutgoingBubble,
+            size: 32,
+          ),
           const SizedBox(height: 12),
           Text(
             "Helper has messaged you.",
@@ -1208,10 +1240,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
           Text(
             "Do you want to proceed with the chat?",
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: g.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: g.textSecondary),
           ),
           const SizedBox(height: 16),
           Row(
@@ -1219,8 +1248,10 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
               Expanded(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text("CANCEL",
-                      style: TextStyle(color: g.textSecondary)),
+                  child: Text(
+                    "CANCEL",
+                    style: TextStyle(color: g.textSecondary),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1230,7 +1261,8 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                     backgroundColor: _kOutgoingBubble,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: _proceedChat,
                   child: const Text("PROCEED"),
