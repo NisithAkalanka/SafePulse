@@ -568,6 +568,7 @@ class _HelpHeroCard extends StatelessWidget {
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Request categories',

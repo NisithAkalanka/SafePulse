@@ -20,7 +20,7 @@ class HelpOfferNotificationService {
   StreamSubscription<User?>? _authSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _incomingSub;
   final Set<String> _processedIds = <String>{};
-  DateTime _listenStartedAt = DateTime.now();
+  bool _hasPrimedInitialSnapshot = false;
 
   /// Starts auth-aware listener once.
   void start() {
@@ -32,7 +32,7 @@ class HelpOfferNotificationService {
     _incomingSub?.cancel();
     _incomingSub = null;
     _processedIds.clear();
-    _listenStartedAt = DateTime.now();
+    _hasPrimedInitialSnapshot = false;
     if (user == null) {
       return;
     }
@@ -53,19 +53,41 @@ class HelpOfferNotificationService {
   Future<void> _onIncomingSnapshot(
     QuerySnapshot<Map<String, dynamic>> snapshot,
   ) async {
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      if (_processedIds.contains(doc.id)) {
-        continue;
-      }
-      if (data['delivered'] == true) {
+    if (!_hasPrimedInitialSnapshot) {
+      _hasPrimedInitialSnapshot = true;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
         _processedIds.add(doc.id);
+
+        if (data['delivered'] == true) {
+          continue;
+        }
+
+        unawaited(
+          doc.reference.update(<String, dynamic>{
+            'delivered': true,
+            'deliveredAt': FieldValue.serverTimestamp(),
+          }),
+        );
+      }
+      return;
+    }
+
+    for (final change in snapshot.docChanges) {
+      if (change.type != DocumentChangeType.added) {
         continue;
       }
 
-      final createdAt = _toDateTime(data['createdAt']);
-      // Prevent replaying older notifications every time listener reconnects.
-      if (createdAt != null && createdAt.isBefore(_listenStartedAt)) {
+      final doc = change.doc;
+      if (_processedIds.contains(doc.id)) {
+        continue;
+      }
+      final data = doc.data();
+      if (data == null) {
+        _processedIds.add(doc.id);
+        continue;
+      }
+      if (data['delivered'] == true) {
         _processedIds.add(doc.id);
         continue;
       }
@@ -92,12 +114,6 @@ class HelpOfferNotificationService {
     }
   }
 
-  DateTime? _toDateTime(Object? raw) {
-    if (raw is Timestamp) return raw.toDate();
-    if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw);
-    return null;
-  }
-
   /// Called when helper taps OFFER HELP.
   Future<bool> notifyRequesterAboutOffer(HelpRequest request) async {
     final helper = _auth.currentUser;
@@ -119,6 +135,7 @@ class HelpOfferNotificationService {
 
     try {
       final helperName = _bestEffortHelperName(helper);
+      final helperBadge = await _resolveHelperBadge(helper.uid);
       debugPrint('SafePulse: Sending help_offer from ${helper.uid} to $requesterUid');
 
       // 1. Create the offer notification record
@@ -127,6 +144,7 @@ class HelpOfferNotificationService {
         'recipientUid': requesterUid,
         'helperUid': helper.uid,
         'helperName': helperName,
+        'helperBadge': helperBadge,
         'requestId': request.id,
         'requestCategory': request.category,
         'requestTitle': request.title,
@@ -197,5 +215,42 @@ class HelpOfferNotificationService {
       return email;
     }
     return 'A helper';
+  }
+
+  Future<String> _resolveHelperBadge(String helperUid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(helperUid).get();
+      final data = doc.data();
+      if (data == null) return 'Bronze';
+
+      final rawBadge = data['helper_badge']?.toString().trim();
+      if (rawBadge != null && rawBadge.isNotEmpty) {
+        return _normalizeBadge(rawBadge);
+      }
+
+      final avg = (data['helper_rating_avg'] as num?)?.toDouble() ?? 0.0;
+      final count = (data['helper_rating_count'] as num?)?.toInt() ?? 0;
+      return _badgeFromRating(avg, count);
+    } catch (e) {
+      debugPrint('SafePulse: Could not resolve helper badge: $e');
+      return 'Bronze';
+    }
+  }
+
+  String _badgeFromRating(double avg, int count) {
+    if (avg >= 4.5 && count >= 15) return 'Gold';
+    if (avg >= 4.0 && count >= 8) return 'Silver';
+    return 'Bronze';
+  }
+
+  String _normalizeBadge(String badge) {
+    switch (badge.toLowerCase()) {
+      case 'gold':
+        return 'Gold';
+      case 'silver':
+        return 'Silver';
+      default:
+        return 'Bronze';
+    }
   }
 }

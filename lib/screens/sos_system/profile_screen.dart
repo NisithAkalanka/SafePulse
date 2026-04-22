@@ -28,6 +28,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   double completionPercentage = 0.0;
   bool isSetupComplete = false;
 
+<<<<<<< Updated upstream
+=======
+  double _lfRatingAvg = 0.0;
+  int _lfRatingCount = 0;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
+
+  int _helperRatingCount = 0;
+  double _helperRatingAvg = 0.0;
+  String _helperBadge = '';
+
+>>>>>>> Stashed changes
   @override
   void initState() {
     super.initState();
@@ -64,7 +75,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // --- මෙන්න අලුතින් එක් කළ කොටස: Role එක ලබා ගැනීම ---
             userRole = ds.data()?['role'] ?? "student";
 
+<<<<<<< Updated upstream
             _profilePhotoBase64 = ds.data()?['profile_photo_base64'];
+=======
+            _helperRatingAvg = _safeDouble(data['helper_rating_avg']);
+            _helperRatingCount = _safeInt(data['helper_rating_count']);
+            _helperBadge = (data['helper_badge'] ?? "").toString();
+
+>>>>>>> Stashed changes
             _calculateCompletion();
           });
         }
@@ -74,6 +92,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+<<<<<<< Updated upstream
+=======
+  void _listenToLostFoundRating() {
+    if (user == null) return;
+
+    _userDocSub?.cancel();
+    _userDocSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .snapshots()
+        .listen((doc) {
+          if (!doc.exists) return;
+          final data = doc.data() ?? {};
+          if (!mounted) return;
+
+          setState(() {
+            _lfRatingAvg = _safeDouble(data['lf_rating_avg']);
+            _lfRatingCount = _safeInt(data['lf_rating_count']);
+
+            _helperRatingAvg = _safeDouble(data['helper_rating_avg']);
+            _helperRatingCount = _safeInt(data['helper_rating_count']);
+            _helperBadge = (data['helper_badge'] ?? "").toString();
+          });
+        });
+  }
+
+  int _safeInt(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  double _safeDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  String _lfBadgeLabel(double avg, int count) {
+    if (count == 0) return 'Bronze';
+    if (avg >= 4.5) return 'Gold';
+    if (avg >= 3.0) return 'Silver';
+    return 'Bronze';
+  }
+
+  Color _lfBadgeColor(String label) {
+    switch (label) {
+      case 'Gold':
+        return const Color(0xFFFFD700);
+      case 'Silver':
+        return const Color(0xFFB0BEC5);
+      case 'Bronze':
+        return const Color(0xFFCD7F32);
+      default:
+        return const Color(0xFFB0BEC5);
+    }
+  }
+
+  String _lfRatingDisplay() {
+    if (_lfRatingCount <= 0) return '0.0★';
+    return '${_lfRatingAvg.toStringAsFixed(1)}★';
+  }
+
+  String _lfRatingSubtitle() {
+    final badge = _lfBadgeLabel(_lfRatingAvg, _lfRatingCount);
+    if (_lfRatingCount <= 0) {
+      return 'Lost & Found\n$badge badge';
+    }
+    return 'Lost & Found\n$badge • $_lfRatingCount rating${_lfRatingCount == 1 ? '' : 's'}';
+  }
+
+  String _helperBadgeLabel(double avg, int count) {
+    if (count == 0) return 'Bronze';
+    if (avg >= 4.5 && count >= 15) return 'Gold';
+    if (avg >= 4.0 && count >= 8) return 'Silver';
+    if (avg >= 3.5 && count >= 3) return 'Bronze';
+    return 'Bronze'; // Default fallback matching bronze color
+  }
+
+  String _helperRatingDisplay() {
+    if (_helperRatingCount <= 0) return '0.0★';
+    return '${_helperRatingAvg.toStringAsFixed(1)}★';
+  }
+
+>>>>>>> Stashed changes
   Future<void> _calculateCompletion() async {
     if (user == null) return;
 
@@ -362,18 +467,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Row(
                             children: [
                               Expanded(
-                                child: _statItem(
-                                  "",
-                                  "Request help reviews",
-                                  const Color(0xFFFF5A5F),
-                                  onTap: () {
-                                    Navigator.of(context).push<void>(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) =>
-                                            const SosHitsRatingsScreen(),
-                                      ),
-                                    );
-                                  },
+                                child: _ratingStatItem(
+                                  value: _helperRatingDisplay(),
+                                  label: "Request Help",
+                                  badge: _helperBadgeLabel(_helperRatingAvg, _helperRatingCount),
+                                  badgeColor: _lfBadgeColor(_helperBadgeLabel(_helperRatingAvg, _helperRatingCount)),
+                                  subtitle: _helperRatingCount <= 0
+                                      ? "No ratings yet"
+                                      : "$_helperRatingCount rating${_helperRatingCount == 1 ? '' : 's'}",
                                 ),
                               ),
                               const SizedBox(width: 10),
