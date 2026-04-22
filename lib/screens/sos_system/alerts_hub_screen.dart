@@ -23,6 +23,261 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
       LostFoundNotificationService();
   final LostFoundService _lostFoundService = LostFoundService();
 
+  String _formatHelperBadge(String? rawBadge) {
+    switch ((rawBadge ?? '').trim().toLowerCase()) {
+      case 'gold':
+        return 'Gold';
+      case 'silver':
+        return 'Silver';
+      default:
+        return 'Bronze';
+    }
+  }
+
+  Color _helperBadgeColor(String badge) {
+    switch (badge.toLowerCase()) {
+      case 'gold':
+        return const Color(0xFFD4A017);
+      case 'silver':
+        return const Color(0xFF8A94A6);
+      default:
+        return const Color(0xFFB86A2E);
+    }
+  }
+
+  void _showHelpAcceptedDialog({
+    required String requestId,
+    required String category,
+    required String requestTitle,
+    required String requestLocation,
+    required String helperBadge,
+  }) {
+    if (!mounted) return;
+
+    final badge = _formatHelperBadge(helperBadge);
+    final badgeColor = _helperBadgeColor(badge);
+    final subtitle = requestTitle.trim().isNotEmpty
+        ? 'Your help offer for $requestTitle has been accepted.'
+        : 'Your help offer has been accepted.';
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 28,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE8F6EC),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_rounded,
+                        color: Color(0xFF2EAD4B),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Help Accepted',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1A1D24),
+                              height: 1.05,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Color(0xFF4C5563),
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F9FC),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFE5EAF1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        category,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                      if (requestTitle.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          requestTitle,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1D24),
+                          ),
+                        ),
+                      ],
+                      if (requestLocation.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.place_rounded,
+                              size: 16,
+                              color: Color(0xFF6B7280),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                requestLocation,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF4C5563),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: badgeColor.withOpacity(0.28)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.workspace_premium_rounded,
+                              color: badgeColor,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Your helper has a $badge badge.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: badgeColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text(
+                        'CLOSE',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                        if (requestId.isEmpty) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => HelpPrivateChatScreen(
+                              requestId: requestId,
+                              title: category,
+                              subtitle: requestTitle,
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2EAD4B),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                      label: const Text(
+                        'CONTACT',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   IconData _lostFoundIcon(String? actionType) {
     switch (actionType) {
       case 'new_post':
@@ -290,14 +545,25 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                                 ) {
                                   if (!mounted) return;
 
-                                  NotificationService.showHelpAcceptedNotification(
-                                    id: docId.hashCode,
-                                    category:
-                                        (data['requestCategory'] ??
-                                                'Help request')
-                                            .toString(),
-                                    title: (data['requestTitle'] ?? '')
+                                  final requestCategory =
+                                      (data['requestCategory'] ??
+                                              'Help request')
+                                          .toString();
+                                  final requestTitle =
+                                      (data['requestTitle'] ?? '')
+                                          .toString();
+                                  final helperBadge =
+                                      data['helperBadge']?.toString();
+                                  final requestLocation =
+                                      (data['requestLocationName'] ?? 'Nearby')
+                                          .toString();
+                                  _showHelpAcceptedDialog(
+                                    requestId: (data['requestId'] ?? '')
                                         .toString(),
+                                    category: requestCategory,
+                                    requestTitle: requestTitle,
+                                    requestLocation: requestLocation,
+                                    helperBadge: helperBadge ?? '',
                                   );
                                 });
 
@@ -307,18 +573,39 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                               final bool isRecipient =
                                   data['recipientUid'] == uid;
                               final bool isHelper = data['helperUid'] == uid;
+                              final bool isAccepted =
+                                  data['accepted'] == true;
+                              final String helperBadge =
+                                  (data['helperBadge'] ?? '')
+                                      .toString()
+                                      .trim()
+                                      .toLowerCase();
+                              final String requestTitle =
+                                  (data['requestTitle'] ?? '').toString();
+                              final String acceptedBody =
+                                  requestTitle.isNotEmpty
+                                  ? 'Your help offer for $requestTitle has been accepted.'
+                                  : 'Your help offer has been accepted.';
+                              final String badgeBody =
+                                  helperBadge.isNotEmpty
+                                  ? ' Your helper has a $helperBadge badge.'
+                                  : '';
 
                               if (isRecipient || isHelper) {
                                 rows.add({
                                   'id': d.id,
                                   'rowType': 'offer',
                                   'requestId': data['requestId'],
-                                  'requestTitle': (data['requestTitle'] ?? '')
-                                      .toString(),
-                                  'title': isHelper
+                                  'requestTitle': requestTitle,
+                                  'title': isHelper && isAccepted
+                                      ? 'Help Accepted'
+                                      : isHelper
                                       ? "You offered help to ${data['requestCategory'] ?? 'someone'}"
                                       : (data['helperName'] ?? "A helper")
                                             .toString(),
+                                  'body': isHelper && isAccepted
+                                      ? '$acceptedBody$badgeBody'
+                                      : '',
                                   'type':
                                       (data['requestCategory'] ?? 'Help offer')
                                           .toString(),
@@ -498,6 +785,20 @@ class _AlertsHubScreenState extends State<AlertsHubScreen> {
                                             ),
                                           ),
                                         ] else if (isOffer) ...[
+                                          if ((row['body'] ?? '')
+                                              .toString()
+                                              .trim()
+                                              .isNotEmpty) ...[
+                                            Text(
+                                              row['body'].toString(),
+                                              style: TextStyle(
+                                                color: textSecondary,
+                                                fontWeight: FontWeight.w600,
+                                                height: 1.35,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                          ],
                                           Text(
                                             "Type: ${row['type']}",
                                             style: TextStyle(

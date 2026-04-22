@@ -216,6 +216,65 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
     );
   }
 
+  Future<void> _submitRating(int rating) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final helperUid = _requestHelperUid;
+    
+    if (helperUid != null) {
+      try {
+        final helperRef = FirebaseFirestore.instance.collection('users').doc(helperUid);
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          final snapshot = await transaction.get(helperRef);
+          if (snapshot.exists) {
+            final data = snapshot.data();
+            if (data == null) return;
+            
+            final currentCount = (data['helper_rating_count'] as num?)?.toInt() ?? 0;
+            final currentAvg = (data['helper_rating_avg'] as num?)?.toDouble() ?? 0.0;
+            
+            final newCount = currentCount + 1;
+            final newAvg = ((currentAvg * currentCount) + rating) / newCount;
+            
+            String? newBadge;
+            if (newAvg >= 4.5 && newCount >= 15) {
+              newBadge = 'Gold';
+            } else if (newAvg >= 4.0 && newCount >= 8) {
+              newBadge = 'Silver';
+            } else if (newAvg >= 3.5 && newCount >= 3) {
+              newBadge = 'Bronze';
+            }
+            
+            final updates = <String, dynamic>{
+              'helper_rating_count': newCount,
+              'helper_rating_avg': newAvg,
+            };
+            if (newBadge != null) {
+               updates['helper_badge'] = newBadge;
+            } else {
+               updates['helper_badge'] = FieldValue.delete();
+            }
+
+            transaction.update(helperRef, updates);
+          }
+        });
+      } catch (e) {
+        debugPrint('Error updating helper rating: $e');
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isResolved = true;
+      _helperTyping = false;
+    });
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Thanks! Session resolved. Rating: $rating/5'),
+      ),
+    );
+  }
+
   Future<void> _togglePlayAudio(String audioPath) async {
     if (_isResolved) return;
 
@@ -655,8 +714,8 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                               style: TextStyle(color: dg.textSecondary),
                             ),
                             const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            Wrap(
+                              alignment: WrapAlignment.center,
                               children: List.generate(5, (i) {
                                 final idx = i + 1;
                                 final selected = idx <= rating;
@@ -701,6 +760,7 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                             ),
                             onPressed: () {
                               Navigator.of(ctx).pop();
+                              _submitRating(rating);
                             },
                             child: Text('Submit ($rating)'),
                           ),
@@ -710,21 +770,9 @@ class _HelpPrivateChatScreenState extends State<HelpPrivateChatScreen> {
                   );
                 },
               );
-
-              if (!mounted) return;
-              setState(() {
-                _isResolved = true;
-                _helperTyping = false;
-              });
-
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text('Thanks! Session resolved. Rating: $rating/5'),
-                ),
-              );
-                  },
-                  customBorder: const CircleBorder(),
-                  child: Container(
+            },
+            customBorder: const CircleBorder(),
+            child: Container(
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(

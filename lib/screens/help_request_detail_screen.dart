@@ -723,7 +723,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
     return Scaffold(
       backgroundColor: _g.scaffoldBg,
       extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       bottomNavigationBar: MainBottomNavigationBarView(
         currentIndex: mainNavHelpTabIndexForRole(_navUserRole),
         items: buildMainNavBarItems(_navUserRole),
@@ -848,7 +848,12 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                         controller: _scrollController,
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
-                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          20,
+                          16,
+                          24 + MediaQuery.viewInsetsOf(context).bottom,
+                        ),
                         child: Form(
                           key: _formKey,
                           autovalidateMode: _attemptedSubmit
@@ -1183,6 +1188,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             'Date',
@@ -1238,6 +1244,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             'Time',
@@ -1608,6 +1615,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
@@ -1677,6 +1685,7 @@ class _HelpRequestDetailScreenState extends State<HelpRequestDetailScreen> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Request type',

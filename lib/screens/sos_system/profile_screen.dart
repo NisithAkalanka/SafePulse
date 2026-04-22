@@ -33,6 +33,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _lfRatingCount = 0;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
 
+  int _helperRatingCount = 0;
+  double _helperRatingAvg = 0.0;
+  String _helperBadge = '';
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +83,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _lfRatingAvg = _safeDouble(data['lf_rating_avg']);
             _lfRatingCount = _safeInt(data['lf_rating_count']);
 
+            _helperRatingAvg = _safeDouble(data['helper_rating_avg']);
+            _helperRatingCount = _safeInt(data['helper_rating_count']);
+            _helperBadge = (data['helper_badge'] ?? "").toString();
+
             _calculateCompletion();
           });
         }
@@ -104,6 +112,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() {
             _lfRatingAvg = _safeDouble(data['lf_rating_avg']);
             _lfRatingCount = _safeInt(data['lf_rating_count']);
+
+            _helperRatingAvg = _safeDouble(data['helper_rating_avg']);
+            _helperRatingCount = _safeInt(data['helper_rating_count']);
+            _helperBadge = (data['helper_badge'] ?? "").toString();
           });
         });
   }
@@ -153,6 +165,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return 'Lost & Found\n$badge badge';
     }
     return 'Lost & Found\n$badge • $_lfRatingCount rating${_lfRatingCount == 1 ? '' : 's'}';
+  }
+
+  String _helperBadgeLabel(double avg, int count) {
+    if (count == 0) return 'Bronze';
+    if (avg >= 4.5 && count >= 15) return 'Gold';
+    if (avg >= 4.0 && count >= 8) return 'Silver';
+    if (avg >= 3.5 && count >= 3) return 'Bronze';
+    return 'Bronze'; // Default fallback matching bronze color
+  }
+
+  String _helperRatingDisplay() {
+    if (_helperRatingCount <= 0) return '0.0★';
+    return '${_helperRatingAvg.toStringAsFixed(1)}★';
   }
 
   Future<void> _calculateCompletion() async {
@@ -447,18 +472,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Row(
                             children: [
                               Expanded(
-                                child: _statItem(
-                                  "",
-                                  "Request help reviews",
-                                  const Color(0xFFFF5A5F),
-                                  onTap: () {
-                                    Navigator.of(context).push<void>(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) =>
-                                            const SosHitsRatingsScreen(),
-                                      ),
-                                    );
-                                  },
+                                child: _ratingStatItem(
+                                  value: _helperRatingDisplay(),
+                                  label: "Request Help",
+                                  badge: _helperBadgeLabel(
+                                    _helperRatingAvg,
+                                    _helperRatingCount,
+                                  ),
+                                  badgeColor: _lfBadgeColor(
+                                    _helperBadgeLabel(
+                                      _helperRatingAvg,
+                                      _helperRatingCount,
+                                    ),
+                                  ),
+                                  subtitle: _helperRatingCount <= 0
+                                      ? "No ratings yet"
+                                      : "$_helperRatingCount rating${_helperRatingCount == 1 ? '' : 's'}",
                                 ),
                               ),
                               const SizedBox(width: 10),

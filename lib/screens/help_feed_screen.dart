@@ -413,7 +413,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
-          onTap: sendOffer,
+          onTap: null,
           child: Container(
             constraints: const BoxConstraints(minHeight: 132),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -426,9 +426,11 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
               ),
               boxShadow: g.cardShadow,
             ),
-            child: Row(
-              children: [
-                Container(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 380;
+
+                Widget avatar = Container(
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
@@ -444,134 +446,138 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                     color: redPrimary,
                     size: 34,
                   ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        request.category,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
-                          color: g.textPrimary,
-                        ),
+                );
+
+                Widget details = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      request.category,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        color: g.textPrimary,
                       ),
-                      const SizedBox(height: 7),
-                      Text(
-                        request.requesterName.isNotEmpty
-                            ? request.requesterName
-                            : request.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: g.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      request.requesterName.isNotEmpty
+                          ? request.requesterName
+                          : request.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: g.textSecondary,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 7),
-                      Text(
-                        request.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: g.textSecondary.withValues(alpha: 0.9),
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      request.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: g.textSecondary.withValues(alpha: 0.9),
+                        fontWeight: FontWeight.w600,
                       ),
-                      if (request.description.trim().isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          request.description.trim(),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.35,
-                            color: g.textSecondary.withValues(alpha: 0.9),
-                          ),
-                        ),
-                      ],
-                      if (s.statusLabel != null) ...[
-                        const SizedBox(height: 6),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF1E9E5A,
-                              ).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              s.statusLabel!,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF1E9E5A),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.place_rounded,
-                            size: 16,
-                            color: redPrimary,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              request.locationName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: g.captionGrey,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                      ),
+                    ),
+                    if (request.description.trim().isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.send_rounded,
-                            size: 14,
-                            color: g.captionGrey,
+                      Text(
+                        request.description.trim(),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.35,
+                          color: g.textSecondary.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
+                    if (s.statusLabel != null) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF1E9E5A,
+                            ).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            s.statusLabel!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1E9E5A),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.place_rounded,
+                          size: 16,
+                          color: redPrimary,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            request.locationName,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: g.captionGrey,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.send_rounded,
+                          size: 14,
+                          color: g.captionGrey,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
                             _timeAgoLabel(request.createdAt),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 12,
                               color: g.captionGrey,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+
+                Widget actionBlock = Column(
+                  crossAxisAlignment: isCompact
+                      ? CrossAxisAlignment.stretch
+                      : CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (request.isUrgent)
@@ -590,6 +596,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                         ),
                         child: const Text(
                           'Urgent',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -599,6 +606,7 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                       ),
                     SizedBox(
                       height: 44,
+                      width: isCompact ? double.infinity : null,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: redPrimary,
@@ -619,8 +627,36 @@ class _HelpFeedScreenState extends State<HelpFeedScreen> {
                       ),
                     ),
                   ],
-                ),
-              ],
+                );
+
+                if (isCompact) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          avatar,
+                          const SizedBox(width: 20),
+                          Expanded(child: details),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      actionBlock,
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    avatar,
+                    const SizedBox(width: 20),
+                    Expanded(child: details),
+                    const SizedBox(width: 14),
+                    actionBlock,
+                  ],
+                );
+              },
             ),
           ),
         ),

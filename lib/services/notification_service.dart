@@ -147,6 +147,7 @@ class NotificationService {
     required int id,
     required String category,
     required String title,
+    String? helperBadge,
   }) async {
     const NotificationDetails details = NotificationDetails(
       iOS: DarwinNotificationDetails(
@@ -164,10 +165,16 @@ class NotificationService {
       ),
     );
 
+    final normalizedBadge = (helperBadge ?? '').trim().toLowerCase();
+    final badgeLine = normalizedBadge.isNotEmpty
+        ? ' Your helper has a $normalizedBadge badge.'
+        : '';
+
     await _notificationsPlugin.show(
       id: id,
-      title: 'Your Help Has been Accepted',
-      body: 'You can now start a private chat for $category: $title',
+      title: 'Help Accepted',
+      body:
+          'Your help offer for $category: $title has been accepted.$badgeLine',
       notificationDetails: details,
     );
   }
