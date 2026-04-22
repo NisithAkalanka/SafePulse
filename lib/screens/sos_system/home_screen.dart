@@ -524,9 +524,26 @@ class _HomeScreenState extends State<HomeScreen>
         });
   }
 
-  void _listenForHelpOfferNotifications() {
+  Future<void> _listenForHelpOfferNotifications() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      final role = (userDoc.data()?['role'] ?? _userRole).toString();
+      if (role == 'admin') {
+        _helpOfferSub?.cancel();
+        _helpOfferSub = null;
+        _seenHelpOfferNotifications.clear();
+        return;
+      }
+    } catch (_) {
+      // If role lookup fails, keep existing behavior for non-admin users.
+    }
+
     _helpOfferSub?.cancel();
     _helpOfferSub = FirebaseFirestore.instance
         .collection('help_offer_notifications')
@@ -550,6 +567,7 @@ class _HomeScreenState extends State<HomeScreen>
     Map<String, dynamic> data,
   ) {
     if (!mounted) return;
+    if (_userRole == 'admin') return;
     final helperName = (data['helperName'] ?? 'A helper').toString();
     final category = (data['requestCategory'] ?? 'Help request').toString();
     final requestTitle = (data['requestTitle'] ?? '').toString();
@@ -558,64 +576,205 @@ class _HomeScreenState extends State<HomeScreen>
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.green[50],
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.green),
-            SizedBox(width: 10),
-            Text("Helper Ready"),
-          ],
-        ),
-        content: Text(
-          "$helperName is ready to help.\n\n$category\n$requestTitle\n📍 $location",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("Later"),
+      barrierDismissible: true,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 28,
+                offset: Offset(0, 14),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              if (requestId.isNotEmpty) {
-                await FirebaseFirestore.instance
-                    .collection('alerts')
-                    .doc(requestId)
-                    .set({
-                      'status': 'Accepted',
-                      'acceptedBy': helperName,
-                      'helper_uid': data['helperUid'],
-                      'helper_name': helperName,
-                      'accepted_at': FieldValue.serverTimestamp(),
-                    }, SetOptions(merge: true));
-              }
-              await FirebaseFirestore.instance
-                  .collection('help_offer_notifications')
-                  .doc(notificationId)
-                  .set({
-                    'accepted': true,
-                    'acceptedAt': FieldValue.serverTimestamp(),
-                    'read': true,
-                    'readAt': FieldValue.serverTimestamp(),
-                  }, SetOptions(merge: true));
-              if (!mounted) return;
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => HelpPrivateChatScreen(
-                    requestId: requestId,
-                    title: category,
-                    subtitle: requestTitle,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE8F6EC),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF2EAD4B),
+                      size: 28,
+                    ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Helper Ready',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1A1D24),
+                            height: 1.05,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$helperName is ready to help.',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF4C5563),
+                            height: 1.35,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text("Accept"),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F9FC),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE5EAF1)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      category,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    if (requestTitle.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        requestTitle,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1A1D24),
+                        ),
+                      ),
+                    ],
+                    if (location.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.place_rounded,
+                            size: 16,
+                            color: Color(0xFF6B7280),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              location,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF4C5563),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text(
+                      'Later',
+                      style: TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(dialogContext);
+                      if (requestId.isNotEmpty) {
+                        await FirebaseFirestore.instance
+                            .collection('alerts')
+                            .doc(requestId)
+                            .set({
+                              'status': 'Accepted',
+                              'acceptedBy': helperName,
+                              'helper_uid': data['helperUid'],
+                              'helper_name': helperName,
+                              'accepted_at': FieldValue.serverTimestamp(),
+                            }, SetOptions(merge: true));
+                      }
+                      await FirebaseFirestore.instance
+                          .collection('help_offer_notifications')
+                          .doc(notificationId)
+                          .set({
+                            'accepted': true,
+                            'acceptedAt': FieldValue.serverTimestamp(),
+                            'read': true,
+                            'readAt': FieldValue.serverTimestamp(),
+                          }, SetOptions(merge: true));
+                      if (!mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HelpPrivateChatScreen(
+                            requestId: requestId,
+                            title: category,
+                            subtitle: requestTitle,
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2EAD4B),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    child: const Text(
+                      'Accept',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
